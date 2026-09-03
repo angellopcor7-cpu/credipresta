@@ -1,4 +1,4 @@
-import { signIn, signUp } from "./actions";
+import { signIn } from "./actions";
 
 export default async function LoginPage({
   searchParams,
@@ -57,21 +57,17 @@ export default async function LoginPage({
             </p>
           )}
 
-          <div className="flex flex-col gap-2 pt-2">
-            <button
-              formAction={signIn}
-              className="w-full bg-emerald-500 hover:bg-emerald-400 transition-colors text-slate-950 font-semibold rounded-md py-2 text-sm"
-            >
-              Iniciar sesión
-            </button>
-            <button
-              formAction={signUp}
-              className="w-full border border-slate-700 hover:bg-slate-800 transition-colors text-slate-200 rounded-md py-2 text-sm"
-            >
-              Crear cuenta
-            </button>
-          </div>
+          <button
+            formAction={signIn}
+            className="w-full bg-emerald-500 hover:bg-emerald-400 transition-colors text-slate-950 font-semibold rounded-md py-2 text-sm"
+          >
+            Iniciar sesión
+          </button>
         </form>
+
+        <p className="text-center text-xs text-slate-500">
+          Las cuentas de cobradores las crea un administrador desde el panel.
+        </p>
       </div>
     </div>
   );

@@ -1,48 +1,127 @@
-export type Client = {
+export type EstadoCliente = "activo" | "pendiente_aprobacion" | "inactivo";
+
+export type Cliente = {
   id: string;
-  full_name: string;
-  phone: string | null;
-  email: string | null;
-  national_id: string | null;
-  address: string | null;
-  notes: string | null;
+  nombre_completo: string;
+  telefono: string | null;
+  direccion: string | null;
+  identificacion: string | null;
+  referencia_personal: string | null;
+  notas: string | null;
+  estado: EstadoCliente;
+  creado_por: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type TipoDocumento =
+  | "ine_frente"
+  | "ine_reverso"
+  | "comprobante_domicilio"
+  | "foto_cliente"
+  | "contrato_pagare"
+  | "otro";
+
+export type DocumentoCliente = {
+  id: string;
+  cliente_id: string;
+  tipo_documento: TipoDocumento;
+  storage_path: string;
+  subido_por: string | null;
   created_at: string;
 };
 
-export type LoanStatus = "active" | "paid" | "overdue" | "cancelled";
-export type PaymentFrequency = "weekly" | "biweekly" | "monthly";
-
-export type Loan = {
+export type Cobrador = {
   id: string;
-  client_id: string;
-  principal_amount: number;
-  interest_rate: number;
-  term_months: number;
-  payment_frequency: PaymentFrequency;
-  start_date: string;
-  status: LoanStatus;
-  notes: string | null;
+  usuario_id: string;
+  zona: string | null;
+  fecha_ingreso: string | null;
+  activo: boolean;
+};
+
+export type CobradorConUsuario = Cobrador & {
+  usuarios: { nombre_completo: string; telefono: string | null } | null;
+};
+
+export type Ruta = {
+  id: string;
+  nombre: string;
+  zona: string | null;
+  cobrador_id: string | null;
+  activa: boolean;
   created_at: string;
 };
 
-export type LoanWithClient = Loan & { clients: { full_name: string } | null };
+export type EstadoPrestamo = "activo" | "en_mora" | "liquidado" | "cancelado";
 
-export type LoanBalance = {
-  loan_id: string;
-  client_id: string;
-  principal_amount: number;
-  interest_rate: number;
-  status: LoanStatus;
-  total_paid: number;
-  balance: number;
+export type Prestamo = {
+  id: string;
+  cliente_id: string;
+  cobrador_id: string | null;
+  monto_prestado: number;
+  porcentaje_interes: number;
+  monto_interes: number;
+  monto_total: number;
+  saldo_actual: number;
+  plazo_dias: number;
+  monto_cuota_sugerida: number;
+  fecha_inicio: string;
+  estado: EstadoPrestamo;
+  fecha_liquidacion: string | null;
+  creado_por: string | null;
+  created_at: string;
 };
 
-export type Payment = {
+export type PrestamoConCliente = Prestamo & {
+  clientes: { nombre_completo: string } | null;
+};
+
+export type EstadoDiaCalendario = "pendiente" | "pagado" | "parcial" | "no_aplica";
+
+export type CalendarioPago = {
   id: string;
-  loan_id: string;
-  amount: number;
-  payment_date: string;
-  method: string | null;
-  notes: string | null;
+  prestamo_id: string;
+  numero_dia: number;
+  fecha_programada: string;
+  monto_esperado: number;
+  estado: EstadoDiaCalendario;
+};
+
+export type TipoPago = "cuota_diaria" | "abono_libre" | "pago_mora";
+
+export type Pago = {
+  id: string;
+  prestamo_id: string;
+  calendario_pago_id: string | null;
+  monto: number;
+  tipo: TipoPago;
+  fecha_pago: string;
+  registrado_por: string | null;
+  metodo: string | null;
+  notas: string | null;
+  created_at: string;
+};
+
+export type EstadoMora = "pendiente" | "pagada" | "condonada";
+
+export type Mora = {
+  id: string;
+  prestamo_id: string;
+  calendario_pago_id: string | null;
+  monto_mora: number;
+  fecha_generada: string;
+  estado: EstadoMora;
+  fecha_pago: string | null;
+  generada_por: string;
+};
+
+export type HistorialMovimiento = {
+  id: string;
+  prestamo_id: string | null;
+  cliente_id: string | null;
+  usuario_id: string | null;
+  tipo_movimiento: string;
+  descripcion: string | null;
+  monto: number | null;
   created_at: string;
 };

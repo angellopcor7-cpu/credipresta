@@ -1,29 +1,31 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import type { Client } from "@/lib/types";
+import type { Cliente } from "@/lib/types";
 
-export default async function ClientsPage() {
+const estadoLabel: Record<string, string> = {
+  activo: "Activo",
+  pendiente_aprobacion: "Pendiente de aprobación",
+  inactivo: "Inactivo",
+};
+
+export default async function ClientesPage() {
   const supabase = await createClient();
-  const { data } = await supabase
-    .from("clients")
-    .select("*")
-    .order("created_at", { ascending: false });
-
-  const clients = (data ?? []) as Client[];
+  const { data } = await supabase.from("clientes").select("*").order("created_at", { ascending: false });
+  const clientes = (data ?? []) as Cliente[];
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes</h1>
         <Link
-          href="/dashboard/clients/new"
+          href="/clientes/nuevo"
           className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
         >
           + Nuevo cliente
         </Link>
       </div>
 
-      {clients.length === 0 ? (
+      {clientes.length === 0 ? (
         <p className="text-slate-400 text-sm">Aún no hay clientes.</p>
       ) : (
         <div className="border border-slate-800 rounded-xl overflow-hidden">
@@ -32,19 +34,17 @@ export default async function ClientsPage() {
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Teléfono</th>
-                <th className="px-4 py-3">Correo</th>
                 <th className="px-4 py-3">Identificación</th>
+                <th className="px-4 py-3">Estado</th>
               </tr>
             </thead>
             <tbody>
-              {clients.map((c) => (
+              {clientes.map((c) => (
                 <tr key={c.id} className="border-t border-slate-800">
-                  <td className="px-4 py-3">{c.full_name}</td>
-                  <td className="px-4 py-3 text-slate-300">{c.phone ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-300">{c.email ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-300">
-                    {c.national_id ?? "—"}
-                  </td>
+                  <td className="px-4 py-3">{c.nombre_completo}</td>
+                  <td className="px-4 py-3 text-slate-300">{c.telefono ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-300">{c.identificacion ?? "—"}</td>
+                  <td className="px-4 py-3 text-slate-300">{estadoLabel[c.estado]}</td>
                 </tr>
               ))}
             </tbody>
