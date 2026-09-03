@@ -93,9 +93,13 @@ export type Pago = {
   id: string;
   prestamo_id: string;
   calendario_pago_id: string | null;
+  cliente_id: string | null;
+  cobrador_id: string | null;
   monto: number;
   tipo: TipoPago;
   fecha_pago: string;
+  saldo_anterior: number | null;
+  saldo_posterior: number | null;
   registrado_por: string | null;
   metodo: string | null;
   notas: string | null;
