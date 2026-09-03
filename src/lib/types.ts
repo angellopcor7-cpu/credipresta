@@ -113,6 +113,9 @@ export type Mora = {
   prestamo_id: string;
   calendario_pago_id: string | null;
   monto_mora: number;
+  dia_atraso: number;
+  saldo_anterior: number;
+  saldo_posterior: number;
   fecha_generada: string;
   estado: EstadoMora;
   fecha_pago: string | null;

@@ -67,6 +67,29 @@ export function calcularMontoMora(saldoActual: number, regla: ReglaMora): number
   return saldoActual >= regla.umbral ? regla.moraAlta : regla.moraBaja;
 }
 
+/** Suma la mora del día al saldo del préstamo (nunca resta, la mora siempre incrementa la deuda). */
+export function calcularSaldoConMora(saldoActual: number, montoMora: number): number {
+  return redondear(saldoActual + montoMora);
+}
+
+export type EstadoCuota = "pendiente" | "pagado" | "parcial" | "no_aplica";
+
+export type CuotaCalendario = {
+  fechaProgramada: string; // YYYY-MM-DD
+  estado: EstadoCuota;
+};
+
+/**
+ * Un préstamo está en atraso si tiene al menos un día de cobro programado
+ * ANTES de `hoy` que sigue sin pagarse por completo (pendiente o parcial).
+ * Es la condición que determina si hoy le toca generar mora.
+ */
+export function tieneCuotaVencidaSinPagar(calendario: CuotaCalendario[], hoy: string): boolean {
+  return calendario.some(
+    (dia) => dia.fechaProgramada < hoy && (dia.estado === "pendiente" || dia.estado === "parcial")
+  );
+}
+
 /**
  * Determina si una fecha es día de cobro para un préstamo, según su monto.
  * Préstamos >= umbral (5,000): cobro lunes-viernes.

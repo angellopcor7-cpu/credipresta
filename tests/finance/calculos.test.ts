@@ -5,6 +5,8 @@ import {
   calcularSaldo,
   calcularCuotaSugerida,
   calcularMontoMora,
+  calcularSaldoConMora,
+  tieneCuotaVencidaSinPagar,
   esDiaDeCobro,
   generarCalendarioPagos,
   validarMontoPago,
@@ -77,6 +79,53 @@ describe("mora", () => {
   it("aplica mora alta si el saldo es igual o mayor al umbral", () => {
     expect(calcularMontoMora(5000, regla)).toBe(100);
     expect(calcularMontoMora(9000, regla)).toBe(100);
+  });
+
+  it("ejemplo del negocio: saldo $4,000, un día de atraso -> $4,050", () => {
+    const mora = calcularMontoMora(4000, regla);
+    expect(mora).toBe(50);
+    expect(calcularSaldoConMora(4000, mora)).toBe(4050);
+  });
+
+  it("ejemplo del negocio: dos días de atraso seguidos -> $4,050 luego $4,100", () => {
+    let saldo = 4000;
+    saldo = calcularSaldoConMora(saldo, calcularMontoMora(saldo, regla));
+    expect(saldo).toBe(4050);
+    saldo = calcularSaldoConMora(saldo, calcularMontoMora(saldo, regla));
+    expect(saldo).toBe(4100);
+  });
+
+  it("ejemplo del negocio: saldo $6,000, tres días de atraso -> $6,300", () => {
+    let saldo = 6000;
+    for (let dia = 0; dia < 3; dia++) {
+      saldo = calcularSaldoConMora(saldo, calcularMontoMora(saldo, regla));
+    }
+    expect(saldo).toBe(6300);
+  });
+});
+
+describe("detección de atraso", () => {
+  it("está en atraso si una cuota programada antes de hoy sigue pendiente", () => {
+    const calendario = [
+      { fechaProgramada: "2026-09-01", estado: "pendiente" as const },
+      { fechaProgramada: "2026-09-10", estado: "pendiente" as const },
+    ];
+    expect(tieneCuotaVencidaSinPagar(calendario, "2026-09-03")).toBe(true);
+  });
+
+  it("no está en atraso si todas las cuotas vencidas ya se pagaron", () => {
+    const calendario = [{ fechaProgramada: "2026-09-01", estado: "pagado" as const }];
+    expect(tieneCuotaVencidaSinPagar(calendario, "2026-09-03")).toBe(false);
+  });
+
+  it("no está en atraso si la cuota vencida está programada para hoy o después", () => {
+    const calendario = [{ fechaProgramada: "2026-09-03", estado: "pendiente" as const }];
+    expect(tieneCuotaVencidaSinPagar(calendario, "2026-09-03")).toBe(false);
+  });
+
+  it("un pago parcial también cuenta como atraso", () => {
+    const calendario = [{ fechaProgramada: "2026-09-01", estado: "parcial" as const }];
+    expect(tieneCuotaVencidaSinPagar(calendario, "2026-09-03")).toBe(true);
   });
 });
 
