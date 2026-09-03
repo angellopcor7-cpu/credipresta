@@ -1,6 +1,7 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdministrador } from "@/lib/auth/roles";
 import { obtenerConfiguraciones } from "@/lib/config";
@@ -115,6 +116,23 @@ export async function aplicarMoraDeHoy(prestamoId: string): Promise<ResultadoMor
   revalidatePath("/prestamos");
   revalidatePath("/dashboard");
   return resultado;
+}
+
+/**
+ * Wrapper para el botón "Aplicar mora de hoy" de la página del préstamo:
+ * llama a `aplicarMoraDeHoy` y redirige de vuelta con un mensaje de éxito
+ * o error (mismo patrón que `registrarPago`, sin JavaScript en el cliente).
+ */
+export async function aplicarMoraDesdeFormulario(formData: FormData) {
+  const prestamoId = String(formData.get("prestamo_id") || "");
+  const resultado = await aplicarMoraDeHoy(prestamoId);
+
+  if (!resultado.aplicada) {
+    redirect(`/prestamos/${prestamoId}?error=${encodeURIComponent(resultado.motivo || "No se pudo aplicar la mora")}`);
+  }
+  redirect(
+    `/prestamos/${prestamoId}?exito=${encodeURIComponent(`Mora del día aplicada: $${resultado.montoMora}`)}`
+  );
 }
 
 /** Revisa TODOS los préstamos activos/en mora y aplica la mora del día a los que tengan cuotas vencidas. */

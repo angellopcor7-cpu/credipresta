@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { CalendarioPago, Pago, Prestamo } from "@/lib/types";
+import type { CalendarioPago, Mora, Pago, Prestamo } from "@/lib/types";
 import { registrarPago } from "../actions";
+import { aplicarMoraDesdeFormulario } from "../moras-actions";
 
 type PrestamoConClienteDetalle = Prestamo & {
   clientes: { nombre_completo: string; telefono: string | null } | null;
@@ -24,16 +25,17 @@ export default async function DetallePrestamoPage({
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ error?: string }>;
+  searchParams: Promise<{ error?: string; exito?: string }>;
 }) {
   const { id } = await params;
-  const { error } = await searchParams;
+  const { error, exito } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: prestamo }, { data: pagos }, { data: calendario }] = await Promise.all([
+  const [{ data: prestamo }, { data: pagos }, { data: calendario }, { data: moras }] = await Promise.all([
     supabase.from("prestamos").select("*, clientes(nombre_completo, telefono)").eq("id", id).single(),
     supabase.from("pagos").select("*").eq("prestamo_id", id).order("created_at", { ascending: false }),
     supabase.from("calendario_pagos").select("*").eq("prestamo_id", id).order("numero_dia"),
+    supabase.from("moras").select("*").eq("prestamo_id", id).order("fecha_generada", { ascending: false }),
   ]);
 
   if (!prestamo) notFound();
@@ -41,6 +43,7 @@ export default async function DetallePrestamoPage({
   const p = prestamo as unknown as PrestamoConClienteDetalle;
   const listaPagos = (pagos ?? []) as Pago[];
   const listaCalendario = (calendario ?? []) as CalendarioPago[];
+  const listaMoras = (moras ?? []) as Mora[];
   const puedeRecibirPagos = p.estado === "activo" || p.estado === "en_mora";
 
   return (
@@ -65,6 +68,21 @@ export default async function DetallePrestamoPage({
         <span>Plazo: {p.plazo_dias} días</span>
         <span>Cuota sugerida: {currency(Number(p.monto_cuota_sugerida))}</span>
       </div>
+
+      {exito && (
+        <p className="text-sm text-emerald-400 bg-emerald-950/50 border border-emerald-900 rounded-md px-3 py-2">
+          {exito}
+        </p>
+      )}
+
+      {puedeRecibirPagos && (
+        <form action={aplicarMoraDesdeFormulario}>
+          <input type="hidden" name="prestamo_id" value={p.id} />
+          <button className="text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md px-4 py-2">
+            Aplicar mora de hoy
+          </button>
+        </form>
+      )}
 
       {puedeRecibirPagos ? (
         <form
@@ -155,6 +173,36 @@ export default async function DetallePrestamoPage({
                       <td className="px-3 py-2 text-slate-300">
                         {pago.saldo_posterior !== null ? currency(Number(pago.saldo_posterior)) : "—"}
                       </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+
+        <div>
+          <h2 className="font-semibold mb-2">Historial de moras</h2>
+          {listaMoras.length === 0 ? (
+            <p className="text-slate-500 text-sm">Sin moras aplicadas.</p>
+          ) : (
+            <div className="border border-slate-800 rounded-xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-slate-900 text-slate-400 text-left">
+                  <tr>
+                    <th className="px-3 py-2">Fecha</th>
+                    <th className="px-3 py-2">Día atraso</th>
+                    <th className="px-3 py-2">Monto</th>
+                    <th className="px-3 py-2">Saldo después</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {listaMoras.map((mora) => (
+                    <tr key={mora.id} className="border-t border-slate-800">
+                      <td className="px-3 py-2 text-slate-300">{mora.fecha_generada}</td>
+                      <td className="px-3 py-2 text-slate-300">{mora.dia_atraso}</td>
+                      <td className="px-3 py-2 text-amber-400">{currency(Number(mora.monto_mora))}</td>
+                      <td className="px-3 py-2 text-slate-300">{currency(Number(mora.saldo_posterior))}</td>
                     </tr>
                   ))}
                 </tbody>
