@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdministrador } from "@/lib/auth/roles";
 import { generarPagarePDF } from "@/lib/pdf/pagare";
+import { obtenerFechaLimitePorPrestamo } from "@/lib/supabase/calendario";
 
 type PrestamoParaPagare = {
   id: string;
@@ -36,8 +37,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const p = prestamo as unknown as PrestamoParaPagare;
 
   const fechaInicio = new Date(`${p.fecha_inicio}T00:00:00Z`);
-  const fechaFin = new Date(fechaInicio);
-  fechaFin.setUTCDate(fechaFin.getUTCDate() + p.plazo_dias);
+  // La fecha límite real es la última fecha programada de su calendario de
+  // cobro (que salta fines de semana según la regla) — no simplemente
+  // fecha_inicio + plazo_dias corridos.
+  const fechaLimitePorPrestamo = await obtenerFechaLimitePorPrestamo(supabase, [p.id]);
+  const fechaFinTexto = fechaLimitePorPrestamo.get(p.id);
+  const fechaFin = fechaFinTexto ? new Date(`${fechaFinTexto}T00:00:00Z`) : fechaInicio;
 
   const bytes = await generarPagarePDF({
     folio: p.id.slice(0, 8).toUpperCase(),

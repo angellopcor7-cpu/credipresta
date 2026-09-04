@@ -1,5 +1,7 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
+import { formatoFechaCorta } from "@/lib/format";
+import { obtenerFechaLimitePorPrestamo } from "@/lib/supabase/calendario";
 import type { PrestamoConCliente } from "@/lib/types";
 
 function currency(n: number) {
@@ -28,6 +30,10 @@ export default async function PrestamosPage() {
     .order("created_at", { ascending: false });
 
   const prestamos = (data ?? []) as unknown as PrestamoConCliente[];
+  const fechaLimitePorPrestamo = await obtenerFechaLimitePorPrestamo(
+    supabase,
+    prestamos.map((p) => p.id)
+  );
 
   return (
     <div className="space-y-6">
@@ -52,6 +58,8 @@ export default async function PrestamosPage() {
                 <th className="px-4 py-3">Prestado</th>
                 <th className="px-4 py-3">Total</th>
                 <th className="px-4 py-3">Saldo</th>
+                <th className="px-4 py-3">Inicio</th>
+                <th className="px-4 py-3">Vence</th>
                 <th className="px-4 py-3">Estado</th>
               </tr>
             </thead>
@@ -66,6 +74,10 @@ export default async function PrestamosPage() {
                   <td className="px-4 py-3 text-slate-300">{currency(Number(p.monto_prestado))}</td>
                   <td className="px-4 py-3 text-slate-300">{currency(Number(p.monto_total))}</td>
                   <td className="px-4 py-3 font-medium">{currency(Number(p.saldo_actual))}</td>
+                  <td className="px-4 py-3 text-slate-400">{formatoFechaCorta(p.fecha_inicio)}</td>
+                  <td className="px-4 py-3 text-slate-400">
+                    {formatoFechaCorta(fechaLimitePorPrestamo.get(p.id))}
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`text-xs border rounded-full px-2 py-1 ${estadoColor[p.estado]}`}>
                       {estadoLabel[p.estado]}

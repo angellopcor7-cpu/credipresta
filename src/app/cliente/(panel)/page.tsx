@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { exigirCliente } from "@/lib/auth/roles";
+import { formatoFechaCorta } from "@/lib/format";
+import { obtenerFechaLimitePorPrestamo } from "@/lib/supabase/calendario";
 import type { Prestamo, SolicitudPrestamo } from "@/lib/types";
 
 function currency(n: number) {
@@ -51,6 +53,10 @@ export default async function ClientePage({
   const listaPrestamos = (prestamos ?? []) as Prestamo[];
   const listaSolicitudes = (solicitudes ?? []) as SolicitudPrestamo[];
   const tieneSolicitudPendiente = listaSolicitudes.some((s) => s.estado === "pendiente");
+  const fechaLimitePorPrestamo = await obtenerFechaLimitePorPrestamo(
+    supabase,
+    listaPrestamos.map((p) => p.id)
+  );
 
   return (
     <div className="space-y-8">
@@ -117,6 +123,8 @@ export default async function ClientePage({
                   <th className="px-3 py-2">Total a pagar</th>
                   <th className="px-3 py-2">Saldo actual</th>
                   <th className="px-3 py-2">Pago diario</th>
+                  <th className="px-3 py-2">Inicio</th>
+                  <th className="px-3 py-2">Fecha límite</th>
                 </tr>
               </thead>
               <tbody>
@@ -126,6 +134,10 @@ export default async function ClientePage({
                     <td className="px-3 py-2">{currency(Number(p.monto_total))}</td>
                     <td className="px-3 py-2 text-emerald-400">{currency(Number(p.saldo_actual))}</td>
                     <td className="px-3 py-2 text-slate-300">{currency(Number(p.monto_cuota_sugerida))}</td>
+                    <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(p.fecha_inicio)}</td>
+                    <td className="px-3 py-2 text-slate-400">
+                      {formatoFechaCorta(fechaLimitePorPrestamo.get(p.id))}
+                    </td>
                   </tr>
                 ))}
               </tbody>

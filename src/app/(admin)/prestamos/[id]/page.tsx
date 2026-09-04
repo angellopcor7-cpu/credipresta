@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
+import { formatoFechaCorta } from "@/lib/format";
 import type { CalendarioPago, Mora, Pago, Prestamo } from "@/lib/types";
 import { registrarPago } from "../actions";
 import { aplicarMoraDesdeFormulario } from "../moras-actions";
@@ -75,10 +76,12 @@ export default async function DetallePrestamoPage({
         <Resumen label="Saldo actual" value={currency(Number(p.saldo_actual))} destacado />
       </div>
 
-      <div className="flex items-center gap-3 text-sm text-slate-400">
+      <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
         <span className="border border-slate-700 rounded-full px-2 py-1">{estadoLabel[p.estado]}</span>
         <span>Plazo: {p.plazo_dias} días</span>
         <span>Cuota sugerida: {currency(Number(p.monto_cuota_sugerida))}</span>
+        <span>Inicio: {formatoFechaCorta(p.fecha_inicio)}</span>
+        <span>Fecha límite: {formatoFechaCorta(listaCalendario.at(-1)?.fecha_programada)}</span>
       </div>
 
       {exito && (
