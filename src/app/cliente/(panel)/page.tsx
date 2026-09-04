@@ -2,10 +2,17 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { exigirCliente } from "@/lib/auth/roles";
 import { formatoFechaCorta } from "@/lib/format";
-import { obtenerFechaLimitePorPrestamo } from "@/lib/supabase/calendario";
+import { obtenerCalendarioPorPrestamo } from "@/lib/supabase/calendario";
 import { obtenerConfiguraciones } from "@/lib/config";
 import { InfoDiasCobro } from "@/components/InfoDiasCobro";
 import type { Prestamo, SolicitudPrestamo } from "@/lib/types";
+
+const estadoDiaLabel: Record<string, { texto: string; clase: string }> = {
+  pendiente: { texto: "Pendiente", clase: "bg-amber-950 text-amber-400 border-amber-900" },
+  parcial: { texto: "Parcial", clase: "bg-sky-950 text-sky-400 border-sky-900" },
+  pagado: { texto: "Pagado", clase: "bg-emerald-950 text-emerald-400 border-emerald-900" },
+  no_aplica: { texto: "No aplica", clase: "bg-slate-800 text-slate-400 border-slate-700" },
+};
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -55,7 +62,7 @@ export default async function ClientePage({
   const listaPrestamos = (prestamos ?? []) as Prestamo[];
   const listaSolicitudes = (solicitudes ?? []) as SolicitudPrestamo[];
   const tieneSolicitudPendiente = listaSolicitudes.some((s) => s.estado === "pendiente");
-  const fechaLimitePorPrestamo = await obtenerFechaLimitePorPrestamo(
+  const calendarioPorPrestamo = await obtenerCalendarioPorPrestamo(
     supabase,
     listaPrestamos.map((p) => p.id)
   );
@@ -125,33 +132,81 @@ export default async function ClientePage({
         {listaPrestamos.length === 0 ? (
           <p className="text-slate-500 text-sm">Todavía no tienes ningún préstamo activo.</p>
         ) : (
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
-                <tr>
-                  <th className="px-3 py-2">Estado</th>
-                  <th className="px-3 py-2">Total a pagar</th>
-                  <th className="px-3 py-2">Saldo actual</th>
-                  <th className="px-3 py-2">Pago diario</th>
-                  <th className="px-3 py-2">Inicio</th>
-                  <th className="px-3 py-2">Fecha límite</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listaPrestamos.map((p) => (
-                  <tr key={p.id} className="border-t border-slate-800">
-                    <td className="px-3 py-2 text-slate-300">{estadoPrestamoLabel[p.estado] ?? p.estado}</td>
-                    <td className="px-3 py-2">{currency(Number(p.monto_total))}</td>
-                    <td className="px-3 py-2 text-emerald-400">{currency(Number(p.saldo_actual))}</td>
-                    <td className="px-3 py-2 text-slate-300">{currency(Number(p.monto_cuota_sugerida))}</td>
-                    <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(p.fecha_inicio)}</td>
-                    <td className="px-3 py-2 text-slate-400">
-                      {formatoFechaCorta(fechaLimitePorPrestamo.get(p.id))}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="space-y-3">
+            {listaPrestamos.map((p) => {
+              const diasCalendario = calendarioPorPrestamo.get(p.id) ?? [];
+              const fechaLimite = diasCalendario.at(-1)?.fecha_programada;
+              return (
+                <div key={p.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <span className="text-xs border border-slate-700 rounded-full px-2 py-1 text-slate-300">
+                      {estadoPrestamoLabel[p.estado] ?? p.estado}
+                    </span>
+                    <p className="text-emerald-400 font-semibold">{currency(Number(p.saldo_actual))} de saldo</p>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-sm">
+                    <div>
+                      <p className="text-slate-500 text-xs">Total a pagar</p>
+                      <p className="font-medium">{currency(Number(p.monto_total))}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-xs">Pago diario</p>
+                      <p className="font-medium">{currency(Number(p.monto_cuota_sugerida))}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-xs">Inicio</p>
+                      <p className="font-medium">{formatoFechaCorta(p.fecha_inicio)}</p>
+                    </div>
+                    <div>
+                      <p className="text-slate-500 text-xs">Fecha límite</p>
+                      <p className="font-medium">{formatoFechaCorta(fechaLimite)}</p>
+                    </div>
+                  </div>
+
+                  {diasCalendario.length > 0 && (
+                    <details className="text-sm">
+                      <summary className="cursor-pointer text-emerald-400 hover:text-emerald-300 font-medium">
+                        Ver mis días de pago (recomendado)
+                      </summary>
+                      <div className="mt-3 border border-slate-800 rounded-lg overflow-hidden max-h-72 overflow-y-auto">
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-950 text-slate-400 text-left sticky top-0">
+                            <tr>
+                              <th className="px-3 py-2">Día</th>
+                              <th className="px-3 py-2">Fecha</th>
+                              <th className="px-3 py-2">Pago mínimo sugerido</th>
+                              <th className="px-3 py-2">Estado</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {diasCalendario.map((d) => {
+                              const estadoDia = estadoDiaLabel[d.estado] ?? estadoDiaLabel.pendiente;
+                              return (
+                                <tr key={d.id} className="border-t border-slate-800">
+                                  <td className="px-3 py-2 text-slate-300">{d.numero_dia}</td>
+                                  <td className="px-3 py-2 text-slate-300">{formatoFechaCorta(d.fecha_programada)}</td>
+                                  <td className="px-3 py-2">{currency(Number(d.monto_esperado))}</td>
+                                  <td className="px-3 py-2">
+                                    <span className={`text-xs border rounded-full px-2 py-1 ${estadoDia.clase}`}>
+                                      {estadoDia.texto}
+                                    </span>
+                                  </td>
+                                </tr>
+                              );
+                            })}
+                          </tbody>
+                        </table>
+                      </div>
+                      <p className="mt-2 text-xs text-slate-500">
+                        Estos montos son una recomendación de cuánto pagar cada día para terminar a tiempo — puedes
+                        abonar más o menos, lo importante es el saldo total.
+                      </p>
+                    </details>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
