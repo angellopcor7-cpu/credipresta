@@ -14,6 +14,7 @@ type PrestamoParaPagare = {
   fecha_inicio: string;
   clientes: { nombre_completo: string } | null;
   cobradores: { usuarios: { nombre_completo: string } | null } | null;
+  usuarios: { nombre_completo: string } | null;
 };
 
 /** Genera (al vuelo, sin guardar nada) el PDF del pagaré de un préstamo con sus datos ya llenados. */
@@ -25,7 +26,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const { data: prestamo } = await supabase
     .from("prestamos")
     .select(
-      "id, monto_prestado, porcentaje_interes, monto_total, monto_cuota_sugerida, plazo_dias, fecha_inicio, clientes(nombre_completo), cobradores(usuarios(nombre_completo))"
+      "id, monto_prestado, porcentaje_interes, monto_total, monto_cuota_sugerida, plazo_dias, fecha_inicio, clientes(nombre_completo), cobradores(usuarios(nombre_completo)), usuarios!prestamos_creado_por_fkey(nombre_completo)"
     )
     .eq("id", id)
     .single();
@@ -63,7 +64,11 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     fechaInicio,
     fechaFin,
     fechaFirma: fechaInicio,
-    nombreCobrador: p.cobradores?.usuarios?.nombre_completo ?? "Administración de CrediPresta",
+    // El "cobrador" del pagaré es quien aprobó/creó el préstamo (admin=cobrador
+    // en este negocio); si algún día se asigna un cobrador real al préstamo,
+    // ese nombre tiene prioridad.
+    nombreCobrador:
+      p.cobradores?.usuarios?.nombre_completo ?? p.usuarios?.nombre_completo ?? "Administración de CrediPresta",
     firmaClienteDataUrl: solicitud?.firma_cliente_data_url ?? null,
   });
 

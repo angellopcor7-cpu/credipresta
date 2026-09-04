@@ -10,6 +10,7 @@ import { aplicarMoraDesdeFormulario } from "../moras-actions";
 
 type PrestamoConClienteDetalle = Prestamo & {
   clientes: { nombre_completo: string; telefono: string | null } | null;
+  usuarios: { nombre_completo: string } | null;
 };
 
 function currency(n: number) {
@@ -35,7 +36,11 @@ export default async function DetallePrestamoPage({
   const supabase = await createClient();
 
   const [{ data: prestamo }, { data: pagos }, { data: calendario }, { data: moras }, config] = await Promise.all([
-    supabase.from("prestamos").select("*, clientes(nombre_completo, telefono)").eq("id", id).single(),
+    supabase
+      .from("prestamos")
+      .select("*, clientes(nombre_completo, telefono), usuarios!prestamos_creado_por_fkey(nombre_completo)")
+      .eq("id", id)
+      .single(),
     supabase.from("pagos").select("*").eq("prestamo_id", id).order("created_at", { ascending: false }),
     supabase.from("calendario_pagos").select("*").eq("prestamo_id", id).order("numero_dia"),
     supabase.from("moras").select("*").eq("prestamo_id", id).order("fecha_generada", { ascending: false }),
@@ -85,6 +90,7 @@ export default async function DetallePrestamoPage({
         <span>Cuota sugerida: {currency(Number(p.monto_cuota_sugerida))}</span>
         <span>Inicio: {formatoFechaCorta(p.fecha_inicio)}</span>
         <span>Fecha límite: {formatoFechaCorta(listaCalendario.at(-1)?.fecha_programada)}</span>
+        <span>Cobrador (pagaré): {p.usuarios?.nombre_completo ?? "Administración de CrediPresta"}</span>
       </div>
 
       {exito && (

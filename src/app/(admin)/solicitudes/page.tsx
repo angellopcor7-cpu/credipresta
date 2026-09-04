@@ -3,6 +3,10 @@ import type { SolicitudConCliente, TipoDocumento } from "@/lib/types";
 import { rechazarSolicitud } from "./actions";
 import { SolicitudAprobarForm } from "./SolicitudAprobarForm";
 
+type SolicitudRevisada = SolicitudConCliente & {
+  usuarios: { nombre_completo: string } | null;
+};
+
 const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
   ine_frente: "INE frente",
   ine_reverso: "INE reverso",
@@ -65,14 +69,14 @@ export default async function SolicitudesPage({
       .order("fecha_solicitud", { ascending: true }),
     supabase
       .from("solicitudes_prestamo")
-      .select("*, clientes(nombre_completo, telefono)")
+      .select("*, clientes(nombre_completo, telefono), usuarios(nombre_completo)")
       .in("estado", ["aprobada", "rechazada"])
       .order("fecha_revision", { ascending: false })
       .limit(20),
   ]);
 
   const listaPendientes = (pendientes ?? []) as unknown as SolicitudConCliente[];
-  const listaRevisadas = (revisadas ?? []) as unknown as SolicitudConCliente[];
+  const listaRevisadas = (revisadas ?? []) as unknown as SolicitudRevisada[];
   const documentosPorCliente = await obtenerDocumentosPorCliente(
     supabase,
     listaPendientes.map((s) => s.cliente_id)
@@ -165,6 +169,7 @@ export default async function SolicitudesPage({
                   <th className="px-3 py-2">Cliente</th>
                   <th className="px-3 py-2">Monto</th>
                   <th className="px-3 py-2">Estado</th>
+                  <th className="px-3 py-2">Aprobó / rechazó</th>
                 </tr>
               </thead>
               <tbody>
@@ -183,6 +188,7 @@ export default async function SolicitudesPage({
                         {s.estado === "aprobada" ? "Aprobada" : "Rechazada"}
                       </span>
                     </td>
+                    <td className="px-3 py-2 text-slate-400">{s.usuarios?.nombre_completo ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>
