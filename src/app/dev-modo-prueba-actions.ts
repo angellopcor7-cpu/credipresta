@@ -26,6 +26,7 @@ export async function entrarComoClienteDePrueba() {
   await entrarComoPrueba("prueba.cliente@credipresta.test", "/cliente");
 }
 
-export async function entrarComoCobradorDePrueba() {
-  await entrarComoPrueba("prueba.cobrador@credipresta.test", "/panel");
+/** En CrediPresta, administrador y cobrador son la misma persona: esta vista es el panel de negocio (/dashboard). */
+export async function entrarComoNegocioDePrueba() {
+  await entrarComoPrueba("prueba.admin@credipresta.test", "/dashboard");
 }

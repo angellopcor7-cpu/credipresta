@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { entrarComoClienteDePrueba, entrarComoCobradorDePrueba } from "./dev-modo-prueba-actions";
+import { entrarComoClienteDePrueba, entrarComoNegocioDePrueba } from "./dev-modo-prueba-actions";
 
 /**
  * Widget flotante solo para pruebas: deja saltar rápido a la vista de
@@ -9,7 +9,7 @@ import { entrarComoClienteDePrueba, entrarComoCobradorDePrueba } from "./dev-mod
  * quitarse antes de entregar la app final al cliente.
  */
 export default function DevModoPrueba() {
-  const [cargando, setCargando] = useState<"cliente" | "cobrador" | null>(null);
+  const [cargando, setCargando] = useState<"cliente" | "negocio" | null>(null);
 
   return (
     <div className="fixed bottom-4 right-4 z-50 bg-amber-500 text-slate-950 rounded-xl shadow-lg p-3 text-sm">
@@ -31,8 +31,8 @@ export default function DevModoPrueba() {
         </form>
         <form
           action={async () => {
-            setCargando("cobrador");
-            await entrarComoCobradorDePrueba();
+            setCargando("negocio");
+            await entrarComoNegocioDePrueba();
           }}
         >
           <button
@@ -40,7 +40,7 @@ export default function DevModoPrueba() {
             disabled={cargando !== null}
             className="w-full bg-slate-950 text-white font-semibold px-3 py-1.5 rounded-md hover:bg-slate-800 disabled:opacity-50"
           >
-            {cargando === "cobrador" ? "Entrando..." : "Ver como Cobrador"}
+            {cargando === "negocio" ? "Entrando..." : "Ver como Negocio"}
           </button>
         </form>
       </div>
