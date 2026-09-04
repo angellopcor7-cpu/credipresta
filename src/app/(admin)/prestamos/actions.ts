@@ -9,19 +9,19 @@ import {
   calcularInteres,
   calcularMontoTotal,
   calcularCuotaSugerida,
-  calcularPorcentajeInteresPorPlazo,
+  calcularPorcentajeInteresTotal,
   calcularSaldo,
   validarMontoPago,
   generarCalendarioPagos,
-  PLAZOS_VALIDOS,
 } from "@/lib/finance/calculos";
 
 /**
- * Crea un préstamo nuevo: calcula automáticamente el interés (20% por
- * defecto, tomado de `configuraciones`), el total a pagar y la cuota
- * sugerida, y genera el calendario completo de días de cobro según la
- * regla vigente (que depende del monto del préstamo). Nada de esto se le
- * pide al usuario a mano.
+ * Crea un préstamo nuevo: el administrador da el plazo (cualquier número de
+ * días) y el interés diario (por defecto 1%); el interés total, el total a
+ * pagar y la cuota sugerida se calculan solos (interés total = diario ×
+ * plazo), igual que el calendario completo de días de cobro según la regla
+ * vigente (que depende del monto del préstamo). Nada de esto se le pide al
+ * usuario a mano dos veces.
  */
 export async function crearPrestamo(formData: FormData) {
   const sesion = await exigirAdministrador();
@@ -31,6 +31,7 @@ export async function crearPrestamo(formData: FormData) {
   const clienteId = String(formData.get("cliente_id") || "");
   const montoPrestado = Number(formData.get("monto_prestado"));
   const plazoDias = Number(formData.get("plazo_dias") || "");
+  const porcentajeInteresDiario = Number(formData.get("porcentaje_interes_diario") || "");
   const cobradorId = String(formData.get("cobrador_id") || "") || null;
 
   if (!clienteId) {
@@ -39,15 +40,15 @@ export async function crearPrestamo(formData: FormData) {
   if (!montoPrestado || montoPrestado <= 0) {
     redirect(`/prestamos/nuevo?error=${encodeURIComponent("El monto prestado debe ser mayor a 0")}`);
   }
-  if (!PLAZOS_VALIDOS.includes(plazoDias as (typeof PLAZOS_VALIDOS)[number])) {
-    redirect(
-      `/prestamos/nuevo?error=${encodeURIComponent(`El plazo debe ser de ${PLAZOS_VALIDOS.join(" o ")} días`)}`
-    );
+  if (!plazoDias || plazoDias <= 0) {
+    redirect(`/prestamos/nuevo?error=${encodeURIComponent("El plazo en días debe ser mayor a 0")}`);
+  }
+  if (!porcentajeInteresDiario || porcentajeInteresDiario <= 0) {
+    redirect(`/prestamos/nuevo?error=${encodeURIComponent("El interés diario debe ser mayor a 0")}`);
   }
 
-  // El interés lo determina el plazo (20 días -> 20%, 30 días -> 30%), no se
-  // captura aparte — así lo pidió el negocio.
-  const porcentaje = calcularPorcentajeInteresPorPlazo(plazoDias);
+  // Interés total = interés diario × plazo (ej. 1% diario × 20 días = 20%).
+  const porcentaje = calcularPorcentajeInteresTotal(porcentajeInteresDiario, plazoDias);
   const montoInteres = calcularInteres(montoPrestado, porcentaje);
   const montoTotal = calcularMontoTotal(montoPrestado, porcentaje);
   const montoCuota = calcularCuotaSugerida(montoTotal, plazoDias);

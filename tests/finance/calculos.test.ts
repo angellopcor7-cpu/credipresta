@@ -4,7 +4,7 @@ import {
   calcularMontoTotal,
   calcularSaldo,
   calcularCuotaSugerida,
-  calcularPorcentajeInteresPorPlazo,
+  calcularPorcentajeInteresTotal,
   calcularMontoMora,
   calcularSaldoConMora,
   tieneCuotaVencidaSinPagar,
@@ -70,30 +70,31 @@ describe("cuota sugerida", () => {
   });
 });
 
-describe("interés según el plazo (ejemplo exacto del negocio)", () => {
-  it("un préstamo a 20 días es 20% de interés", () => {
-    expect(calcularPorcentajeInteresPorPlazo(20)).toBe(20);
+describe("interés diario × plazo (ejemplo exacto del negocio)", () => {
+  it("1% diario a 20 días da 20% de interés total", () => {
+    expect(calcularPorcentajeInteresTotal(1, 20)).toBe(20);
   });
 
-  it("un préstamo a 30 días es 30% de interés", () => {
-    expect(calcularPorcentajeInteresPorPlazo(30)).toBe(30);
+  it("1% diario a 30 días da 30% de interés total", () => {
+    expect(calcularPorcentajeInteresTotal(1, 30)).toBe(30);
   });
 
-  it("préstamo de $5,000 a 20 días: total $6,000, pago diario $300", () => {
-    const porcentaje = calcularPorcentajeInteresPorPlazo(20);
+  it("préstamo de $5,000 a 20 días con 1% diario: total $6,000, pago diario $300", () => {
+    const porcentaje = calcularPorcentajeInteresTotal(1, 20);
     const total = calcularMontoTotal(5000, porcentaje);
     expect(total).toBe(6000);
     expect(calcularCuotaSugerida(total, 20)).toBe(300);
   });
 
-  it("préstamo de $5,000 a 30 días: total $6,500", () => {
-    const porcentaje = calcularPorcentajeInteresPorPlazo(30);
-    expect(calcularMontoTotal(5000, porcentaje)).toBe(6500);
+  it("funciona con cualquier plazo, no solo 20 o 30 días", () => {
+    expect(calcularPorcentajeInteresTotal(1, 45)).toBe(45);
+    expect(calcularPorcentajeInteresTotal(0.8, 25)).toBe(20);
   });
 
-  it("rechaza cualquier plazo que no sea 20 o 30 días", () => {
-    expect(() => calcularPorcentajeInteresPorPlazo(24)).toThrow();
-    expect(() => calcularPorcentajeInteresPorPlazo(15)).toThrow();
+  it("rechaza interés diario o plazo en 0 o negativos", () => {
+    expect(() => calcularPorcentajeInteresTotal(0, 20)).toThrow();
+    expect(() => calcularPorcentajeInteresTotal(1, 0)).toThrow();
+    expect(() => calcularPorcentajeInteresTotal(-1, 20)).toThrow();
   });
 });
 

@@ -1,6 +1,8 @@
 import { createClient } from "@/lib/supabase/server";
 import { crearPrestamo } from "../actions";
-import { calcularMontoTotal, calcularPorcentajeInteresPorPlazo, PLAZOS_VALIDOS } from "@/lib/finance/calculos";
+import { calcularMontoTotal, calcularPorcentajeInteresTotal } from "@/lib/finance/calculos";
+
+const INTERES_DIARIO_POR_DEFECTO = 1;
 
 export default async function NuevoPrestamoPage({
   searchParams,
@@ -81,29 +83,42 @@ export default async function NuevoPrestamoPage({
           </div>
           <div className="space-y-1">
             <label className="text-sm text-slate-300" htmlFor="plazo_dias">
-              Plazo
+              Plazo (días)
             </label>
-            <select
+            <input
               id="plazo_dias"
               name="plazo_dias"
+              type="number"
+              min="1"
+              step="1"
+              defaultValue={20}
               required
-              defaultValue={PLAZOS_VALIDOS[0]}
               className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {PLAZOS_VALIDOS.map((dias) => (
-                <option key={dias} value={dias}>
-                  {dias} días ({calcularPorcentajeInteresPorPlazo(dias)}% de interés)
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </div>
 
+        <div className="space-y-1">
+          <label className="text-sm text-slate-300" htmlFor="porcentaje_interes_diario">
+            Interés diario (%)
+          </label>
+          <input
+            id="porcentaje_interes_diario"
+            name="porcentaje_interes_diario"
+            type="number"
+            min="0.01"
+            step="0.01"
+            defaultValue={INTERES_DIARIO_POR_DEFECTO}
+            required
+            className="w-full max-w-[10rem] rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        </div>
+
         <p className="text-xs text-slate-500">
-          El interés depende del plazo: a 20 días es 20%, a 30 días es 30%. Por ejemplo, $5,000 a 20 días da un
-          total a pagar de{" "}
+          El interés total = interés diario × plazo. Por ejemplo, con {INTERES_DIARIO_POR_DEFECTO}% diario, $5,000
+          a 20 días da un total a pagar de{" "}
           {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(
-            calcularMontoTotal(5000, calcularPorcentajeInteresPorPlazo(20))
+            calcularMontoTotal(5000, calcularPorcentajeInteresTotal(INTERES_DIARIO_POR_DEFECTO, 20))
           )}{" "}
           (pago diario $300). El total, el interés y el calendario de pagos se calculan automáticamente al
           guardar.
