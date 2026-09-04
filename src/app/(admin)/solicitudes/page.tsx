@@ -1,8 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import type { SolicitudConCliente, TipoDocumento } from "@/lib/types";
-import { aprobarSolicitud, rechazarSolicitud } from "./actions";
-
-const INTERES_DIARIO_POR_DEFECTO = 1;
+import { rechazarSolicitud } from "./actions";
+import { SolicitudAprobarForm } from "./SolicitudAprobarForm";
 
 const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
   ine_frente: "INE frente",
@@ -122,26 +121,12 @@ export default async function SolicitudesPage({
                   )}
                 </div>
 
-                <div className="flex flex-wrap items-center gap-3">
-                  <form action={aprobarSolicitud} className="flex items-center gap-2">
-                    <input type="hidden" name="solicitud_id" value={s.id} />
-                    <label className="text-xs text-slate-400" htmlFor={`interes-${s.id}`}>
-                      Interés diario (%)
-                    </label>
-                    <input
-                      id={`interes-${s.id}`}
-                      name="porcentaje_interes_diario"
-                      type="number"
-                      min="0.01"
-                      step="0.01"
-                      defaultValue={INTERES_DIARIO_POR_DEFECTO}
-                      required
-                      className="w-20 rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-                    />
-                    <button className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
-                      Aprobar
-                    </button>
-                  </form>
+                <div className="flex flex-wrap items-start gap-4">
+                  <SolicitudAprobarForm
+                    solicitudId={s.id}
+                    montoSolicitado={Number(s.monto_solicitado)}
+                    plazoDias={s.plazo_dias}
+                  />
 
                   <form action={rechazarSolicitud} className="flex items-center gap-2">
                     <input type="hidden" name="solicitud_id" value={s.id} />
