@@ -52,8 +52,20 @@ export default async function DetallePrestamoPage({
         <Link href="/prestamos" className="text-sm text-slate-400 hover:text-white">
           ← Préstamos
         </Link>
-        <h1 className="text-2xl font-bold mt-1">{p.clientes?.nombre_completo ?? "—"}</h1>
-        <p className="text-slate-400 text-sm">{p.clientes?.telefono ?? "Sin teléfono"}</p>
+        <div className="flex items-center justify-between gap-3 mt-1">
+          <div>
+            <h1 className="text-2xl font-bold">{p.clientes?.nombre_completo ?? "—"}</h1>
+            <p className="text-slate-400 text-sm">{p.clientes?.telefono ?? "Sin teléfono"}</p>
+          </div>
+          <a
+            href={`/prestamos/${p.id}/pagare`}
+            target="_blank"
+            rel="noreferrer"
+            className="shrink-0 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium rounded-md px-4 py-2"
+          >
+            Descargar pagaré (PDF)
+          </a>
+        </div>
       </div>
 
       <div className="grid sm:grid-cols-4 gap-4">
