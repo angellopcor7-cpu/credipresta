@@ -91,7 +91,17 @@ export default async function DetallePrestamoPage({
         <span>Inicio: {formatoFechaCorta(p.fecha_inicio)}</span>
         <span>Fecha límite: {formatoFechaCorta(listaCalendario.at(-1)?.fecha_programada)}</span>
         <span>Cobrador (pagaré): {p.usuarios?.nombre_completo ?? "Administración de CrediPresta"}</span>
+        <span>
+          Pago: {p.metodo_pago === "efectivo" ? "Efectivo" : p.metodo_pago === "transferencia" ? "Transferencia" : "Efectivo o transferencia"}
+        </span>
       </div>
+
+      {p.datos_transferencia && (
+        <div className="bg-slate-900 border border-slate-800 rounded-lg p-3 text-sm text-slate-300">
+          <p className="text-slate-500 text-xs mb-1">Datos de transferencia compartidos con el cliente</p>
+          <p className="whitespace-pre-line">{p.datos_transferencia}</p>
+        </div>
+      )}
 
       {exito && (
         <p className="text-sm text-emerald-400 bg-emerald-950/50 border border-emerald-900 rounded-md px-3 py-2">

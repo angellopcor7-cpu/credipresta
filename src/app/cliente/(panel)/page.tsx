@@ -5,7 +5,13 @@ import { formatoFechaCorta } from "@/lib/format";
 import { obtenerCalendarioPorPrestamo } from "@/lib/supabase/calendario";
 import { obtenerConfiguraciones } from "@/lib/config";
 import { InfoDiasCobro } from "@/components/InfoDiasCobro";
-import type { Prestamo, SolicitudPrestamo } from "@/lib/types";
+import type { MetodoPago, Prestamo, SolicitudPrestamo } from "@/lib/types";
+
+const ETIQUETAS_METODO_PAGO: Record<MetodoPago, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  ambos: "Efectivo o transferencia",
+};
 
 const estadoDiaLabel: Record<string, { texto: string; clase: string }> = {
   pendiente: { texto: "Pendiente", clase: "bg-amber-950 text-amber-400 border-amber-900" },
@@ -113,7 +119,8 @@ export default async function ClientePage({
                       {currency(Number(s.monto_solicitado))} a {s.plazo_dias} días
                     </p>
                     <p className="text-slate-500 text-xs">
-                      Pedido el {new Date(s.fecha_solicitud).toLocaleDateString("es-MX")}
+                      Pedido el {new Date(s.fecha_solicitud).toLocaleDateString("es-MX")} · Pago:{" "}
+                      {ETIQUETAS_METODO_PAGO[s.metodo_pago]}
                     </p>
                   </div>
                   <div className="flex items-center gap-2">
@@ -177,6 +184,16 @@ export default async function ClientePage({
                       <p className="font-medium">{formatoFechaCorta(fechaLimite)}</p>
                     </div>
                   </div>
+
+                  <p className="text-xs text-slate-400">
+                    Método de pago: <span className="text-slate-200">{ETIQUETAS_METODO_PAGO[p.metodo_pago]}</span>
+                  </p>
+                  {p.datos_transferencia && (
+                    <div className="bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm">
+                      <p className="text-slate-500 text-xs mb-1">Datos para tu transferencia</p>
+                      <p className="text-slate-200 whitespace-pre-line">{p.datos_transferencia}</p>
+                    </div>
+                  )}
 
                   {diasCalendario.length > 0 && (
                     <details className="text-sm">

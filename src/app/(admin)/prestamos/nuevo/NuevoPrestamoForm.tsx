@@ -26,6 +26,9 @@ export function NuevoPrestamoForm({
   const [monto, setMonto] = useState("");
   const [plazo, setPlazo] = useState(String(PLAZO_POR_DEFECTO));
   const [interesDiario, setInteresDiario] = useState(String(INTERES_DIARIO_POR_DEFECTO));
+  const [metodoPago, setMetodoPago] = useState<"efectivo" | "transferencia" | "ambos">("efectivo");
+  const [datosTransferencia, setDatosTransferencia] = useState("");
+  const requiereDatosTransferencia = metodoPago === "transferencia" || metodoPago === "ambos";
 
   // Cálculo en vivo con lo que el usuario va escribiendo — las mismas
   // funciones puras que usa el servidor, para que la vista previa sea
@@ -140,6 +143,44 @@ export function NuevoPrestamoForm({
           onChange={(e) => setInteresDiario(e.target.value)}
           className="w-full max-w-[10rem] rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
+      </div>
+
+      <div className="space-y-2">
+        <p className="text-sm text-slate-300">Método de pago</p>
+        <div className="grid grid-cols-3 gap-2">
+          {(
+            [
+              { value: "efectivo", label: "Efectivo" },
+              { value: "transferencia", label: "Transferencia" },
+              { value: "ambos", label: "Ambos" },
+            ] as const
+          ).map((opcion) => (
+            <label
+              key={opcion.value}
+              className="flex items-center justify-center gap-1.5 rounded-md bg-slate-800 border border-slate-700 px-2 py-2 text-xs text-slate-300 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-400 cursor-pointer"
+            >
+              <input
+                type="radio"
+                name="metodo_pago"
+                value={opcion.value}
+                checked={metodoPago === opcion.value}
+                onChange={() => setMetodoPago(opcion.value)}
+                className="accent-emerald-500"
+              />
+              {opcion.label}
+            </label>
+          ))}
+        </div>
+        {requiereDatosTransferencia && (
+          <textarea
+            name="datos_transferencia"
+            rows={2}
+            value={datosTransferencia}
+            onChange={(e) => setDatosTransferencia(e.target.value)}
+            placeholder="Datos para recibir la transferencia: banco, cuenta/CLABE, titular"
+            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          />
+        )}
       </div>
 
       {preview ? (

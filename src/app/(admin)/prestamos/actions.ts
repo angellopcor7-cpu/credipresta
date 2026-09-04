@@ -14,6 +14,9 @@ import {
   validarMontoPago,
   generarCalendarioPagos,
 } from "@/lib/finance/calculos";
+import type { MetodoPago } from "@/lib/types";
+
+const METODOS_PAGO_VALIDOS: MetodoPago[] = ["efectivo", "transferencia", "ambos"];
 
 /**
  * Crea un préstamo nuevo: el administrador da el plazo (cualquier número de
@@ -33,6 +36,19 @@ export async function crearPrestamo(formData: FormData) {
   const plazoDias = Number(formData.get("plazo_dias") || "");
   const porcentajeInteresDiario = Number(formData.get("porcentaje_interes_diario") || "");
   const cobradorId = String(formData.get("cobrador_id") || "") || null;
+  const metodoPagoCrudo = String(formData.get("metodo_pago") || "efectivo");
+  const metodoPago: MetodoPago = METODOS_PAGO_VALIDOS.includes(metodoPagoCrudo as MetodoPago)
+    ? (metodoPagoCrudo as MetodoPago)
+    : "efectivo";
+  const datosTransferencia = String(formData.get("datos_transferencia") || "").trim() || null;
+
+  if (metodoPago !== "efectivo" && !datosTransferencia) {
+    redirect(
+      `/prestamos/nuevo?error=${encodeURIComponent(
+        "Pon los datos para recibir la transferencia (banco, cuenta, titular)"
+      )}`
+    );
+  }
 
   if (!clienteId) {
     redirect(`/prestamos/nuevo?error=${encodeURIComponent("Selecciona un cliente")}`);
@@ -66,6 +82,8 @@ export async function crearPrestamo(formData: FormData) {
       plazo_dias: plazoDias,
       monto_cuota_sugerida: montoCuota,
       estado: "activo",
+      metodo_pago: metodoPago,
+      datos_transferencia: datosTransferencia,
       creado_por: sesion.id,
     })
     .select("id, fecha_inicio")

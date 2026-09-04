@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { calcularInteres, calcularMontoTotal, calcularCuotaSugerida } from "@/lib/finance/calculos";
 import { generarPagareParaFirma, aprobarSolicitud } from "./actions";
-import type { EstadoSolicitud } from "@/lib/types";
+import type { EstadoSolicitud, MetodoPago } from "@/lib/types";
 
 const INTERES_DIARIO_POR_DEFECTO = 1;
 
@@ -47,17 +47,23 @@ export function SolicitudAprobarForm({
   montoSolicitado,
   plazoDias,
   estado,
+  metodoPago,
   porcentajeInteresDiarioPropuesto,
   firmaClienteDataUrl,
+  administradores,
 }: {
   solicitudId: string;
   montoSolicitado: number;
   plazoDias: number;
   estado: EstadoSolicitud;
+  metodoPago: MetodoPago;
   porcentajeInteresDiarioPropuesto: number | null;
   firmaClienteDataUrl: string | null;
+  administradores: { id: string; nombre: string }[];
 }) {
   const [interesDiario, setInteresDiario] = useState(String(INTERES_DIARIO_POR_DEFECTO));
+  const [datosTransferencia, setDatosTransferencia] = useState("");
+  const requiereDatosTransferencia = metodoPago === "transferencia" || metodoPago === "ambos";
 
   const previewEnVivo = useMemo(() => {
     const interesDiarioNum = Number(interesDiario);
@@ -84,6 +90,7 @@ export function SolicitudAprobarForm({
   }, [porcentajeInteresDiarioPropuesto, montoSolicitado, plazoDias]);
 
   if (estado === "pendiente") {
+    const puedeGenerarPagare = !!previewEnVivo && (!requiereDatosTransferencia || datosTransferencia.trim().length > 0);
     return (
       <form action={generarPagareParaFirma} className="space-y-3">
         <input type="hidden" name="solicitud_id" value={solicitudId} />
@@ -104,7 +111,7 @@ export function SolicitudAprobarForm({
           />
           <button
             type="submit"
-            disabled={!previewEnVivo}
+            disabled={!puedeGenerarPagare}
             className="bg-slate-700 hover:bg-slate-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-semibold text-sm px-3 py-1.5 rounded-md"
           >
             Pagaré
@@ -118,6 +125,24 @@ export function SolicitudAprobarForm({
             Aprobar
           </button>
         </div>
+
+        {requiereDatosTransferencia && (
+          <div className="space-y-1 max-w-md">
+            <label className="text-xs text-slate-400" htmlFor={`transferencia-${solicitudId}`}>
+              El cliente eligió pagar por transferencia — pon aquí los datos para recibirla (banco, cuenta/CLABE,
+              titular)
+            </label>
+            <textarea
+              id={`transferencia-${solicitudId}`}
+              name="datos_transferencia"
+              rows={2}
+              value={datosTransferencia}
+              onChange={(e) => setDatosTransferencia(e.target.value)}
+              placeholder="Ej. BBVA, CLABE 012180001234567895, a nombre de Angel López"
+              className="w-full rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            />
+          </div>
+        )}
 
         {previewEnVivo ? (
           <Preview {...previewEnVivo} />
@@ -156,8 +181,23 @@ export function SolicitudAprobarForm({
         <span className="text-xs bg-emerald-950 text-emerald-400 border border-emerald-900 rounded-full px-3 py-1.5">
           El cliente ya firmó su pagaré
         </span>
-        <form action={aprobarSolicitud}>
+        <form action={aprobarSolicitud} className="flex flex-wrap items-center gap-2">
           <input type="hidden" name="solicitud_id" value={solicitudId} />
+          <select
+            name="revisado_por"
+            required
+            defaultValue=""
+            className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          >
+            <option value="" disabled>
+              ¿Quién aprueba?
+            </option>
+            {administradores.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.nombre}
+              </option>
+            ))}
+          </select>
           <button className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
             Aprobar
           </button>

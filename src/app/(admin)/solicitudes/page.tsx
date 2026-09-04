@@ -1,10 +1,16 @@
 import { createClient } from "@/lib/supabase/server";
-import type { SolicitudConCliente, TipoDocumento } from "@/lib/types";
+import type { MetodoPago, SolicitudConCliente, TipoDocumento } from "@/lib/types";
 import { rechazarSolicitud } from "./actions";
 import { SolicitudAprobarForm } from "./SolicitudAprobarForm";
 
 type SolicitudRevisada = SolicitudConCliente & {
   usuarios: { nombre_completo: string } | null;
+};
+
+const ETIQUETAS_METODO_PAGO: Record<MetodoPago, string> = {
+  efectivo: "Efectivo",
+  transferencia: "Transferencia",
+  ambos: "Efectivo o transferencia",
 };
 
 const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
@@ -61,7 +67,7 @@ export default async function SolicitudesPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: pendientes }, { data: revisadas }] = await Promise.all([
+  const [{ data: pendientes }, { data: revisadas }, { data: administradores }] = await Promise.all([
     supabase
       .from("solicitudes_prestamo")
       .select("*, clientes(nombre_completo, telefono)")
@@ -73,10 +79,19 @@ export default async function SolicitudesPage({
       .in("estado", ["aprobada", "rechazada"])
       .order("fecha_revision", { ascending: false })
       .limit(20),
+    supabase
+      .from("usuarios")
+      .select("id, nombre_completo, roles!inner(nombre)")
+      .eq("roles.nombre", "administrador")
+      .eq("activo", true)
+      .order("nombre_completo"),
   ]);
 
   const listaPendientes = (pendientes ?? []) as unknown as SolicitudConCliente[];
   const listaRevisadas = (revisadas ?? []) as unknown as SolicitudRevisada[];
+  const listaAdministradores = ((administradores ?? []) as unknown as { id: string; nombre_completo: string }[]).map(
+    (u) => ({ id: u.id, nombre: u.nombre_completo })
+  );
   const documentosPorCliente = await obtenerDocumentosPorCliente(
     supabase,
     listaPendientes.map((s) => s.cliente_id)
@@ -103,9 +118,12 @@ export default async function SolicitudesPage({
                     <p className="font-medium">{s.clientes?.nombre_completo ?? "—"}</p>
                     <p className="text-slate-500 text-xs">{s.clientes?.telefono ?? "Sin teléfono"}</p>
                   </div>
-                  <p className="text-emerald-400 font-semibold">
-                    {currency(Number(s.monto_solicitado))} a {s.plazo_dias} días
-                  </p>
+                  <div className="text-right">
+                    <p className="text-emerald-400 font-semibold">
+                      {currency(Number(s.monto_solicitado))} a {s.plazo_dias} días
+                    </p>
+                    <p className="text-slate-500 text-xs">Pago: {ETIQUETAS_METODO_PAGO[s.metodo_pago]}</p>
+                  </div>
                 </div>
 
                 <div className="flex flex-wrap gap-2">
@@ -131,16 +149,33 @@ export default async function SolicitudesPage({
                     montoSolicitado={Number(s.monto_solicitado)}
                     plazoDias={s.plazo_dias}
                     estado={s.estado}
+                    metodoPago={s.metodo_pago}
                     porcentajeInteresDiarioPropuesto={
                       s.porcentaje_interes_diario_propuesto !== null
                         ? Number(s.porcentaje_interes_diario_propuesto)
                         : null
                     }
                     firmaClienteDataUrl={s.firma_cliente_data_url}
+                    administradores={listaAdministradores}
                   />
 
-                  <form action={rechazarSolicitud} className="flex items-center gap-2">
+                  <form action={rechazarSolicitud} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="solicitud_id" value={s.id} />
+                    <select
+                      name="revisado_por"
+                      required
+                      defaultValue=""
+                      className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="" disabled>
+                        ¿Quién rechaza?
+                      </option>
+                      {listaAdministradores.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nombre}
+                        </option>
+                      ))}
+                    </select>
                     <input
                       name="notas"
                       placeholder="Motivo (opcional)"
@@ -168,6 +203,7 @@ export default async function SolicitudesPage({
                 <tr>
                   <th className="px-3 py-2">Cliente</th>
                   <th className="px-3 py-2">Monto</th>
+                  <th className="px-3 py-2">Pago</th>
                   <th className="px-3 py-2">Estado</th>
                   <th className="px-3 py-2">Aprobó / rechazó</th>
                 </tr>
@@ -177,6 +213,7 @@ export default async function SolicitudesPage({
                   <tr key={s.id} className="border-t border-slate-800">
                     <td className="px-3 py-2">{s.clientes?.nombre_completo ?? "—"}</td>
                     <td className="px-3 py-2">{currency(Number(s.monto_solicitado))}</td>
+                    <td className="px-3 py-2 text-slate-400">{ETIQUETAS_METODO_PAGO[s.metodo_pago]}</td>
                     <td className="px-3 py-2">
                       <span
                         className={`text-xs border rounded-full px-2 py-1 ${

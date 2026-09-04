@@ -49,6 +49,35 @@ export default async function SolicitarPrestamoPage({
           />
         </div>
 
+        <div className="space-y-2">
+          <p className="text-sm text-slate-300">Método de pago</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { value: "efectivo", label: "Efectivo" },
+              { value: "transferencia", label: "Transferencia" },
+              { value: "ambos", label: "Ambos" },
+            ].map((opcion, i) => (
+              <label
+                key={opcion.value}
+                className="flex items-center justify-center gap-1.5 rounded-md bg-slate-800 border border-slate-700 px-2 py-2 text-xs text-slate-300 has-[:checked]:border-emerald-500 has-[:checked]:text-emerald-400 cursor-pointer"
+              >
+                <input
+                  type="radio"
+                  name="metodo_pago"
+                  value={opcion.value}
+                  defaultChecked={i === 0}
+                  className="accent-emerald-500"
+                />
+                {opcion.label}
+              </label>
+            ))}
+          </div>
+          <p className="text-xs text-slate-500">
+            Si eliges transferencia, el administrador te va a compartir los datos de la cuenta al aprobar tu
+            solicitud.
+          </p>
+        </div>
+
         {error && (
           <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
         )}

@@ -55,6 +55,14 @@ export type Ruta = {
 
 export type EstadoPrestamo = "activo" | "en_mora" | "liquidado" | "cancelado";
 
+export type MetodoPago = "efectivo" | "transferencia" | "ambos";
+
+export const METODOS_PAGO: { value: MetodoPago; label: string }[] = [
+  { value: "efectivo", label: "Efectivo" },
+  { value: "transferencia", label: "Transferencia" },
+  { value: "ambos", label: "Ambos" },
+];
+
 export type Prestamo = {
   id: string;
   cliente_id: string;
@@ -69,6 +77,8 @@ export type Prestamo = {
   fecha_inicio: string;
   estado: EstadoPrestamo;
   fecha_liquidacion: string | null;
+  metodo_pago: MetodoPago;
+  datos_transferencia: string | null;
   creado_por: string | null;
   created_at: string;
 };
@@ -150,6 +160,8 @@ export type SolicitudPrestamo = {
   porcentaje_interes_diario_propuesto: number | null;
   firma_cliente_data_url: string | null;
   fecha_firma: string | null;
+  metodo_pago: MetodoPago;
+  datos_transferencia: string | null;
   revisado_por: string | null;
   fecha_revision: string | null;
   notas_revision: string | null;

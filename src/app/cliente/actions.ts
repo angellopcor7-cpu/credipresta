@@ -5,7 +5,9 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exigirCliente } from "@/lib/auth/roles";
-import type { TipoDocumento } from "@/lib/types";
+import type { MetodoPago, TipoDocumento } from "@/lib/types";
+
+const METODOS_PAGO_VALIDOS: MetodoPago[] = ["efectivo", "transferencia", "ambos"];
 
 const DOCUMENTOS_REGISTRO: { campo: string; tipo: TipoDocumento; etiqueta: string }[] = [
   { campo: "doc_ine_frente", tipo: "ine_frente", etiqueta: "INE — frente" },
@@ -129,6 +131,10 @@ export async function crearSolicitudPrestamo(formData: FormData) {
 
   const montoSolicitado = Number(formData.get("monto_solicitado"));
   const plazoDias = Number(formData.get("plazo_dias"));
+  const metodoPagoCrudo = String(formData.get("metodo_pago") || "efectivo");
+  const metodoPago: MetodoPago = METODOS_PAGO_VALIDOS.includes(metodoPagoCrudo as MetodoPago)
+    ? (metodoPagoCrudo as MetodoPago)
+    : "efectivo";
 
   if (!montoSolicitado || montoSolicitado <= 0) {
     redirect(`/cliente/solicitar?error=${encodeURIComponent("El monto debe ser mayor a 0")}`);
@@ -151,6 +157,7 @@ export async function crearSolicitudPrestamo(formData: FormData) {
     cliente_id: cliente!.id,
     monto_solicitado: montoSolicitado,
     plazo_dias: plazoDias,
+    metodo_pago: metodoPago,
   });
 
   if (error) {
