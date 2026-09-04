@@ -3,10 +3,11 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { exigirCliente } from "@/lib/auth/roles";
 import type { TipoDocumento } from "@/lib/types";
 
-const DOCUMENTOS_SOLICITUD: { campo: string; tipo: TipoDocumento; etiqueta: string }[] = [
+const DOCUMENTOS_REGISTRO: { campo: string; tipo: TipoDocumento; etiqueta: string }[] = [
   { campo: "doc_ine_frente", tipo: "ine_frente", etiqueta: "INE — frente" },
   { campo: "doc_ine_reverso", tipo: "ine_reverso", etiqueta: "INE — reverso" },
   { campo: "doc_comprobante_domicilio", tipo: "comprobante_domicilio", etiqueta: "Comprobante de domicilio" },
@@ -15,10 +16,16 @@ const DOCUMENTOS_SOLICITUD: { campo: string; tipo: TipoDocumento; etiqueta: stri
 
 /**
  * Registro libre de cliente: cualquiera puede crear su cuenta con correo y
- * contraseña. Un trigger en la base de datos (handle_new_cliente_signup)
+ * contraseña, y sube sus documentos (INE, comprobante, foto) desde el
+ * primer momento. Un trigger en la base de datos (handle_new_cliente_signup)
  * detecta `tipo_cuenta: "cliente"` en los metadatos y crea automáticamente
  * su fila en `usuarios` (rol cliente) y en `clientes` — no hace falta que
  * un admin lo dé de alta primero.
+ *
+ * Los documentos se suben con el cliente admin (service_role) porque, si el
+ * proyecto tiene confirmación de correo activada, todavía no hay sesión
+ * iniciada justo después de crear la cuenta y las políticas normales (RLS)
+ * no dejarían subir nada sin sesión.
  */
 export async function registrarCliente(formData: FormData) {
   const nombreCompleto = String(formData.get("nombre_completo") || "").trim();
@@ -26,6 +33,7 @@ export async function registrarCliente(formData: FormData) {
   const direccion = String(formData.get("direccion") || "").trim();
   const email = String(formData.get("email") || "").trim();
   const password = String(formData.get("password") || "");
+  const confirmarPassword = String(formData.get("confirmar_password") || "");
 
   if (!nombreCompleto || !email || password.length < 6) {
     redirect(
@@ -33,6 +41,15 @@ export async function registrarCliente(formData: FormData) {
         "Nombre, correo y una contraseña de al menos 6 caracteres son obligatorios"
       )}`
     );
+  }
+  if (password !== confirmarPassword) {
+    redirect(`/cliente/registro?error=${encodeURIComponent("Las contraseñas no coinciden")}`);
+  }
+  for (const { campo, etiqueta } of DOCUMENTOS_REGISTRO) {
+    const archivo = formData.get(campo) as File | null;
+    if (!archivo || archivo.size === 0) {
+      redirect(`/cliente/registro?error=${encodeURIComponent(`Falta subir: ${etiqueta}`)}`);
+    }
   }
 
   const supabase = await createClient();
@@ -51,6 +68,34 @@ export async function registrarCliente(formData: FormData) {
 
   if (error) {
     redirect(`/cliente/registro?error=${encodeURIComponent(error.message)}`);
+  }
+
+  // El trigger handle_new_cliente_signup ya creó la fila en `clientes` como
+  // parte del mismo insert en auth.users, así que ya existe aquí.
+  const admin = createAdminClient();
+  const { data: cliente } = await admin
+    .from("clientes")
+    .select("id")
+    .eq("usuario_id", data.user!.id)
+    .maybeSingle();
+
+  if (cliente) {
+    for (const { campo, tipo } of DOCUMENTOS_REGISTRO) {
+      const archivo = formData.get(campo) as File;
+      const rutaArchivo = `${cliente.id}/${tipo}/${Date.now()}-${archivo.name}`;
+      const { error: errorSubida } = await admin.storage
+        .from("documentos-clientes")
+        .upload(rutaArchivo, archivo, { contentType: archivo.type });
+
+      if (!errorSubida) {
+        await admin.from("documentos_clientes").insert({
+          cliente_id: cliente.id,
+          tipo_documento: tipo,
+          storage_path: rutaArchivo,
+          subido_por: data.user!.id,
+        });
+      }
+    }
   }
 
   if (!data.session) {
@@ -77,7 +122,7 @@ export async function iniciarSesionCliente(formData: FormData) {
   redirect("/cliente");
 }
 
-/** El cliente pide un préstamo: queda como solicitud pendiente hasta que un administrador la revise y apruebe. */
+/** El cliente pide un préstamo: queda como solicitud pendiente hasta que un administrador la revise y apruebe. Sus documentos ya quedaron subidos al crear su cuenta. */
 export async function crearSolicitudPrestamo(formData: FormData) {
   const sesion = await exigirCliente();
   const supabase = await createClient();
@@ -90,13 +135,6 @@ export async function crearSolicitudPrestamo(formData: FormData) {
   }
   if (!plazoDias || plazoDias <= 0) {
     redirect(`/cliente/solicitar?error=${encodeURIComponent("El plazo en días debe ser mayor a 0")}`);
-  }
-
-  for (const { campo, etiqueta } of DOCUMENTOS_SOLICITUD) {
-    const archivo = formData.get(campo) as File | null;
-    if (!archivo || archivo.size === 0) {
-      redirect(`/cliente/solicitar?error=${encodeURIComponent(`Falta subir: ${etiqueta}`)}`);
-    }
   }
 
   const { data: cliente } = await supabase
@@ -117,23 +155,6 @@ export async function crearSolicitudPrestamo(formData: FormData) {
 
   if (error) {
     redirect(`/cliente/solicitar?error=${encodeURIComponent(error.message)}`);
-  }
-
-  for (const { campo, tipo } of DOCUMENTOS_SOLICITUD) {
-    const archivo = formData.get(campo) as File;
-    const rutaArchivo = `${cliente!.id}/${tipo}/${Date.now()}-${archivo.name}`;
-    const { error: errorSubida } = await supabase.storage
-      .from("documentos-clientes")
-      .upload(rutaArchivo, archivo, { contentType: archivo.type });
-
-    if (!errorSubida) {
-      await supabase.from("documentos_clientes").insert({
-        cliente_id: cliente!.id,
-        tipo_documento: tipo,
-        storage_path: rutaArchivo,
-        subido_por: sesion.id,
-      });
-    }
   }
 
   revalidatePath("/cliente");
