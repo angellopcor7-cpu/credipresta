@@ -4,6 +4,7 @@ import {
   calcularMontoTotal,
   calcularSaldo,
   calcularCuotaSugerida,
+  calcularPorcentajeInteresPorPlazo,
   calcularMontoMora,
   calcularSaldoConMora,
   tieneCuotaVencidaSinPagar,
@@ -66,6 +67,33 @@ describe("validación de pagos", () => {
 describe("cuota sugerida", () => {
   it("divide el total entre el plazo en días", () => {
     expect(calcularCuotaSugerida(1200, 24)).toBe(50);
+  });
+});
+
+describe("interés según el plazo (ejemplo exacto del negocio)", () => {
+  it("un préstamo a 20 días es 20% de interés", () => {
+    expect(calcularPorcentajeInteresPorPlazo(20)).toBe(20);
+  });
+
+  it("un préstamo a 30 días es 30% de interés", () => {
+    expect(calcularPorcentajeInteresPorPlazo(30)).toBe(30);
+  });
+
+  it("préstamo de $5,000 a 20 días: total $6,000, pago diario $300", () => {
+    const porcentaje = calcularPorcentajeInteresPorPlazo(20);
+    const total = calcularMontoTotal(5000, porcentaje);
+    expect(total).toBe(6000);
+    expect(calcularCuotaSugerida(total, 20)).toBe(300);
+  });
+
+  it("préstamo de $5,000 a 30 días: total $6,500", () => {
+    const porcentaje = calcularPorcentajeInteresPorPlazo(30);
+    expect(calcularMontoTotal(5000, porcentaje)).toBe(6500);
+  });
+
+  it("rechaza cualquier plazo que no sea 20 o 30 días", () => {
+    expect(() => calcularPorcentajeInteresPorPlazo(24)).toThrow();
+    expect(() => calcularPorcentajeInteresPorPlazo(15)).toThrow();
   });
 });
 

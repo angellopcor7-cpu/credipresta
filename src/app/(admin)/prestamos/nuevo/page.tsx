@@ -1,6 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { crearPrestamo } from "../actions";
-import { calcularMontoTotal } from "@/lib/finance/calculos";
+import { calcularMontoTotal, calcularPorcentajeInteresPorPlazo, PLAZOS_VALIDOS } from "@/lib/finance/calculos";
 
 export default async function NuevoPrestamoPage({
   searchParams,
@@ -9,13 +9,11 @@ export default async function NuevoPrestamoPage({
 }) {
   const { error } = await searchParams;
   const supabase = await createClient();
-  const [{ data: clientes }, { data: cobradores }, { data: configPorcentaje }] = await Promise.all([
+  const [{ data: clientes }, { data: cobradores }] = await Promise.all([
     supabase.from("clientes").select("id, nombre_completo").eq("estado", "activo").order("nombre_completo"),
     supabase.from("cobradores").select("id, usuarios(nombre_completo)").eq("activo", true),
-    supabase.from("configuraciones").select("valor").eq("clave", "porcentaje_interes_default").single(),
   ]);
 
-  const porcentaje = Number(configPorcentaje?.valor ?? 20);
   const listaCobradores = (cobradores ?? []) as unknown as Array<{
     id: string;
     usuarios: { nombre_completo: string } | null;
@@ -83,25 +81,32 @@ export default async function NuevoPrestamoPage({
           </div>
           <div className="space-y-1">
             <label className="text-sm text-slate-300" htmlFor="plazo_dias">
-              Plazo (días de cobro)
+              Plazo
             </label>
-            <input
+            <select
               id="plazo_dias"
               name="plazo_dias"
-              type="number"
-              min="1"
-              placeholder="24 (por defecto)"
+              required
+              defaultValue={PLAZOS_VALIDOS[0]}
               className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            />
+            >
+              {PLAZOS_VALIDOS.map((dias) => (
+                <option key={dias} value={dias}>
+                  {dias} días ({calcularPorcentajeInteresPorPlazo(dias)}% de interés)
+                </option>
+              ))}
+            </select>
           </div>
         </div>
 
         <p className="text-xs text-slate-500">
-          Con {porcentaje}% de interés: un préstamo de $1,000 genera un total a pagar de{" "}
+          El interés depende del plazo: a 20 días es 20%, a 30 días es 30%. Por ejemplo, $5,000 a 20 días da un
+          total a pagar de{" "}
           {new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(
-            calcularMontoTotal(1000, porcentaje)
-          )}
-          . El interés, el total y el calendario de pagos se calculan automáticamente al guardar.
+            calcularMontoTotal(5000, calcularPorcentajeInteresPorPlazo(20))
+          )}{" "}
+          (pago diario $300). El total, el interés y el calendario de pagos se calculan automáticamente al
+          guardar.
         </p>
 
         {error && (

@@ -9,9 +9,11 @@ import {
   calcularInteres,
   calcularMontoTotal,
   calcularCuotaSugerida,
+  calcularPorcentajeInteresPorPlazo,
   calcularSaldo,
   validarMontoPago,
   generarCalendarioPagos,
+  PLAZOS_VALIDOS,
 } from "@/lib/finance/calculos";
 
 /**
@@ -28,8 +30,7 @@ export async function crearPrestamo(formData: FormData) {
 
   const clienteId = String(formData.get("cliente_id") || "");
   const montoPrestado = Number(formData.get("monto_prestado"));
-  const plazoDiasInput = String(formData.get("plazo_dias") || "");
-  const plazoDias = plazoDiasInput ? Number(plazoDiasInput) : config.plazoDiasDefault;
+  const plazoDias = Number(formData.get("plazo_dias") || "");
   const cobradorId = String(formData.get("cobrador_id") || "") || null;
 
   if (!clienteId) {
@@ -38,11 +39,15 @@ export async function crearPrestamo(formData: FormData) {
   if (!montoPrestado || montoPrestado <= 0) {
     redirect(`/prestamos/nuevo?error=${encodeURIComponent("El monto prestado debe ser mayor a 0")}`);
   }
-  if (!plazoDias || plazoDias <= 0) {
-    redirect(`/prestamos/nuevo?error=${encodeURIComponent("El plazo en días debe ser mayor a 0")}`);
+  if (!PLAZOS_VALIDOS.includes(plazoDias as (typeof PLAZOS_VALIDOS)[number])) {
+    redirect(
+      `/prestamos/nuevo?error=${encodeURIComponent(`El plazo debe ser de ${PLAZOS_VALIDOS.join(" o ")} días`)}`
+    );
   }
 
-  const porcentaje = config.porcentajeInteresDefault;
+  // El interés lo determina el plazo (20 días -> 20%, 30 días -> 30%), no se
+  // captura aparte — así lo pidió el negocio.
+  const porcentaje = calcularPorcentajeInteresPorPlazo(plazoDias);
   const montoInteres = calcularInteres(montoPrestado, porcentaje);
   const montoTotal = calcularMontoTotal(montoPrestado, porcentaje);
   const montoCuota = calcularCuotaSugerida(montoTotal, plazoDias);

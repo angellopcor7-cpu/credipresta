@@ -29,6 +29,22 @@ export function calcularMontoTotal(montoPrestado: number, porcentajeInteres: num
   return redondear(montoPrestado + calcularInteres(montoPrestado, porcentajeInteres));
 }
 
+/** Plazos de préstamo que maneja el negocio. */
+export const PLAZOS_VALIDOS = [20, 30] as const;
+export type PlazoValido = (typeof PLAZOS_VALIDOS)[number];
+
+/**
+ * El interés se determina por el plazo, no se elige aparte: un préstamo a
+ * 20 días es 20% de interés, uno a 30 días es 30%. Son los únicos 2 plazos
+ * que maneja el negocio.
+ */
+export function calcularPorcentajeInteresPorPlazo(plazoDias: number): number {
+  if (!PLAZOS_VALIDOS.includes(plazoDias as PlazoValido)) {
+    throw new Error("El plazo debe ser de 20 o 30 días");
+  }
+  return plazoDias;
+}
+
 /** cuota sugerida = total / plazo_dias (referencia, no es una obligación rígida por día) */
 export function calcularCuotaSugerida(montoTotal: number, plazoDias: number): number {
   if (plazoDias <= 0) throw new Error("plazoDias debe ser mayor a 0");
