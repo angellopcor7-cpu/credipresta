@@ -1,11 +1,53 @@
 import { createClient } from "@/lib/supabase/server";
-import type { SolicitudConCliente } from "@/lib/types";
+import type { SolicitudConCliente, TipoDocumento } from "@/lib/types";
 import { aprobarSolicitud, rechazarSolicitud } from "./actions";
 
 const INTERES_DIARIO_POR_DEFECTO = 1;
 
+const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
+  ine_frente: "INE frente",
+  ine_reverso: "INE reverso",
+  comprobante_domicilio: "Comprobante domicilio",
+  foto_cliente: "Foto",
+  contrato_pagare: "Contrato",
+  otro: "Otro",
+};
+
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
+}
+
+/** Trae los links (temporales, 1h) a los documentos de cada cliente con solicitud pendiente, para revisarlos antes de aprobar. */
+async function obtenerDocumentosPorCliente(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clienteIds: string[]
+) {
+  if (clienteIds.length === 0) return new Map<string, { tipo: TipoDocumento; url: string }[]>();
+
+  const { data: documentos } = await supabase
+    .from("documentos_clientes")
+    .select("cliente_id, tipo_documento, storage_path")
+    .in("cliente_id", clienteIds);
+
+  const mapa = new Map<string, { tipo: TipoDocumento; url: string }[]>();
+  if (!documentos || documentos.length === 0) return mapa;
+
+  const { data: firmados } = await supabase.storage
+    .from("documentos-clientes")
+    .createSignedUrls(
+      documentos.map((d) => d.storage_path),
+      3600
+    );
+
+  documentos.forEach((doc, i) => {
+    const url = firmados?.[i]?.signedUrl;
+    if (!url) return;
+    const lista = mapa.get(doc.cliente_id) ?? [];
+    lista.push({ tipo: doc.tipo_documento, url });
+    mapa.set(doc.cliente_id, lista);
+  });
+
+  return mapa;
 }
 
 export default async function SolicitudesPage({
@@ -32,6 +74,10 @@ export default async function SolicitudesPage({
 
   const listaPendientes = (pendientes ?? []) as unknown as SolicitudConCliente[];
   const listaRevisadas = (revisadas ?? []) as unknown as SolicitudConCliente[];
+  const documentosPorCliente = await obtenerDocumentosPorCliente(
+    supabase,
+    listaPendientes.map((s) => s.cliente_id)
+  );
 
   return (
     <div className="space-y-8">
@@ -57,6 +103,23 @@ export default async function SolicitudesPage({
                   <p className="text-emerald-400 font-semibold">
                     {currency(Number(s.monto_solicitado))} a {s.plazo_dias} días
                   </p>
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {(documentosPorCliente.get(s.cliente_id) ?? []).map((doc, i) => (
+                    <a
+                      key={i}
+                      href={doc.url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-full px-3 py-1"
+                    >
+                      {ETIQUETAS_DOCUMENTO[doc.tipo]}
+                    </a>
+                  ))}
+                  {(documentosPorCliente.get(s.cliente_id) ?? []).length === 0 && (
+                    <span className="text-xs text-amber-400">Sin documentos subidos</span>
+                  )}
                 </div>
 
                 <div className="flex flex-wrap items-center gap-3">

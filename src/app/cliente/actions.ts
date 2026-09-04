@@ -4,6 +4,14 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirCliente } from "@/lib/auth/roles";
+import type { TipoDocumento } from "@/lib/types";
+
+const DOCUMENTOS_SOLICITUD: { campo: string; tipo: TipoDocumento; etiqueta: string }[] = [
+  { campo: "doc_ine_frente", tipo: "ine_frente", etiqueta: "INE — frente" },
+  { campo: "doc_ine_reverso", tipo: "ine_reverso", etiqueta: "INE — reverso" },
+  { campo: "doc_comprobante_domicilio", tipo: "comprobante_domicilio", etiqueta: "Comprobante de domicilio" },
+  { campo: "doc_foto_cliente", tipo: "foto_cliente", etiqueta: "Foto tuya" },
+];
 
 /**
  * Registro libre de cliente: cualquiera puede crear su cuenta con correo y
@@ -84,6 +92,13 @@ export async function crearSolicitudPrestamo(formData: FormData) {
     redirect(`/cliente/solicitar?error=${encodeURIComponent("El plazo en días debe ser mayor a 0")}`);
   }
 
+  for (const { campo, etiqueta } of DOCUMENTOS_SOLICITUD) {
+    const archivo = formData.get(campo) as File | null;
+    if (!archivo || archivo.size === 0) {
+      redirect(`/cliente/solicitar?error=${encodeURIComponent(`Falta subir: ${etiqueta}`)}`);
+    }
+  }
+
   const { data: cliente } = await supabase
     .from("clientes")
     .select("id")
@@ -102,6 +117,23 @@ export async function crearSolicitudPrestamo(formData: FormData) {
 
   if (error) {
     redirect(`/cliente/solicitar?error=${encodeURIComponent(error.message)}`);
+  }
+
+  for (const { campo, tipo } of DOCUMENTOS_SOLICITUD) {
+    const archivo = formData.get(campo) as File;
+    const rutaArchivo = `${cliente!.id}/${tipo}/${Date.now()}-${archivo.name}`;
+    const { error: errorSubida } = await supabase.storage
+      .from("documentos-clientes")
+      .upload(rutaArchivo, archivo, { contentType: archivo.type });
+
+    if (!errorSubida) {
+      await supabase.from("documentos_clientes").insert({
+        cliente_id: cliente!.id,
+        tipo_documento: tipo,
+        storage_path: rutaArchivo,
+        subido_por: sesion.id,
+      });
+    }
   }
 
   revalidatePath("/cliente");
