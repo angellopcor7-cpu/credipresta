@@ -16,6 +16,11 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+  const { count: solicitudesPendientes } = await supabase
+    .from("solicitudes_prestamo")
+    .select("id", { count: "exact", head: true })
+    .eq("estado", "pendiente");
 
   return (
     <div className="min-h-screen bg-slate-950 text-white">
@@ -39,6 +44,14 @@ export default async function AdminLayout({
             </Link>
             <Link href="/prestamos" className="hover:text-white">
               Préstamos
+            </Link>
+            <Link href="/solicitudes" className="hover:text-white relative">
+              Solicitudes
+              {!!solicitudesPendientes && (
+                <span className="ml-1 inline-flex items-center justify-center bg-amber-500 text-slate-950 text-xs font-bold rounded-full h-5 min-w-5 px-1">
+                  {solicitudesPendientes}
+                </span>
+              )}
             </Link>
             <span className="text-slate-500">{sesion.nombreCompleto}</span>
             <form action={signOut}>

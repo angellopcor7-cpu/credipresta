@@ -1,13 +1,22 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
+export type Rol = "administrador" | "cobrador" | "cliente";
+
 export type SesionUsuario = {
   id: string;
   email: string | undefined;
   nombreCompleto: string;
-  rol: "administrador" | "cobrador";
+  rol: Rol;
   cobradorId: string | null;
 };
+
+/** A dónde debe ir cada rol al entrar — para no mandar a nadie a una pantalla que no le toca. */
+export function rutaInicioPorRol(rol: Rol): string {
+  if (rol === "administrador") return "/dashboard";
+  if (rol === "cobrador") return "/panel";
+  return "/cliente";
+}
 
 /**
  * Carga el usuario autenticado junto con su rol y (si aplica) su id de
@@ -32,7 +41,7 @@ export async function getSesionUsuario(): Promise<SesionUsuario | null> {
   if (!perfil || !perfil.activo) return null;
 
   const rolNombre = (perfil.roles as unknown as { nombre: string } | null)?.nombre;
-  if (rolNombre !== "administrador" && rolNombre !== "cobrador") return null;
+  if (rolNombre !== "administrador" && rolNombre !== "cobrador" && rolNombre !== "cliente") return null;
 
   const cobrador = perfil.cobradores as unknown as { id: string } | { id: string }[] | null;
   const cobradorId = Array.isArray(cobrador) ? cobrador[0]?.id ?? null : cobrador?.id ?? null;
@@ -46,18 +55,26 @@ export async function getSesionUsuario(): Promise<SesionUsuario | null> {
   };
 }
 
-/** Exige que haya sesión con rol administrador; si no, redirige. */
+/** Exige que haya sesión con rol administrador; si no, redirige a donde sí le toca. */
 export async function exigirAdministrador(): Promise<SesionUsuario> {
   const sesion = await getSesionUsuario();
   if (!sesion) redirect("/login");
-  if (sesion.rol !== "administrador") redirect("/panel");
+  if (sesion.rol !== "administrador") redirect(rutaInicioPorRol(sesion.rol));
   return sesion;
 }
 
-/** Exige que haya sesión con rol cobrador; si no, redirige. */
+/** Exige que haya sesión con rol cobrador; si no, redirige a donde sí le toca. */
 export async function exigirCobrador(): Promise<SesionUsuario> {
   const sesion = await getSesionUsuario();
   if (!sesion) redirect("/login");
-  if (sesion.rol !== "cobrador") redirect("/dashboard");
+  if (sesion.rol !== "cobrador") redirect(rutaInicioPorRol(sesion.rol));
+  return sesion;
+}
+
+/** Exige que haya sesión con rol cliente; si no, redirige a donde sí le toca. */
+export async function exigirCliente(): Promise<SesionUsuario> {
+  const sesion = await getSesionUsuario();
+  if (!sesion) redirect("/cliente/login");
+  if (sesion.rol !== "cliente") redirect(rutaInicioPorRol(sesion.rol));
   return sesion;
 }

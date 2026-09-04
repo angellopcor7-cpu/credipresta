@@ -2,6 +2,7 @@ export type EstadoCliente = "activo" | "pendiente_aprobacion" | "inactivo";
 
 export type Cliente = {
   id: string;
+  usuario_id: string | null;
   nombre_completo: string;
   telefono: string | null;
   direccion: string | null;
@@ -131,4 +132,24 @@ export type HistorialMovimiento = {
   descripcion: string | null;
   monto: number | null;
   created_at: string;
+};
+
+export type EstadoSolicitud = "pendiente" | "aprobada" | "rechazada";
+
+export type SolicitudPrestamo = {
+  id: string;
+  cliente_id: string;
+  monto_solicitado: number;
+  plazo_dias: number;
+  estado: EstadoSolicitud;
+  fecha_solicitud: string;
+  revisado_por: string | null;
+  fecha_revision: string | null;
+  notas_revision: string | null;
+  prestamo_id: string | null;
+  created_at: string;
+};
+
+export type SolicitudConCliente = SolicitudPrestamo & {
+  clientes: { nombre_completo: string; telefono: string | null } | null;
 };
