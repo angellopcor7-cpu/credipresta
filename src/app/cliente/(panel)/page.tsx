@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirCliente } from "@/lib/auth/roles";
 import { formatoFechaCorta } from "@/lib/format";
 import { obtenerFechaLimitePorPrestamo } from "@/lib/supabase/calendario";
+import { obtenerConfiguraciones } from "@/lib/config";
+import { InfoDiasCobro } from "@/components/InfoDiasCobro";
 import type { Prestamo, SolicitudPrestamo } from "@/lib/types";
 
 function currency(n: number) {
@@ -57,6 +59,7 @@ export default async function ClientePage({
     supabase,
     listaPrestamos.map((p) => p.id)
   );
+  const config = await obtenerConfiguraciones();
 
   return (
     <div className="space-y-8">
@@ -110,8 +113,15 @@ export default async function ClientePage({
         )}
       </div>
 
-      <div>
-        <h2 className="font-semibold mb-2">Mis préstamos</h2>
+      <div className="space-y-3">
+        <h2 className="font-semibold">Mis préstamos</h2>
+        {listaPrestamos.length > 0 && (
+          <InfoDiasCobro
+            umbral={config.umbralMora}
+            diasMenorUmbral={config.diasCobroMenorUmbral}
+            diasMayorIgualUmbral={config.diasCobroMayorIgualUmbral}
+          />
+        )}
         {listaPrestamos.length === 0 ? (
           <p className="text-slate-500 text-sm">Todavía no tienes ningún préstamo activo.</p>
         ) : (

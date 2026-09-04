@@ -2,6 +2,8 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatoFechaCorta } from "@/lib/format";
+import { obtenerConfiguraciones } from "@/lib/config";
+import { InfoDiasCobro } from "@/components/InfoDiasCobro";
 import type { CalendarioPago, Mora, Pago, Prestamo } from "@/lib/types";
 import { registrarPago } from "../actions";
 import { aplicarMoraDesdeFormulario } from "../moras-actions";
@@ -32,11 +34,12 @@ export default async function DetallePrestamoPage({
   const { error, exito } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: prestamo }, { data: pagos }, { data: calendario }, { data: moras }] = await Promise.all([
+  const [{ data: prestamo }, { data: pagos }, { data: calendario }, { data: moras }, config] = await Promise.all([
     supabase.from("prestamos").select("*, clientes(nombre_completo, telefono)").eq("id", id).single(),
     supabase.from("pagos").select("*").eq("prestamo_id", id).order("created_at", { ascending: false }),
     supabase.from("calendario_pagos").select("*").eq("prestamo_id", id).order("numero_dia"),
     supabase.from("moras").select("*").eq("prestamo_id", id).order("fecha_generada", { ascending: false }),
+    obtenerConfiguraciones(),
   ]);
 
   if (!prestamo) notFound();
@@ -262,6 +265,13 @@ export default async function DetallePrestamoPage({
 
         <div>
           <h2 className="font-semibold mb-2">Calendario de cobro</h2>
+          <div className="mb-3">
+            <InfoDiasCobro
+              umbral={config.umbralMora}
+              diasMenorUmbral={config.diasCobroMenorUmbral}
+              diasMayorIgualUmbral={config.diasCobroMayorIgualUmbral}
+            />
+          </div>
           <div className="border border-slate-800 rounded-xl overflow-hidden max-h-80 overflow-y-auto">
             <table className="w-full text-sm">
               <thead className="bg-slate-900 text-slate-400 text-left sticky top-0">
