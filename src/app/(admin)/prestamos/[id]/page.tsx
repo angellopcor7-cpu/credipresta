@@ -76,12 +76,46 @@ export default async function DetallePrestamoPage({
       )}
 
       {puedeRecibirPagos && (
-        <form action={aplicarMoraDesdeFormulario}>
-          <input type="hidden" name="prestamo_id" value={p.id} />
-          <button className="text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md px-4 py-2">
-            Aplicar mora de hoy
-          </button>
-        </form>
+        <div className="space-y-2">
+          <form action={aplicarMoraDesdeFormulario}>
+            <input type="hidden" name="prestamo_id" value={p.id} />
+            <button className="text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md px-4 py-2">
+              Aplicar mora de hoy
+            </button>
+          </form>
+
+          <details className="text-sm bg-slate-900 border border-slate-800 rounded-xl px-4 py-3 max-w-2xl">
+            <summary className="cursor-pointer text-slate-300 font-medium">
+              ¿Cómo funciona la mora diaria?
+            </summary>
+            <div className="mt-3 space-y-2 text-slate-400">
+              <p>Se aplica una vez por cada día de atraso:</p>
+              <ul className="list-disc list-inside space-y-1">
+                <li>Préstamos con saldo menor a $5,000: mora de $50 diarios.</li>
+                <li>Préstamos con saldo de $5,000 o más: mora de $100 diarios.</li>
+              </ul>
+              <p>
+                Si el cliente tiene un día de atraso, al día siguiente debe pagar su abono correspondiente más la
+                mora acumulada.
+              </p>
+              <div className="grid sm:grid-cols-2 gap-3 pt-1">
+                <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
+                  <p className="text-slate-300 font-medium mb-1">Ejemplo con mora de $50</p>
+                  <p>Saldo pendiente: $4,000</p>
+                  <p>Día 1 de atraso → mora $50 → nuevo saldo $4,050</p>
+                  <p>Día 2 de atraso → mora acumulada $100 → nuevo saldo $4,100</p>
+                </div>
+                <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
+                  <p className="text-slate-300 font-medium mb-1">Ejemplo con mora de $100</p>
+                  <p>Saldo pendiente: $6,000</p>
+                  <p>Día 1 de atraso → mora $100 → nuevo saldo $6,100</p>
+                  <p>3 días de atraso → mora acumulada $300 → nuevo saldo $6,300</p>
+                </div>
+              </div>
+              <p className="pt-1">No se aplica más de una mora por préstamo el mismo día.</p>
+            </div>
+          </details>
+        </div>
       )}
 
       {puedeRecibirPagos ? (
