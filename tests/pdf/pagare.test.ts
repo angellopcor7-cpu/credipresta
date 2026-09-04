@@ -42,4 +42,21 @@ describe("generarPagarePDF", () => {
     });
     expect(bytes.length).toBeGreaterThan(500);
   });
+
+  it("incluye la firma del cliente cuando se le pasa una imagen válida", async () => {
+    const firmaPngValida =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+    const bytes = await generarPagarePDF({ ...datosBase, firmaClienteDataUrl: firmaPngValida });
+    const encabezado = Buffer.from(bytes.slice(0, 5)).toString("ascii");
+    expect(encabezado).toBe("%PDF-");
+    expect(bytes.length).toBeGreaterThan(500);
+  });
+
+  it("no truena si la firma viene corrupta (deja la línea en blanco)", async () => {
+    const bytes = await generarPagarePDF({
+      ...datosBase,
+      firmaClienteDataUrl: "data:image/png;base64,esto-no-es-un-png-valido",
+    });
+    expect(bytes.length).toBeGreaterThan(500);
+  });
 });

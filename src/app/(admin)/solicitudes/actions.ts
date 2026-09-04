@@ -14,16 +14,14 @@ import {
 } from "@/lib/finance/calculos";
 
 /**
- * Aprueba una solicitud que un cliente pidió por su cuenta: crea el
- * préstamo real (con el mismo cálculo automático que `crearPrestamo`, el
- * administrador solo agrega el interés diario porque el cliente no lo
- * captura), genera su calendario de cobro, marca la solicitud como
- * aprobada y activa al cliente.
+ * Paso 1: el admin fija el interés diario y genera el pagaré. Esto NO crea
+ * el préstamo todavía — solo deja la solicitud en "esperando_firma" con el
+ * interés ya fijo, para que el cliente pueda entrar a su cuenta, ver el
+ * pagaré con esos datos y dibujar su firma.
  */
-export async function aprobarSolicitud(formData: FormData) {
-  const sesion = await exigirAdministrador();
+export async function generarPagareParaFirma(formData: FormData) {
+  await exigirAdministrador();
   const supabase = await createClient();
-  const config = await obtenerConfiguraciones();
 
   const solicitudId = String(formData.get("solicitud_id") || "");
   const porcentajeInteresDiario = Number(formData.get("porcentaje_interes_diario") || "");
@@ -32,22 +30,59 @@ export async function aprobarSolicitud(formData: FormData) {
     redirect(`/solicitudes?error=${encodeURIComponent("El interés diario debe ser mayor a 0")}`);
   }
 
+  const { error } = await supabase
+    .from("solicitudes_prestamo")
+    .update({
+      estado: "esperando_firma",
+      porcentaje_interes_diario_propuesto: porcentajeInteresDiario,
+    })
+    .eq("id", solicitudId)
+    .eq("estado", "pendiente");
+
+  if (error) {
+    redirect(`/solicitudes?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/solicitudes");
+  redirect("/solicitudes");
+}
+
+/**
+ * Paso 2 (final): una vez que el cliente ya firmó su pagaré (estado
+ * "firmada"), el admin da el último click para crear el préstamo real, con
+ * el mismo interés que ya se fijó y que el cliente ya vio y firmó — aquí ya
+ * no se vuelve a pedir el interés, para que no pueda cambiar después de
+ * firmado.
+ */
+export async function aprobarSolicitud(formData: FormData) {
+  const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+  const config = await obtenerConfiguraciones();
+
+  const solicitudId = String(formData.get("solicitud_id") || "");
+
   const { data: solicitud } = await supabase
     .from("solicitudes_prestamo")
-    .select("id, cliente_id, monto_solicitado, plazo_dias, estado")
+    .select("id, cliente_id, monto_solicitado, plazo_dias, estado, porcentaje_interes_diario_propuesto")
     .eq("id", solicitudId)
     .single();
 
   if (!solicitud) {
     redirect(`/solicitudes?error=${encodeURIComponent("Solicitud no encontrada")}`);
   }
-  if (solicitud.estado !== "pendiente") {
-    redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue revisada")}`);
+  if (solicitud.estado !== "firmada") {
+    redirect(`/solicitudes?error=${encodeURIComponent("El cliente todavía no firma su pagaré")}`);
+  }
+  if (!solicitud.porcentaje_interes_diario_propuesto) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Falta el interés diario de esta solicitud")}`);
   }
 
   const montoPrestado = Number(solicitud.monto_solicitado);
   const plazoDias = solicitud.plazo_dias;
-  const porcentaje = calcularPorcentajeInteresTotal(porcentajeInteresDiario, plazoDias);
+  const porcentaje = calcularPorcentajeInteresTotal(
+    Number(solicitud.porcentaje_interes_diario_propuesto),
+    plazoDias
+  );
   const montoInteres = calcularInteres(montoPrestado, porcentaje);
   const montoTotal = calcularMontoTotal(montoPrestado, porcentaje);
   const montoCuota = calcularCuotaSugerida(montoTotal, plazoDias);
@@ -114,7 +149,7 @@ export async function aprobarSolicitud(formData: FormData) {
   redirect(`/prestamos/${prestamo.id}`);
 }
 
-/** Rechaza una solicitud pendiente, con una nota opcional de por qué. */
+/** Rechaza una solicitud en cualquier etapa antes de la aprobación final, con una nota opcional de por qué. */
 export async function rechazarSolicitud(formData: FormData) {
   const sesion = await exigirAdministrador();
   const supabase = await createClient();
@@ -131,7 +166,7 @@ export async function rechazarSolicitud(formData: FormData) {
       notas_revision: notas,
     })
     .eq("id", solicitudId)
-    .eq("estado", "pendiente");
+    .in("estado", ["pendiente", "esperando_firma", "firmada"]);
 
   revalidatePath("/solicitudes");
   redirect("/solicitudes");

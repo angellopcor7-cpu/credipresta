@@ -160,3 +160,59 @@ export async function crearSolicitudPrestamo(formData: FormData) {
   revalidatePath("/cliente");
   redirect("/cliente?exito=" + encodeURIComponent("Tu solicitud fue enviada. Un administrador la va a revisar."));
 }
+
+const FIRMA_PREFIJO_VALIDO = "data:image/png;base64,";
+const FIRMA_TAMANO_MAXIMO = 300_000; // ~300KB de texto base64, de sobra para un trazo simple
+
+/**
+ * El cliente firma su pagaré dibujando en un canvas. Se llama directo desde
+ * un componente cliente (no es un <form action>), así que recibe la imagen
+ * ya convertida a data URL y regresa un resultado en vez de redirigir, para
+ * que el componente decida cuándo navegar.
+ */
+export async function firmarSolicitud(
+  solicitudId: string,
+  firmaDataUrl: string
+): Promise<{ ok: true } | { ok: false; error: string }> {
+  const sesion = await exigirCliente();
+
+  if (!firmaDataUrl.startsWith(FIRMA_PREFIJO_VALIDO)) {
+    return { ok: false, error: "Firma inválida" };
+  }
+  if (firmaDataUrl.length > FIRMA_TAMANO_MAXIMO) {
+    return { ok: false, error: "La firma quedó demasiado grande, intenta de nuevo con un trazo más simple" };
+  }
+
+  const supabase = await createClient();
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("id")
+    .eq("usuario_id", sesion.id)
+    .maybeSingle();
+
+  if (!cliente) {
+    return { ok: false, error: "No se encontró tu perfil de cliente" };
+  }
+
+  const { data: filas, error } = await supabase
+    .from("solicitudes_prestamo")
+    .update({
+      estado: "firmada",
+      firma_cliente_data_url: firmaDataUrl,
+      fecha_firma: new Date().toISOString(),
+    })
+    .eq("id", solicitudId)
+    .eq("cliente_id", cliente.id)
+    .eq("estado", "esperando_firma")
+    .select("id");
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+  if (!filas || filas.length === 0) {
+    return { ok: false, error: "Esta solicitud ya no está esperando tu firma" };
+  }
+
+  revalidatePath("/cliente");
+  return { ok: true };
+}

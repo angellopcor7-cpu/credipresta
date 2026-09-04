@@ -17,6 +17,8 @@ export type DatosPagare = {
   fechaFin: Date;
   fechaFirma: Date;
   nombreCobrador: string;
+  /** Data URL "data:image/png;base64,..." de la firma que el cliente dibujó en su portal, si ya firmó. */
+  firmaClienteDataUrl?: string | null;
 };
 
 function formatoFecha(d: Date): string {
@@ -96,6 +98,20 @@ export async function generarPagarePDF(datos: DatosPagare): Promise<Uint8Array> 
   parrafo(`Cobrador(a) responsable de esta cuenta: ${datos.nombreCobrador}.`);
 
   y -= 50;
+
+  if (datos.firmaClienteDataUrl?.startsWith("data:image/png;base64,")) {
+    try {
+      const base64 = datos.firmaClienteDataUrl.split(",")[1] ?? "";
+      const imagenFirma = await pdf.embedPng(Buffer.from(base64, "base64"));
+      const anchoFirma = 180;
+      const altoFirma = (imagenFirma.height / imagenFirma.width) * anchoFirma;
+      pagina.drawImage(imagenFirma, { x: MARGEN, y: y - altoFirma + 10, width: anchoFirma, height: altoFirma });
+      y -= altoFirma - 4;
+    } catch {
+      // Si por algo la firma no se puede leer, simplemente se deja la línea en blanco.
+    }
+  }
+
   linea("_______________________________", { espacio: 16 });
   linea("Firma del cliente", { tamano: 9, espacio: 14 });
   linea(datos.nombreCliente, { tamano: 9, espacio: 40 });

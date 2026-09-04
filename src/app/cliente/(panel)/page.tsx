@@ -27,6 +27,8 @@ const estadoPrestamoLabel: Record<string, string> = {
 
 const estadoSolicitudLabel: Record<string, { texto: string; clase: string }> = {
   pendiente: { texto: "Pendiente de revisión", clase: "bg-amber-950 text-amber-400 border-amber-900" },
+  esperando_firma: { texto: "Falta que firmes tu pagaré", clase: "bg-amber-950 text-amber-400 border-amber-900" },
+  firmada: { texto: "Firmada, esperando aprobación", clase: "bg-sky-950 text-sky-400 border-sky-900" },
   aprobada: { texto: "Aprobada", clase: "bg-emerald-950 text-emerald-400 border-emerald-900" },
   rechazada: { texto: "Rechazada", clase: "bg-red-950 text-red-400 border-red-900" },
 };
@@ -61,7 +63,9 @@ export default async function ClientePage({
 
   const listaPrestamos = (prestamos ?? []) as Prestamo[];
   const listaSolicitudes = (solicitudes ?? []) as SolicitudPrestamo[];
-  const tieneSolicitudPendiente = listaSolicitudes.some((s) => s.estado === "pendiente");
+  const tieneSolicitudPendiente = listaSolicitudes.some((s) =>
+    ["pendiente", "esperando_firma", "firmada"].includes(s.estado)
+  );
   const calendarioPorPrestamo = await obtenerCalendarioPorPrestamo(
     supabase,
     listaPrestamos.map((p) => p.id)
@@ -102,7 +106,7 @@ export default async function ClientePage({
               return (
                 <div
                   key={s.id}
-                  className="flex items-center justify-between bg-slate-900 border border-slate-800 rounded-xl p-4"
+                  className="flex flex-wrap items-center justify-between gap-3 bg-slate-900 border border-slate-800 rounded-xl p-4"
                 >
                   <div>
                     <p className="font-medium">
@@ -112,7 +116,17 @@ export default async function ClientePage({
                       Pedido el {new Date(s.fecha_solicitud).toLocaleDateString("es-MX")}
                     </p>
                   </div>
-                  <span className={`text-xs border rounded-full px-2 py-1 ${estado.clase}`}>{estado.texto}</span>
+                  <div className="flex items-center gap-2">
+                    <span className={`text-xs border rounded-full px-2 py-1 ${estado.clase}`}>{estado.texto}</span>
+                    {s.estado === "esperando_firma" && (
+                      <Link
+                        href={`/cliente/solicitudes/${s.id}/firmar`}
+                        className="text-xs bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-md px-3 py-1.5"
+                      >
+                        Firmar pagaré
+                      </Link>
+                    )}
+                  </div>
                 </div>
               );
             })}

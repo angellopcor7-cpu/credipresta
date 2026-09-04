@@ -44,6 +44,14 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   const fechaFinTexto = fechaLimitePorPrestamo.get(p.id);
   const fechaFin = fechaFinTexto ? new Date(`${fechaFinTexto}T00:00:00Z`) : fechaInicio;
 
+  // Si este préstamo vino de una solicitud que el cliente ya firmó en su
+  // portal, se usa esa misma firma en el PDF en vez de dejar la línea en blanco.
+  const { data: solicitud } = await supabase
+    .from("solicitudes_prestamo")
+    .select("firma_cliente_data_url")
+    .eq("prestamo_id", p.id)
+    .maybeSingle();
+
   const bytes = await generarPagarePDF({
     folio: p.id.slice(0, 8).toUpperCase(),
     nombreCliente: p.clientes?.nombre_completo ?? "Cliente",
@@ -56,6 +64,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     fechaFin,
     fechaFirma: fechaInicio,
     nombreCobrador: p.cobradores?.usuarios?.nombre_completo ?? "Administración de CrediPresta",
+    firmaClienteDataUrl: solicitud?.firma_cliente_data_url ?? null,
   });
 
   return new NextResponse(Buffer.from(bytes), {

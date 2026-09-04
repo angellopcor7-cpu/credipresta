@@ -61,12 +61,12 @@ export default async function SolicitudesPage({
     supabase
       .from("solicitudes_prestamo")
       .select("*, clientes(nombre_completo, telefono)")
-      .eq("estado", "pendiente")
+      .in("estado", ["pendiente", "esperando_firma", "firmada"])
       .order("fecha_solicitud", { ascending: true }),
     supabase
       .from("solicitudes_prestamo")
       .select("*, clientes(nombre_completo, telefono)")
-      .neq("estado", "pendiente")
+      .in("estado", ["aprobada", "rechazada"])
       .order("fecha_revision", { ascending: false })
       .limit(20),
   ]);
@@ -126,6 +126,13 @@ export default async function SolicitudesPage({
                     solicitudId={s.id}
                     montoSolicitado={Number(s.monto_solicitado)}
                     plazoDias={s.plazo_dias}
+                    estado={s.estado}
+                    porcentajeInteresDiarioPropuesto={
+                      s.porcentaje_interes_diario_propuesto !== null
+                        ? Number(s.porcentaje_interes_diario_propuesto)
+                        : null
+                    }
+                    firmaClienteDataUrl={s.firma_cliente_data_url}
                   />
 
                   <form action={rechazarSolicitud} className="flex items-center gap-2">

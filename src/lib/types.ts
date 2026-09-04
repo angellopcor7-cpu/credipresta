@@ -134,7 +134,11 @@ export type HistorialMovimiento = {
   created_at: string;
 };
 
-export type EstadoSolicitud = "pendiente" | "aprobada" | "rechazada";
+/**
+ * pendiente -> esperando_firma (el admin ya fijó el interés y generó el
+ * pagaré) -> firmada (el cliente dibujó su firma) -> aprobada/rechazada.
+ */
+export type EstadoSolicitud = "pendiente" | "esperando_firma" | "firmada" | "aprobada" | "rechazada";
 
 export type SolicitudPrestamo = {
   id: string;
@@ -143,6 +147,9 @@ export type SolicitudPrestamo = {
   plazo_dias: number;
   estado: EstadoSolicitud;
   fecha_solicitud: string;
+  porcentaje_interes_diario_propuesto: number | null;
+  firma_cliente_data_url: string | null;
+  fecha_firma: string | null;
   revisado_por: string | null;
   fecha_revision: string | null;
   notas_revision: string | null;
