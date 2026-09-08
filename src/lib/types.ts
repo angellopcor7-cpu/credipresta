@@ -3,6 +3,7 @@ export type EstadoCliente = "activo" | "pendiente_aprobacion" | "inactivo";
 export type Cliente = {
   id: string;
   usuario_id: string | null;
+  cobrador_id: string | null;
   nombre_completo: string;
   telefono: string | null;
   direccion: string | null;
@@ -21,6 +22,7 @@ export type TipoDocumento =
   | "comprobante_domicilio"
   | "foto_cliente"
   | "contrato_pagare"
+  | "pagare_firmado"
   | "otro";
 
 export type DocumentoCliente = {
@@ -79,6 +81,7 @@ export type Prestamo = {
   fecha_liquidacion: string | null;
   metodo_pago: MetodoPago;
   datos_transferencia: string | null;
+  dias_cobro_personalizados: number[] | null;
   creado_por: string | null;
   created_at: string;
 };
@@ -145,10 +148,11 @@ export type HistorialMovimiento = {
 };
 
 /**
- * pendiente -> esperando_firma (el admin ya fijó el interés y generó el
- * pagaré) -> firmada (el cliente dibujó su firma) -> aprobada/rechazada.
+ * El cobrador da de alta al cliente y arma la solicitud con foto de INE y de
+ * pagaré ya firmado a mano (el cliente no tiene cuenta ni firma nada dentro
+ * de la app) -> pendiente -> Empresa aprueba/rechaza directamente.
  */
-export type EstadoSolicitud = "pendiente" | "esperando_firma" | "firmada" | "aprobada" | "rechazada";
+export type EstadoSolicitud = "pendiente" | "aprobada" | "rechazada";
 
 export type SolicitudPrestamo = {
   id: string;
@@ -157,11 +161,9 @@ export type SolicitudPrestamo = {
   plazo_dias: number;
   estado: EstadoSolicitud;
   fecha_solicitud: string;
-  porcentaje_interes_diario_propuesto: number | null;
-  firma_cliente_data_url: string | null;
-  fecha_firma: string | null;
   metodo_pago: MetodoPago;
   datos_transferencia: string | null;
+  dias_cobro_personalizados: number[] | null;
   revisado_por: string | null;
   fecha_revision: string | null;
   notas_revision: string | null;
@@ -170,5 +172,5 @@ export type SolicitudPrestamo = {
 };
 
 export type SolicitudConCliente = SolicitudPrestamo & {
-  clientes: { nombre_completo: string; telefono: string | null } | null;
+  clientes: { nombre_completo: string; telefono: string | null; direccion: string | null } | null;
 };

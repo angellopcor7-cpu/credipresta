@@ -39,12 +39,7 @@ export default async function PrestamosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Préstamos</h1>
-        <Link
-          href="/prestamos/nuevo"
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
-        >
-          + Nuevo préstamo
-        </Link>
+        <p className="text-slate-500 text-sm">Se crean al aprobar una solicitud del cobrador.</p>
       </div>
 
       {prestamos.length === 0 ? (

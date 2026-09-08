@@ -1,4 +1,3 @@
-import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Cliente } from "@/lib/types";
 
@@ -17,12 +16,7 @@ export default async function ClientesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes</h1>
-        <Link
-          href="/clientes/nuevo"
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
-        >
-          + Nuevo cliente
-        </Link>
+        <p className="text-slate-500 text-sm">Los da de alta el cobrador desde su panel.</p>
       </div>
 
       {clientes.length === 0 ? (

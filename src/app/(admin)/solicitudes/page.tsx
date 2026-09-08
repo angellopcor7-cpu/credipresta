@@ -1,16 +1,10 @@
 import { createClient } from "@/lib/supabase/server";
-import type { MetodoPago, SolicitudConCliente, TipoDocumento } from "@/lib/types";
+import type { SolicitudConCliente, TipoDocumento } from "@/lib/types";
 import { rechazarSolicitud } from "./actions";
 import { SolicitudAprobarForm } from "./SolicitudAprobarForm";
 
 type SolicitudRevisada = SolicitudConCliente & {
   usuarios: { nombre_completo: string } | null;
-};
-
-const ETIQUETAS_METODO_PAGO: Record<MetodoPago, string> = {
-  efectivo: "Efectivo",
-  transferencia: "Transferencia",
-  ambos: "Efectivo o transferencia",
 };
 
 const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
@@ -19,6 +13,7 @@ const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
   comprobante_domicilio: "Comprobante domicilio",
   foto_cliente: "Foto",
   contrato_pagare: "Contrato",
+  pagare_firmado: "Pagaré firmado",
   otro: "Otro",
 };
 
@@ -59,6 +54,30 @@ async function obtenerDocumentosPorCliente(
   return mapa;
 }
 
+/** Trae el nombre del cobrador que dio de alta a cada cliente (clientes.creado_por -> usuarios.nombre_completo). */
+async function obtenerCobradorPorCliente(
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  clienteIds: string[]
+) {
+  const mapa = new Map<string, string>();
+  if (clienteIds.length === 0) return mapa;
+
+  const { data: clientes } = await supabase.from("clientes").select("id, creado_por").in("id", clienteIds);
+  const creadoPorIds = (clientes ?? []).map((c) => c.creado_por).filter((id): id is string => !!id);
+  if (creadoPorIds.length === 0) return mapa;
+
+  const { data: usuarios } = await supabase.from("usuarios").select("id, nombre_completo").in("id", creadoPorIds);
+  const nombrePorUsuarioId = new Map((usuarios ?? []).map((u) => [u.id, u.nombre_completo]));
+
+  for (const c of clientes ?? []) {
+    if (c.creado_por && nombrePorUsuarioId.has(c.creado_por)) {
+      mapa.set(c.id, nombrePorUsuarioId.get(c.creado_por)!);
+    }
+  }
+
+  return mapa;
+}
+
 export default async function SolicitudesPage({
   searchParams,
 }: {
@@ -70,12 +89,12 @@ export default async function SolicitudesPage({
   const [{ data: pendientes }, { data: revisadas }, { data: administradores }] = await Promise.all([
     supabase
       .from("solicitudes_prestamo")
-      .select("*, clientes(nombre_completo, telefono)")
-      .in("estado", ["pendiente", "esperando_firma", "firmada"])
+      .select("*, clientes(nombre_completo, telefono, direccion)")
+      .eq("estado", "pendiente")
       .order("fecha_solicitud", { ascending: true }),
     supabase
       .from("solicitudes_prestamo")
-      .select("*, clientes(nombre_completo, telefono), usuarios(nombre_completo)")
+      .select("*, clientes(nombre_completo, telefono, direccion), usuarios(nombre_completo)")
       .in("estado", ["aprobada", "rechazada"])
       .order("fecha_revision", { ascending: false })
       .limit(20),
@@ -93,6 +112,10 @@ export default async function SolicitudesPage({
     (u) => ({ id: u.id, nombre: u.nombre_completo })
   );
   const documentosPorCliente = await obtenerDocumentosPorCliente(
+    supabase,
+    listaPendientes.map((s) => s.cliente_id)
+  );
+  const cobradorPorCliente = await obtenerCobradorPorCliente(
     supabase,
     listaPendientes.map((s) => s.cliente_id)
   );
@@ -117,12 +140,14 @@ export default async function SolicitudesPage({
                   <div>
                     <p className="font-medium">{s.clientes?.nombre_completo ?? "—"}</p>
                     <p className="text-slate-500 text-xs">{s.clientes?.telefono ?? "Sin teléfono"}</p>
+                    <p className="text-slate-500 text-xs">
+                      Dado de alta por: {cobradorPorCliente.get(s.cliente_id) ?? "—"}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-emerald-400 font-semibold">
                       {currency(Number(s.monto_solicitado))} a {s.plazo_dias} días
                     </p>
-                    <p className="text-slate-500 text-xs">Pago: {ETIQUETAS_METODO_PAGO[s.metodo_pago]}</p>
                   </div>
                 </div>
 
@@ -148,14 +173,7 @@ export default async function SolicitudesPage({
                     solicitudId={s.id}
                     montoSolicitado={Number(s.monto_solicitado)}
                     plazoDias={s.plazo_dias}
-                    estado={s.estado}
-                    metodoPago={s.metodo_pago}
-                    porcentajeInteresDiarioPropuesto={
-                      s.porcentaje_interes_diario_propuesto !== null
-                        ? Number(s.porcentaje_interes_diario_propuesto)
-                        : null
-                    }
-                    firmaClienteDataUrl={s.firma_cliente_data_url}
+                    diasPersonalizados={s.dias_cobro_personalizados}
                     administradores={listaAdministradores}
                   />
 
@@ -203,7 +221,7 @@ export default async function SolicitudesPage({
                 <tr>
                   <th className="px-3 py-2">Cliente</th>
                   <th className="px-3 py-2">Monto</th>
-                  <th className="px-3 py-2">Pago</th>
+                  <th className="px-3 py-2">Plan</th>
                   <th className="px-3 py-2">Estado</th>
                   <th className="px-3 py-2">Aprobó / rechazó</th>
                 </tr>
@@ -213,7 +231,7 @@ export default async function SolicitudesPage({
                   <tr key={s.id} className="border-t border-slate-800">
                     <td className="px-3 py-2">{s.clientes?.nombre_completo ?? "—"}</td>
                     <td className="px-3 py-2">{currency(Number(s.monto_solicitado))}</td>
-                    <td className="px-3 py-2 text-slate-400">{ETIQUETAS_METODO_PAGO[s.metodo_pago]}</td>
+                    <td className="px-3 py-2 text-slate-400">{s.plazo_dias} días</td>
                     <td className="px-3 py-2">
                       <span
                         className={`text-xs border rounded-full px-2 py-1 ${

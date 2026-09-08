@@ -53,6 +53,12 @@ export default async function AdminLayout({
                 </span>
               )}
             </Link>
+            <Link
+              href="/panel"
+              className="text-xs border border-slate-700 rounded-full px-3 py-1 hover:border-slate-500"
+            >
+              Vista Cobrador
+            </Link>
             <span className="text-slate-500">{sesion.nombreCompleto}</span>
             <form action={signOut}>
               <button className="text-slate-400 hover:text-white">Cerrar sesión</button>

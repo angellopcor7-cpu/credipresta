@@ -5,6 +5,8 @@ import {
   calcularSaldo,
   calcularCuotaSugerida,
   calcularPorcentajeInteresTotal,
+  calcularPorcentajeInteresPorPlan,
+  esPlanValido,
   calcularMontoMora,
   calcularSaldoConMora,
   tieneCuotaVencidaSinPagar,
@@ -98,6 +100,35 @@ describe("interés diario × plazo (ejemplo exacto del negocio)", () => {
   });
 });
 
+describe("planes fijos (20 días=20%, 30 días=32%)", () => {
+  it("20 días da 20% de interés total", () => {
+    expect(calcularPorcentajeInteresPorPlan(20)).toBe(20);
+  });
+
+  it("30 días da 32% de interés total", () => {
+    expect(calcularPorcentajeInteresPorPlan(30)).toBe(32);
+  });
+
+  it("préstamo de $5,000 a 20 días: total $6,000, pago diario $300", () => {
+    const porcentaje = calcularPorcentajeInteresPorPlan(20);
+    const total = calcularMontoTotal(5000, porcentaje);
+    expect(total).toBe(6000);
+    expect(calcularCuotaSugerida(total, 20)).toBe(300);
+  });
+
+  it("préstamo de $5,000 a 30 días: total $6,600", () => {
+    const porcentaje = calcularPorcentajeInteresPorPlan(30);
+    expect(calcularMontoTotal(5000, porcentaje)).toBe(6600);
+  });
+
+  it("solo 20 o 30 días son planes válidos", () => {
+    expect(esPlanValido(20)).toBe(true);
+    expect(esPlanValido(30)).toBe(true);
+    expect(esPlanValido(15)).toBe(false);
+    expect(esPlanValido(45)).toBe(false);
+  });
+});
+
 describe("mora", () => {
   const regla = { umbral: 5000, moraBaja: 50, moraAlta: 100 };
 
@@ -187,6 +218,19 @@ describe("días de cobro según monto del préstamo", () => {
     expect(esDiaDeCobro(martes, 3000, regla)).toBe(true);
     expect(esDiaDeCobro(martes, 9000, regla)).toBe(true);
   });
+
+  it("días personalizados mandan sobre la regla general (permite fin de semana aunque sea >= $5,000)", () => {
+    const domingo = new Date("2026-09-06T00:00:00Z");
+    const sabado = new Date("2026-09-05T00:00:00Z");
+    const todosLosDias = [0, 1, 2, 3, 4, 5, 6];
+    expect(esDiaDeCobro(domingo, 9000, regla, todosLosDias)).toBe(true);
+    expect(esDiaDeCobro(sabado, 9000, regla, todosLosDias)).toBe(true);
+  });
+
+  it("días personalizados también pueden restringir más que la regla general", () => {
+    const martes = new Date("2026-09-08T00:00:00Z");
+    expect(esDiaDeCobro(martes, 1000, regla, [1, 3, 5])).toBe(false);
+  });
 });
 
 describe("generación del calendario de pagos", () => {
@@ -239,5 +283,23 @@ describe("generación del calendario de pagos", () => {
       regla,
     });
     expect(dias.map((d) => d.numeroDia)).toEqual([1, 2, 3, 4, 5]);
+  });
+
+  it("con días personalizados, un préstamo >= $5,000 puede incluir fines de semana", () => {
+    const dias = generarCalendarioPagos({
+      fechaInicio: new Date("2026-09-01T00:00:00Z"),
+      plazoDias: 10,
+      montoPrestamo: 9000,
+      montoCuota: 50,
+      regla,
+      diasPersonalizados: [0, 1, 2, 3, 4, 5, 6],
+    });
+
+    expect(dias).toHaveLength(10);
+    const incluyeFinDeSemana = dias.some((d) => {
+      const diaSemana = new Date(d.fechaProgramada + "T00:00:00Z").getUTCDay();
+      return diaSemana === 0 || diaSemana === 6;
+    });
+    expect(incluyeFinDeSemana).toBe(true);
   });
 });

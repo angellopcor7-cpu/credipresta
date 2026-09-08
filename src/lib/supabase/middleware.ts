@@ -30,20 +30,18 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const pathname = request.nextUrl.pathname;
-  const esRutaCliente = pathname.startsWith("/cliente");
-  const isAuthRoute =
-    pathname.startsWith("/login") || pathname === "/cliente/login" || pathname === "/cliente/registro";
+  const isAuthRoute = pathname.startsWith("/login");
   const isPublicAsset = pathname.startsWith("/_next");
 
   if (!user && !isAuthRoute && !isPublicAsset && pathname !== "/") {
     const url = request.nextUrl.clone();
-    url.pathname = esRutaCliente ? "/cliente/login" : "/login";
+    url.pathname = "/login";
     return NextResponse.redirect(url);
   }
 
   if (user && isAuthRoute) {
     const url = request.nextUrl.clone();
-    url.pathname = esRutaCliente ? "/cliente" : "/dashboard";
+    url.pathname = "/dashboard";
     return NextResponse.redirect(url);
   }
 

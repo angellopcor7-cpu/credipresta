@@ -1,7 +1,14 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 
-export type Rol = "administrador" | "cobrador" | "cliente";
+/**
+ * App privada: ya no hay clientes con cuenta propia (los da de alta el
+ * cobrador). Solo quedan dos roles reales: administrador (Empresa: Marco y
+ * Camacho) y cobrador. Un administrador también puede actuar como cobrador
+ * (tiene su propia fila en `cobradores`) — por eso `cobradorId` no depende
+ * del rol, se resuelve aparte.
+ */
+export type Rol = "administrador" | "cobrador";
 
 export type SesionUsuario = {
   id: string;
@@ -13,9 +20,7 @@ export type SesionUsuario = {
 
 /** A dónde debe ir cada rol al entrar — para no mandar a nadie a una pantalla que no le toca. */
 export function rutaInicioPorRol(rol: Rol): string {
-  if (rol === "administrador") return "/dashboard";
-  if (rol === "cobrador") return "/panel";
-  return "/cliente";
+  return rol === "administrador" ? "/dashboard" : "/panel";
 }
 
 /**
@@ -41,7 +46,7 @@ export async function getSesionUsuario(): Promise<SesionUsuario | null> {
   if (!perfil || !perfil.activo) return null;
 
   const rolNombre = (perfil.roles as unknown as { nombre: string } | null)?.nombre;
-  if (rolNombre !== "administrador" && rolNombre !== "cobrador" && rolNombre !== "cliente") return null;
+  if (rolNombre !== "administrador" && rolNombre !== "cobrador") return null;
 
   const cobrador = perfil.cobradores as unknown as { id: string } | { id: string }[] | null;
   const cobradorId = Array.isArray(cobrador) ? cobrador[0]?.id ?? null : cobrador?.id ?? null;
@@ -63,18 +68,33 @@ export async function exigirAdministrador(): Promise<SesionUsuario> {
   return sesion;
 }
 
-/** Exige que haya sesión con rol cobrador; si no, redirige a donde sí le toca. */
-export async function exigirCobrador(): Promise<SesionUsuario> {
+/**
+ * Exige que haya sesión con acceso a la vista de cobrador: un cobrador de
+ * verdad, o un administrador (Marco/Camacho también cobran clientes). Si el
+ * administrador todavía no tiene su propia fila en `cobradores`, se la crea
+ * aquí mismo la primera vez que entra a esta vista.
+ */
+export async function exigirVistaCobrador(): Promise<SesionUsuario & { cobradorId: string }> {
   const sesion = await getSesionUsuario();
   if (!sesion) redirect("/login");
-  if (sesion.rol !== "cobrador") redirect(rutaInicioPorRol(sesion.rol));
-  return sesion;
-}
 
-/** Exige que haya sesión con rol cliente; si no, redirige a donde sí le toca. */
-export async function exigirCliente(): Promise<SesionUsuario> {
-  const sesion = await getSesionUsuario();
-  if (!sesion) redirect("/cliente/login");
-  if (sesion.rol !== "cliente") redirect(rutaInicioPorRol(sesion.rol));
-  return sesion;
+  if (sesion.cobradorId) {
+    return { ...sesion, cobradorId: sesion.cobradorId };
+  }
+
+  if (sesion.rol !== "administrador") {
+    // Un cobrador de verdad siempre debería tener ya su fila; si no, su cuenta está mal configurada.
+    redirect("/dashboard");
+  }
+
+  const supabase = await createClient();
+  const { data: nuevoCobrador, error } = await supabase
+    .from("cobradores")
+    .insert({ usuario_id: sesion.id, activo: true })
+    .select("id")
+    .single();
+
+  if (error || !nuevoCobrador) redirect("/dashboard");
+
+  return { ...sesion, cobradorId: nuevoCobrador.id };
 }

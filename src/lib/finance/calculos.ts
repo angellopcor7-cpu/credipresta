@@ -41,6 +41,23 @@ export function calcularPorcentajeInteresTotal(porcentajeInteresDiario: number, 
   return redondear(porcentajeInteresDiario * plazoDias);
 }
 
+export type PlanPrestamo = 20 | 30;
+
+/** Planes fijos del negocio: a 20 días el interés total es 20%, a 30 días es 32%. */
+const INTERES_TOTAL_POR_PLAN: Record<PlanPrestamo, number> = {
+  20: 20,
+  30: 32,
+};
+
+/** El único dato que se elige es 20 o 30 días — el interés total ya viene fijo por el plan. */
+export function calcularPorcentajeInteresPorPlan(plazoDias: PlanPrestamo): number {
+  return INTERES_TOTAL_POR_PLAN[plazoDias];
+}
+
+export function esPlanValido(plazoDias: number): plazoDias is PlanPrestamo {
+  return plazoDias === 20 || plazoDias === 30;
+}
+
 /** cuota sugerida = total / plazo_dias (referencia, no es una obligación rígida por día) */
 export function calcularCuotaSugerida(montoTotal: number, plazoDias: number): number {
   if (plazoDias <= 0) throw new Error("plazoDias debe ser mayor a 0");
@@ -103,14 +120,23 @@ export function tieneCuotaVencidaSinPagar(calendario: CuotaCalendario[], hoy: st
 }
 
 /**
- * Determina si una fecha es día de cobro para un préstamo, según su monto.
- * Préstamos >= umbral (5,000): cobro lunes-viernes.
- * Préstamos < umbral: cobro lunes-sábado.
+ * Determina si una fecha es día de cobro para un préstamo, según su monto —
+ * a menos que ese préstamo tenga días personalizados (`diasPersonalizados`,
+ * elegidos por el cobrador al crearlo), en cuyo caso esos mandan sobre la
+ * regla general. Esto es lo que le permite a un cobrador dejar que un
+ * cliente puntual pague fines de semana aunque el préstamo sea >= al umbral.
+ * Préstamos >= umbral (5,000) sin días personalizados: cobro lunes-viernes.
+ * Préstamos < umbral sin días personalizados: cobro lunes-sábado.
  */
-export function esDiaDeCobro(fecha: Date, montoPrestamo: number, regla: ReglaDiasCobro): boolean {
+export function esDiaDeCobro(
+  fecha: Date,
+  montoPrestamo: number,
+  regla: ReglaDiasCobro,
+  diasPersonalizados?: number[] | null
+): boolean {
   const diaSemana = fecha.getUTCDay(); // 0=domingo..6=sábado
   const diasPermitidos =
-    montoPrestamo >= regla.umbral ? regla.diasMayorIgualUmbral : regla.diasMenorUmbral;
+    diasPersonalizados ?? (montoPrestamo >= regla.umbral ? regla.diasMayorIgualUmbral : regla.diasMenorUmbral);
   return diasPermitidos.includes(diaSemana);
 }
 
@@ -131,8 +157,9 @@ export function generarCalendarioPagos(params: {
   montoPrestamo: number;
   montoCuota: number;
   regla: ReglaDiasCobro;
+  diasPersonalizados?: number[] | null;
 }): DiaCalendario[] {
-  const { fechaInicio, plazoDias, montoPrestamo, montoCuota, regla } = params;
+  const { fechaInicio, plazoDias, montoPrestamo, montoCuota, regla, diasPersonalizados } = params;
   const dias: DiaCalendario[] = [];
   const cursor = new Date(
     Date.UTC(fechaInicio.getUTCFullYear(), fechaInicio.getUTCMonth(), fechaInicio.getUTCDate())
@@ -142,7 +169,7 @@ export function generarCalendarioPagos(params: {
   // Empieza a buscar días de cobro a partir del día siguiente al inicio.
   while (numeroDia < plazoDias) {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
-    if (esDiaDeCobro(cursor, montoPrestamo, regla)) {
+    if (esDiaDeCobro(cursor, montoPrestamo, regla, diasPersonalizados)) {
       numeroDia += 1;
       dias.push({
         numeroDia,
