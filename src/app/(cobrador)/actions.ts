@@ -139,6 +139,17 @@ export async function aplicarPagoDelDia(formData: FormData) {
     redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Este préstamo ya está cerrado")}`);
   }
 
+  const hoy = new Date().toISOString().slice(0, 10);
+  const { data: pagosHoy } = await supabase
+    .from("pagos")
+    .select("id, fecha_pago")
+    .eq("prestamo_id", prestamoId)
+    .eq("tipo", "cuota_diaria");
+  const yaPagoHoy = (pagosHoy ?? []).some((p) => p.fecha_pago?.slice(0, 10) === hoy);
+  if (yaPagoHoy) {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Ya se aplicó el pago de hoy para este préstamo")}`);
+  }
+
   const saldoActual = Number(prestamo.saldo_actual);
   const monto = montoTexto ? Number(montoTexto) : Number(prestamo.monto_cuota_sugerida);
   const montoAplicado = Math.min(monto, saldoActual);

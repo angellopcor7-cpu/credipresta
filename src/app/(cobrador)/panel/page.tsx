@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { aplicarPagoDelDia, marcarIncumplidoDelDia } from "../actions";
+import { AbrirTodoButton } from "./AbrirTodoButton";
 import type { Cliente, Prestamo } from "@/lib/types";
 import {
   Wallet,
@@ -13,6 +14,7 @@ import {
   Clock,
   Phone,
   UserPlus,
+  ChevronDown,
 } from "lucide-react";
 
 function currency(n: number) {
@@ -66,6 +68,22 @@ export default async function PanelCobradorPage({
       ? await supabase.from("moras").select("prestamo_id").in("prestamo_id", prestamoIds).eq("estado", "pendiente")
       : { data: [] as { prestamo_id: string }[] };
   const prestamosConMora = new Set((morasData ?? []).map((m) => m.prestamo_id));
+
+  // Para bloquear los botones de hoy: un préstamo no puede recibir dos
+  // "pago del día" ni dos "no pagó" (mora) el mismo día.
+  const hoy = new Date().toISOString().slice(0, 10);
+  const [{ data: pagosHoyData }, { data: morasHoyData }] = await Promise.all([
+    prestamoIds.length > 0
+      ? supabase.from("pagos").select("prestamo_id, fecha_pago").in("prestamo_id", prestamoIds).eq("tipo", "cuota_diaria")
+      : Promise.resolve({ data: [] as { prestamo_id: string; fecha_pago: string }[] }),
+    prestamoIds.length > 0
+      ? supabase.from("moras").select("prestamo_id").in("prestamo_id", prestamoIds).eq("fecha_generada", hoy)
+      : Promise.resolve({ data: [] as { prestamo_id: string }[] }),
+  ]);
+  const prestamosPagadosHoy = new Set(
+    (pagosHoyData ?? []).filter((p) => p.fecha_pago?.slice(0, 10) === hoy).map((p) => p.prestamo_id)
+  );
+  const prestamosMoraHoy = new Set((morasHoyData ?? []).map((m) => m.prestamo_id));
 
   const filas = clientes.map((cliente) => {
     const prestamosDelCliente = prestamos.filter((p) => p.cliente_id === cliente.id);
@@ -148,6 +166,9 @@ export default async function PanelCobradorPage({
         </div>
       ) : (
         <div className="space-y-3">
+          <div className="flex justify-end">
+            <AbrirTodoButton />
+          </div>
           {filas.map(({ cliente, total, abonado, saldo, progreso, prestamoActivo, estadoTexto, enMora }) => (
             <div
               key={cliente.id}
@@ -221,22 +242,42 @@ export default async function PanelCobradorPage({
                       <p className="font-semibold">{currency(saldo)}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2 ml-auto">
-                    <form action={aplicarPagoDelDia}>
-                      <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                      <button className="inline-flex items-center gap-1.5 text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-1.5 rounded-md">
-                        <CircleCheck className="h-4 w-4" />
-                        Pago del día
-                      </button>
-                    </form>
-                    <form action={marcarIncumplidoDelDia}>
-                      <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                      <button className="inline-flex items-center gap-1.5 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium px-3 py-1.5 rounded-md">
-                        <CircleAlert className="h-4 w-4" />
-                        No pagó
-                      </button>
-                    </form>
-                  </div>
+                  <details className="cliente-details group ml-auto w-full sm:w-auto">
+                    <summary className="inline-flex items-center gap-1 text-xs text-amber-400 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                      <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
+                      Acciones de hoy
+                    </summary>
+                    <div className="flex flex-wrap gap-2 mt-2">
+                      {prestamosPagadosHoy.has(prestamoActivo.id) ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm bg-slate-800 text-slate-400 px-3 py-1.5 rounded-md">
+                          <CircleCheck className="h-4 w-4" />
+                          Ya cobrado hoy
+                        </span>
+                      ) : (
+                        <form action={aplicarPagoDelDia}>
+                          <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
+                          <button className="inline-flex items-center gap-1.5 text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-1.5 rounded-md">
+                            <CircleCheck className="h-4 w-4" />
+                            Pago del día
+                          </button>
+                        </form>
+                      )}
+                      {prestamosMoraHoy.has(prestamoActivo.id) ? (
+                        <span className="inline-flex items-center gap-1.5 text-sm bg-slate-800 text-slate-400 px-3 py-1.5 rounded-md">
+                          <CircleAlert className="h-4 w-4" />
+                          Ya marcado hoy
+                        </span>
+                      ) : (
+                        <form action={marcarIncumplidoDelDia}>
+                          <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
+                          <button className="inline-flex items-center gap-1.5 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium px-3 py-1.5 rounded-md">
+                            <CircleAlert className="h-4 w-4" />
+                            No pagó
+                          </button>
+                        </form>
+                      )}
+                    </div>
+                  </details>
                 </>
               ) : (
                 <p className="text-xs text-slate-500 ml-auto">

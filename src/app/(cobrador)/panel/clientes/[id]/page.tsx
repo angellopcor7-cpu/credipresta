@@ -114,6 +114,12 @@ export default async function DetalleClientePage({
       .filter((d) => d.url);
   }
 
+  // Para bloquear los botones de hoy: un préstamo no puede recibir dos
+  // "pago del día" ni dos "no pagó" (mora) el mismo día.
+  const hoy = new Date().toISOString().slice(0, 10);
+  const yaPagoHoy = pagos.some((p) => p.tipo === "cuota_diaria" && p.fecha_pago?.slice(0, 10) === hoy);
+  const yaMoraHoy = moras.some((m) => m.fecha_generada === hoy);
+
   const puedeCobrar = !!prestamoActivo && (prestamoActivo.estado === "activo" || prestamoActivo.estado === "en_mora");
   const abonado = prestamoActivo ? Number(prestamoActivo.monto_total) - Number(prestamoActivo.saldo_actual) : 0;
   const progreso =
@@ -235,37 +241,51 @@ export default async function DetalleClientePage({
 
           {puedeCobrar && (
             <div className="flex flex-wrap gap-3">
-              <form
-                action={aplicarPagoDelDia}
-                className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3"
-              >
-                <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                <label className="text-sm text-slate-300" htmlFor="monto">
-                  Monto
-                </label>
-                <input
-                  id="monto"
-                  name="monto"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  max={prestamoActivo.saldo_actual}
-                  defaultValue={prestamoActivo.monto_cuota_sugerida}
-                  className="w-28 rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                />
-                <button className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+              {yaPagoHoy ? (
+                <span className="inline-flex items-center gap-1.5 text-sm bg-slate-900 border border-slate-800 text-slate-400 rounded-xl px-4 py-3">
                   <CircleCheck className="h-4 w-4" />
-                  Aplicar pago del día
-                </button>
-              </form>
+                  Ya se cobró el pago de hoy
+                </span>
+              ) : (
+                <form
+                  action={aplicarPagoDelDia}
+                  className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3"
+                >
+                  <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
+                  <label className="text-sm text-slate-300" htmlFor="monto">
+                    Monto
+                  </label>
+                  <input
+                    id="monto"
+                    name="monto"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    max={prestamoActivo.saldo_actual}
+                    defaultValue={prestamoActivo.monto_cuota_sugerida}
+                    className="w-28 rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                  />
+                  <button className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+                    <CircleCheck className="h-4 w-4" />
+                    Aplicar pago del día
+                  </button>
+                </form>
+              )}
 
-              <form action={marcarIncumplidoDelDia} className="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
-                <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                <button className="inline-flex items-center gap-1.5 text-sm bg-red-500/90 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-md">
+              {yaMoraHoy ? (
+                <span className="inline-flex items-center gap-1.5 text-sm bg-slate-900 border border-slate-800 text-slate-400 rounded-xl px-4 py-3">
                   <CircleAlert className="h-4 w-4" />
-                  No pagó hoy (marcar incumplido)
-                </button>
-              </form>
+                  Ya se marcó como no pagó hoy
+                </span>
+              ) : (
+                <form action={marcarIncumplidoDelDia} className="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
+                  <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
+                  <button className="inline-flex items-center gap-1.5 text-sm bg-red-500/90 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-md">
+                    <CircleAlert className="h-4 w-4" />
+                    No pagó hoy (marcar incumplido)
+                  </button>
+                </form>
+              )}
             </div>
           )}
         </>
