@@ -15,6 +15,7 @@ import {
   Phone,
   UserPlus,
   ChevronDown,
+  ChevronRight,
 } from "lucide-react";
 
 function currency(n: number) {
@@ -184,10 +185,8 @@ export default async function PanelCobradorPage({
                 <div className="shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold text-sm">
                   {iniciales(cliente.nombre_completo)}
                 </div>
-                <div>
-                  <Link href={`/panel/clientes/${cliente.id}`} className="font-medium hover:text-amber-400">
-                    {cliente.nombre_completo}
-                  </Link>
+                <div className="min-w-0">
+                  <p className="font-medium truncate">{cliente.nombre_completo}</p>
                   <p className="text-slate-500 text-xs flex items-center gap-1">
                     <Phone className="h-3 w-3" />
                     {cliente.telefono ?? "Sin teléfono"}
@@ -211,6 +210,13 @@ export default async function PanelCobradorPage({
                     {estadoTexto}
                   </span>
                 </div>
+                <Link
+                  href={`/panel/clientes/${cliente.id}`}
+                  title="Ver ficha del cliente"
+                  className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full bg-slate-800 hover:bg-amber-500 border border-slate-700 text-slate-300 hover:text-slate-950 transition-colors"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Link>
               </div>
 
               {prestamoActivo ? (
