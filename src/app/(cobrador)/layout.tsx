@@ -18,7 +18,7 @@ export default async function CobradorLayout({ children }: { children: React.Rea
       <header className="border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/panel" className="font-bold text-lg">
-            Credi<span className="text-emerald-400">Presta</span>
+            Credi<span className="text-amber-400">Presta</span>
           </Link>
           <nav className="flex items-center gap-5 text-sm text-slate-300 flex-wrap">
             <Link href="/panel" className="hover:text-white">

@@ -22,7 +22,7 @@ export default async function RutasPage() {
         <h1 className="text-2xl font-bold">Rutas</h1>
         <Link
           href="/rutas/nueva"
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
+          className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
         >
           + Nueva ruta
         </Link>

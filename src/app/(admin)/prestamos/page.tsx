@@ -16,7 +16,7 @@ const estadoLabel: Record<string, string> = {
 };
 
 const estadoColor: Record<string, string> = {
-  activo: "bg-emerald-950 text-emerald-400 border-emerald-900",
+  activo: "bg-sky-950 text-sky-400 border-sky-900",
   en_mora: "bg-amber-950 text-amber-400 border-amber-900",
   liquidado: "bg-slate-800 text-slate-400 border-slate-700",
   cancelado: "bg-red-950 text-red-400 border-red-900",
@@ -62,7 +62,7 @@ export default async function PrestamosPage() {
               {prestamos.map((p) => (
                 <tr key={p.id} className="border-t border-slate-800 hover:bg-slate-900/50">
                   <td className="px-4 py-3">
-                    <Link href={`/prestamos/${p.id}`} className="hover:text-emerald-400">
+                    <Link href={`/prestamos/${p.id}`} className="hover:text-amber-400">
                       {p.clientes?.nombre_completo ?? "—"}
                     </Link>
                   </td>

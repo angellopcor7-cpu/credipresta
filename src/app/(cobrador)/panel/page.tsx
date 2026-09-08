@@ -88,7 +88,7 @@ export default async function PanelCobradorPage({
         <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
       )}
       {exito && (
-        <p className="text-sm text-emerald-400 bg-emerald-950/50 border border-emerald-900 rounded-md px-3 py-2">
+        <p className="text-sm text-amber-400 bg-amber-950/50 border border-amber-900 rounded-md px-3 py-2">
           {exito}
         </p>
       )}
@@ -121,7 +121,7 @@ export default async function PanelCobradorPage({
                       ? "bg-amber-950 text-amber-400 border-amber-900"
                       : enMora
                         ? "bg-red-950 text-red-400 border-red-900"
-                        : "bg-emerald-950 text-emerald-400 border-emerald-900"
+                        : "bg-sky-950 text-sky-400 border-sky-900"
                   }`}
                 >
                   {estadoTexto}
@@ -137,7 +137,7 @@ export default async function PanelCobradorPage({
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Abonado</p>
-                      <p className="font-semibold text-emerald-400">{currency(abonado)}</p>
+                      <p className="font-semibold text-amber-400">{currency(abonado)}</p>
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Saldo</p>
@@ -147,7 +147,7 @@ export default async function PanelCobradorPage({
                   <div className="flex gap-2">
                     <form action={aplicarPagoDelDia}>
                       <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                      <button className="text-sm bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold px-3 py-1.5 rounded-md">
+                      <button className="text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-1.5 rounded-md">
                         Aplicar pago del día
                       </button>
                     </form>

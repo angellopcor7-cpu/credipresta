@@ -12,7 +12,7 @@ export default async function LoginPage({
       <div className="w-full max-w-sm space-y-6">
         <div className="text-center">
           <h1 className="text-2xl font-bold text-white">
-            Credi<span className="text-emerald-400">Presta</span>
+            Credi<span className="text-amber-400">Presta</span>
           </h1>
           <p className="text-slate-400 text-sm mt-1">
             Accede a tu panel de gestión
@@ -29,7 +29,7 @@ export default async function LoginPage({
               name="email"
               type="email"
               required
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div className="space-y-1">
@@ -42,7 +42,7 @@ export default async function LoginPage({
               type="password"
               required
               minLength={6}
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
 
@@ -52,14 +52,14 @@ export default async function LoginPage({
             </p>
           )}
           {message && (
-            <p className="text-sm text-emerald-400 bg-emerald-950/50 border border-emerald-900 rounded-md px-3 py-2">
+            <p className="text-sm text-amber-400 bg-amber-950/50 border border-amber-900 rounded-md px-3 py-2">
               {message}
             </p>
           )}
 
           <button
             formAction={signIn}
-            className="w-full bg-emerald-500 hover:bg-emerald-400 transition-colors text-slate-950 font-semibold rounded-md py-2 text-sm"
+            className="w-full bg-amber-500 hover:bg-amber-400 transition-colors text-slate-950 font-semibold rounded-md py-2 text-sm"
           >
             Iniciar sesión
           </button>

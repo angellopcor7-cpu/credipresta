@@ -104,7 +104,7 @@ export default async function DetallePrestamoPage({
       )}
 
       {exito && (
-        <p className="text-sm text-emerald-400 bg-emerald-950/50 border border-emerald-900 rounded-md px-3 py-2">
+        <p className="text-sm text-amber-400 bg-amber-950/50 border border-amber-900 rounded-md px-3 py-2">
           {exito}
         </p>
       )}
@@ -172,7 +172,7 @@ export default async function DetallePrestamoPage({
                 step="0.01"
                 max={p.saldo_actual}
                 required
-                className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
             </div>
             <div className="space-y-1">
@@ -183,7 +183,7 @@ export default async function DetallePrestamoPage({
                 id="tipo"
                 name="tipo"
                 defaultValue="cuota_diaria"
-                className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               >
                 <option value="cuota_diaria">Cuota diaria</option>
                 <option value="abono_libre">Abono libre</option>
@@ -198,7 +198,7 @@ export default async function DetallePrestamoPage({
               id="metodo"
               name="metodo"
               placeholder="Efectivo, transferencia..."
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
 
@@ -208,7 +208,7 @@ export default async function DetallePrestamoPage({
             </p>
           )}
 
-          <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
+          <button className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
             Registrar
           </button>
         </form>
@@ -318,7 +318,7 @@ function Resumen({ label, value, destacado = false }: { label: string; value: st
   return (
     <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
       <p className="text-slate-400 text-xs">{label}</p>
-      <p className={`text-xl font-semibold mt-1 ${destacado ? "text-emerald-400" : ""}`}>{value}</p>
+      <p className={`text-xl font-semibold mt-1 ${destacado ? "text-amber-400" : ""}`}>{value}</p>
     </div>
   );
 }

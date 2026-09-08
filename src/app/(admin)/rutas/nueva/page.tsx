@@ -24,7 +24,7 @@ export default async function NuevaRutaPage({
             id="nombre"
             name="nombre"
             required
-            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="space-y-1">
@@ -34,7 +34,7 @@ export default async function NuevaRutaPage({
           <input
             id="zona"
             name="zona"
-            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div className="space-y-1">
@@ -45,7 +45,7 @@ export default async function NuevaRutaPage({
             id="cobrador_id"
             name="cobrador_id"
             defaultValue=""
-            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           >
             <option value="">Sin asignar</option>
             {cobradores.map((c) => (
@@ -62,7 +62,7 @@ export default async function NuevaRutaPage({
           </p>
         )}
 
-        <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
+        <button className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
           Guardar ruta
         </button>
       </form>

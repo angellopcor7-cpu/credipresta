@@ -145,7 +145,7 @@ export default async function SolicitudesPage({
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-emerald-400 font-semibold">
+                    <p className="text-amber-400 font-semibold">
                       {currency(Number(s.monto_solicitado))} a {s.plazo_dias} días
                     </p>
                   </div>
@@ -236,7 +236,7 @@ export default async function SolicitudesPage({
                       <span
                         className={`text-xs border rounded-full px-2 py-1 ${
                           s.estado === "aprobada"
-                            ? "bg-emerald-950 text-emerald-400 border-emerald-900"
+                            ? "bg-sky-950 text-sky-400 border-sky-900"
                             : "bg-red-950 text-red-400 border-red-900"
                         }`}
                       >

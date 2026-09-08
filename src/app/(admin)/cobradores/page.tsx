@@ -17,7 +17,7 @@ export default async function CobradoresPage() {
         <h1 className="text-2xl font-bold">Cobradores</h1>
         <Link
           href="/cobradores/nuevo"
-          className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
+          className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
         >
           + Nuevo cobrador
         </Link>
@@ -46,7 +46,7 @@ export default async function CobradoresPage() {
                     <span
                       className={`text-xs border rounded-full px-2 py-1 ${
                         c.activo
-                          ? "bg-emerald-950 text-emerald-400 border-emerald-900"
+                          ? "bg-sky-950 text-sky-400 border-sky-900"
                           : "bg-slate-800 text-slate-500 border-slate-700"
                       }`}
                     >

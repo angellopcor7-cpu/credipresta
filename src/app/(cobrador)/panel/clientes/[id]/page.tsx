@@ -114,7 +114,7 @@ export default async function DetalleClientePage({
         <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
       )}
       {exito && (
-        <p className="text-sm text-emerald-400 bg-emerald-950/50 border border-emerald-900 rounded-md px-3 py-2">
+        <p className="text-sm text-amber-400 bg-amber-950/50 border border-amber-900 rounded-md px-3 py-2">
           {exito}
         </p>
       )}
@@ -179,7 +179,7 @@ export default async function DetalleClientePage({
                   defaultValue={prestamoActivo.monto_cuota_sugerida}
                   className="w-28 rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
-                <button className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+                <button className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
                   Aplicar pago del día
                 </button>
               </form>
@@ -261,7 +261,7 @@ export default async function DetalleClientePage({
                 {pagos.map((p) => (
                   <tr key={p.id} className="border-t border-slate-800">
                     <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(p.fecha_pago?.slice(0, 10))}</td>
-                    <td className="px-3 py-2 text-emerald-400">{currency(Number(p.monto))}</td>
+                    <td className="px-3 py-2 text-amber-400">{currency(Number(p.monto))}</td>
                     <td className="px-3 py-2 text-slate-400">{p.tipo === "cuota_diaria" ? "Cuota diaria" : p.tipo}</td>
                     <td className="px-3 py-2">{currency(Number(p.saldo_posterior))}</td>
                   </tr>

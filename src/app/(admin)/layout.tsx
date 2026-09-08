@@ -27,7 +27,7 @@ export default async function AdminLayout({
       <header className="border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/dashboard" className="font-bold text-lg">
-            Credi<span className="text-emerald-400">Presta</span>
+            Credi<span className="text-amber-400">Presta</span>
           </Link>
           <nav className="flex items-center gap-5 text-sm text-slate-300 flex-wrap">
             <Link href="/dashboard" className="hover:text-white">

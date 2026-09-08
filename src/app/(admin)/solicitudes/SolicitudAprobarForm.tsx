@@ -39,7 +39,7 @@ export function SolicitudAprobarForm({
         </div>
         <div>
           <p className="text-slate-500 text-xs">Total a pagar</p>
-          <p className="font-semibold text-emerald-400">{currency(total)}</p>
+          <p className="font-semibold text-amber-400">{currency(total)}</p>
         </div>
         <div>
           <p className="text-slate-500 text-xs">Pago diario</p>
@@ -60,7 +60,7 @@ export function SolicitudAprobarForm({
           name="revisado_por"
           required
           defaultValue=""
-          className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
           <option value="" disabled>
             ¿Quién aprueba?
@@ -71,7 +71,7 @@ export function SolicitudAprobarForm({
             </option>
           ))}
         </select>
-        <button className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+        <button className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
           Aprobar
         </button>
       </form>

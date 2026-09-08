@@ -26,7 +26,7 @@ export default async function NuevoCobradorPage({
           </p>
         )}
 
-        <button className="w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
+        <button className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
           Crear cobrador
         </button>
       </form>
@@ -57,7 +57,7 @@ function Field({
         name={name}
         type={type}
         required={required}
-        className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+        className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
       />
       {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>
