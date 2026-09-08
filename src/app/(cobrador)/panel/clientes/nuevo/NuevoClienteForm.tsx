@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { UserRound, Landmark, CalendarClock, FileImage, CircleCheck } from "lucide-react";
 import { crearClienteYSolicitud } from "../../../actions";
 import {
   calcularPorcentajeInteresPorPlan,
@@ -54,7 +55,10 @@ export function NuevoClienteForm({ error }: { error?: string }) {
       className="space-y-5 bg-slate-900 p-6 rounded-xl border border-slate-800"
     >
       <div className="space-y-3">
-        <p className="text-sm font-medium text-slate-200">Datos del cliente</p>
+        <p className="text-sm font-medium text-slate-200 flex items-center gap-1.5">
+          <UserRound className="h-4 w-4 text-amber-400" />
+          Datos del cliente
+        </p>
         <div className="space-y-1">
           <label className="text-sm text-slate-300" htmlFor="nombre_completo">
             Nombre completo
@@ -92,7 +96,10 @@ export function NuevoClienteForm({ error }: { error?: string }) {
       </div>
 
       <div className="space-y-3 border-t border-slate-800 pt-4">
-        <p className="text-sm font-medium text-slate-200">Préstamo</p>
+        <p className="text-sm font-medium text-slate-200 flex items-center gap-1.5">
+          <Landmark className="h-4 w-4 text-amber-400" />
+          Préstamo
+        </p>
         <div className="space-y-1">
           <label className="text-sm text-slate-300" htmlFor="monto_solicitado">
             Valor del préstamo
@@ -164,6 +171,7 @@ export function NuevoClienteForm({ error }: { error?: string }) {
             onChange={(e) => setPersonalizarDias(e.target.checked)}
             className="accent-amber-500"
           />
+          <CalendarClock className="h-4 w-4 text-slate-400 shrink-0" />
           Este cliente va a pagar en días distintos a los normales (por ejemplo, fines de semana)
         </label>
         {personalizarDias && (
@@ -191,7 +199,10 @@ export function NuevoClienteForm({ error }: { error?: string }) {
       </div>
 
       <div className="space-y-3 border-t border-slate-800 pt-4">
-        <p className="text-sm font-medium text-slate-200">Documentos</p>
+        <p className="text-sm font-medium text-slate-200 flex items-center gap-1.5">
+          <FileImage className="h-4 w-4 text-amber-400" />
+          Documentos
+        </p>
         <div className="grid sm:grid-cols-2 gap-3">
           <div className="space-y-1">
             <label className="text-sm text-slate-300" htmlFor="doc_ine_frente">
@@ -241,7 +252,8 @@ export function NuevoClienteForm({ error }: { error?: string }) {
         <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
       )}
 
-      <button className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
+      <button className="w-full inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
+        <CircleCheck className="h-4 w-4" />
         Crear cliente y enviar a Empresa
       </button>
     </form>

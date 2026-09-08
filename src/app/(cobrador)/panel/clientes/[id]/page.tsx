@@ -5,9 +5,28 @@ import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { formatoFechaCorta } from "@/lib/format";
 import { aplicarPagoDelDia, marcarIncumplidoDelDia } from "../../../actions";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
+import {
+  ArrowLeft,
+  Landmark,
+  Wallet,
+  TrendingUp,
+  PiggyBank,
+  CircleCheck,
+  CircleAlert,
+  Clock,
+  FileText,
+  Phone,
+  MapPin,
+  CalendarDays,
+} from "lucide-react";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
+}
+
+function iniciales(nombre: string) {
+  const partes = nombre.trim().split(/\s+/);
+  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
 const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
@@ -97,17 +116,41 @@ export default async function DetalleClientePage({
 
   const puedeCobrar = !!prestamoActivo && (prestamoActivo.estado === "activo" || prestamoActivo.estado === "en_mora");
   const abonado = prestamoActivo ? Number(prestamoActivo.monto_total) - Number(prestamoActivo.saldo_actual) : 0;
+  const progreso =
+    prestamoActivo && Number(prestamoActivo.monto_total) > 0
+      ? Math.min(100, Math.round((abonado / Number(prestamoActivo.monto_total)) * 100))
+      : 0;
   const solicitudPendiente = solicitudes.find((s) => s.estado === "pendiente");
+  const enMora = !!prestamoActivo && prestamoActivo.estado === "en_mora";
 
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/panel" className="text-sm text-slate-400 hover:text-white">
-          ← Mis clientes
+        <Link href="/panel" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+          <ArrowLeft className="h-3.5 w-3.5" />
+          Mis clientes
         </Link>
-        <h1 className="text-2xl font-bold mt-1">{cliente.nombre_completo}</h1>
-        <p className="text-slate-400 text-sm">{cliente.telefono ?? "Sin teléfono"}</p>
-        {cliente.direccion && <p className="text-slate-500 text-xs">{cliente.direccion}</p>}
+
+        <div className="flex items-center gap-3 mt-3">
+          <div className="shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold">
+            {iniciales(cliente.nombre_completo)}
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold leading-tight">{cliente.nombre_completo}</h1>
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-slate-400 text-sm">
+              <span className="inline-flex items-center gap-1">
+                <Phone className="h-3.5 w-3.5" />
+                {cliente.telefono ?? "Sin teléfono"}
+              </span>
+              {cliente.direccion && (
+                <span className="inline-flex items-center gap-1 text-slate-500 text-xs">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {cliente.direccion}
+                </span>
+              )}
+            </div>
+          </div>
+        </div>
       </div>
 
       {error && (
@@ -120,37 +163,68 @@ export default async function DetalleClientePage({
       )}
 
       {cliente.estado === "pendiente_aprobacion" && (
-        <div className="bg-amber-950/50 border border-amber-900 rounded-md px-4 py-3 text-sm text-amber-300">
-          {solicitudPendiente ? (
-            <>
-              Esperando que Empresa apruebe la solicitud de {currency(Number(solicitudPendiente.monto_solicitado))} a{" "}
-              {solicitudPendiente.plazo_dias} días.
-            </>
-          ) : (
-            "Esperando aprobación de Empresa."
-          )}
+        <div className="flex items-start gap-2 bg-amber-950/50 border border-amber-900 rounded-md px-4 py-3 text-sm text-amber-300">
+          <Clock className="h-4 w-4 shrink-0 mt-0.5" />
+          <p>
+            {solicitudPendiente ? (
+              <>
+                Esperando que Empresa apruebe la solicitud de {currency(Number(solicitudPendiente.monto_solicitado))} a{" "}
+                {solicitudPendiente.plazo_dias} días.
+              </>
+            ) : (
+              "Esperando aprobación de Empresa."
+            )}
+          </p>
         </div>
       )}
 
       {prestamoActivo && (
         <>
           <div className="grid sm:grid-cols-4 gap-4">
-            <Resumen label="Prestado" value={currency(Number(prestamoActivo.monto_prestado))} />
-            <Resumen label="Total con interés" value={currency(Number(prestamoActivo.monto_total))} />
-            <Resumen label="Abonado" value={currency(abonado)} />
-            <Resumen label="Saldo" value={currency(Number(prestamoActivo.saldo_actual))} destacado />
+            <Resumen icon={Landmark} label="Prestado" value={currency(Number(prestamoActivo.monto_prestado))} tone="sky" />
+            <Resumen icon={Wallet} label="Total con interés" value={currency(Number(prestamoActivo.monto_total))} tone="amber" />
+            <Resumen icon={TrendingUp} label="Abonado" value={currency(abonado)} tone="sky" />
+            <Resumen icon={PiggyBank} label="Saldo" value={currency(Number(prestamoActivo.saldo_actual))} tone="amber" destacado />
           </div>
 
-          <div className="flex flex-wrap items-center gap-3 text-sm text-slate-400">
-            <span className="border border-slate-700 rounded-full px-2 py-1">
+          <div className="space-y-1.5">
+            <div className="flex justify-between text-xs text-slate-500">
+              <span>Progreso del préstamo</span>
+              <span>{progreso}%</span>
+            </div>
+            <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div className={`h-full rounded-full ${enMora ? "bg-red-500" : "bg-amber-500"}`} style={{ width: `${progreso}%` }} />
+            </div>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+            <span
+              className={`inline-flex items-center gap-1 border rounded-full px-2 py-1 ${
+                enMora
+                  ? "bg-red-950 text-red-400 border-red-900"
+                  : prestamoActivo.estado === "activo"
+                    ? "bg-sky-950 text-sky-400 border-sky-900"
+                    : "border-slate-700"
+              }`}
+            >
+              {enMora ? <CircleAlert className="h-3.5 w-3.5" /> : <CircleCheck className="h-3.5 w-3.5" />}
               {ETIQUETAS_ESTADO_PRESTAMO[prestamoActivo.estado]}
             </span>
-            <span>Plan: {prestamoActivo.plazo_dias} días</span>
-            <span>Pago diario: {currency(Number(prestamoActivo.monto_cuota_sugerida))}</span>
-            <span>Inicio: {formatoFechaCorta(prestamoActivo.fecha_inicio)}</span>
-            <span>Vence: {formatoFechaCorta(calendario.at(-1)?.fecha_programada)}</span>
+            <span className="inline-flex items-center gap-1 border border-slate-800 rounded-full px-2 py-1">
+              <CalendarDays className="h-3.5 w-3.5" />
+              Plan {prestamoActivo.plazo_dias} días
+            </span>
+            <span className="border border-slate-800 rounded-full px-2 py-1">
+              Pago diario: {currency(Number(prestamoActivo.monto_cuota_sugerida))}
+            </span>
+            <span className="border border-slate-800 rounded-full px-2 py-1">
+              Inicio: {formatoFechaCorta(prestamoActivo.fecha_inicio)}
+            </span>
+            <span className="border border-slate-800 rounded-full px-2 py-1">
+              Vence: {formatoFechaCorta(calendario.at(-1)?.fecha_programada)}
+            </span>
             {prestamoActivo.dias_cobro_personalizados && (
-              <span>
+              <span className="border border-slate-800 rounded-full px-2 py-1">
                 Días de cobro:{" "}
                 {prestamoActivo.dias_cobro_personalizados.length === 0
                   ? "ninguno fijo"
@@ -179,14 +253,16 @@ export default async function DetalleClientePage({
                   defaultValue={prestamoActivo.monto_cuota_sugerida}
                   className="w-28 rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                 />
-                <button className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+                <button className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+                  <CircleCheck className="h-4 w-4" />
                   Aplicar pago del día
                 </button>
               </form>
 
               <form action={marcarIncumplidoDelDia} className="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
                 <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                <button className="text-sm bg-red-500/90 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-md">
+                <button className="inline-flex items-center gap-1.5 text-sm bg-red-500/90 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-md">
+                  <CircleAlert className="h-4 w-4" />
                   No pagó hoy (marcar incumplido)
                 </button>
               </form>
@@ -196,7 +272,10 @@ export default async function DetalleClientePage({
       )}
 
       <div>
-        <h2 className="font-semibold mb-2">Documentos</h2>
+        <h2 className="font-semibold mb-2 flex items-center gap-1.5">
+          <FileText className="h-4 w-4 text-slate-500" />
+          Documentos
+        </h2>
         {documentosConUrl.length === 0 ? (
           <p className="text-sm text-slate-500">Sin documentos subidos.</p>
         ) : (
@@ -207,8 +286,9 @@ export default async function DetalleClientePage({
                 href={doc.url}
                 target="_blank"
                 rel="noreferrer"
-                className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-full px-3 py-1"
+                className="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-full px-3 py-1"
               >
+                <FileText className="h-3 w-3" />
                 {ETIQUETAS_DOCUMENTO[doc.tipo]}
               </a>
             ))}
@@ -261,7 +341,7 @@ export default async function DetalleClientePage({
                 {pagos.map((p) => (
                   <tr key={p.id} className="border-t border-slate-800">
                     <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(p.fecha_pago?.slice(0, 10))}</td>
-                    <td className="px-3 py-2 text-amber-400">{currency(Number(p.monto))}</td>
+                    <td className="px-3 py-2 text-sky-400">{currency(Number(p.monto))}</td>
                     <td className="px-3 py-2 text-slate-400">{p.tipo === "cuota_diaria" ? "Cuota diaria" : p.tipo}</td>
                     <td className="px-3 py-2">{currency(Number(p.saldo_posterior))}</td>
                   </tr>
@@ -303,11 +383,29 @@ export default async function DetalleClientePage({
   );
 }
 
-function Resumen({ label, value, destacado }: { label: string; value: string; destacado?: boolean }) {
+function Resumen({
+  icon: Icon,
+  label,
+  value,
+  tone,
+  destacado,
+}: {
+  icon: typeof Wallet;
+  label: string;
+  value: string;
+  tone: "amber" | "sky";
+  destacado?: boolean;
+}) {
+  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-sky-500/10 text-sky-400";
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <p className="text-slate-500 text-xs">{label}</p>
-      <p className={`text-xl font-bold ${destacado ? "text-amber-400" : ""}`}>{value}</p>
+    <div className={`bg-slate-900 border rounded-xl p-4 flex items-center gap-3 ${destacado ? "border-amber-800" : "border-slate-800"}`}>
+      <div className={`shrink-0 rounded-lg p-2 ${toneClasses}`}>
+        <Icon className="h-4 w-4" />
+      </div>
+      <div>
+        <p className="text-slate-500 text-xs">{label}</p>
+        <p className={`text-lg font-bold ${destacado ? "text-amber-400" : ""}`}>{value}</p>
+      </div>
     </div>
   );
 }

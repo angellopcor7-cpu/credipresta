@@ -3,6 +3,17 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { aplicarPagoDelDia, marcarIncumplidoDelDia } from "../actions";
 import type { Cliente, Prestamo } from "@/lib/types";
+import {
+  Wallet,
+  TrendingUp,
+  PiggyBank,
+  Plus,
+  CircleCheck,
+  CircleAlert,
+  Clock,
+  Phone,
+  UserPlus,
+} from "lucide-react";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -14,11 +25,17 @@ const estadoClienteLabel: Record<string, string> = {
   inactivo: "Inactivo",
 };
 
+function iniciales(nombre: string) {
+  const partes = nombre.trim().split(/\s+/);
+  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase() || "?";
+}
+
 /**
  * "Mis clientes": la pantalla principal del cobrador. Lista a todos sus
  * clientes con el total (con interés), lo abonado y el saldo de cada uno, y
  * arriba el total sumado de toda su cartera — tal cual lo pidió el negocio
- * ("que todos los clientes se suban y puedan ver el total").
+ * ("que todos los clientes se suban y puedan ver el total"). Los clientes en
+ * mora se muestran primero, para que el cobrador sepa a quién atender hoy.
  */
 export default async function PanelCobradorPage({
   searchParams,
@@ -55,6 +72,7 @@ export default async function PanelCobradorPage({
     const total = prestamosDelCliente.reduce((suma, p) => suma + Number(p.monto_total), 0);
     const saldo = prestamosDelCliente.reduce((suma, p) => suma + Number(p.saldo_actual), 0);
     const abonado = total - saldo;
+    const progreso = total > 0 ? Math.min(100, Math.round((abonado / total) * 100)) : 0;
 
     const prestamoActivo = prestamosDelCliente.find((p) => p.estado === "activo" || p.estado === "en_mora");
     const enMora = prestamosDelCliente.some((p) => prestamosConMora.has(p.id) || p.estado === "en_mora");
@@ -65,23 +83,42 @@ export default async function PanelCobradorPage({
       estadoTexto = todosLiquidados ? "Liquidado" : enMora ? "En mora" : "Al corriente";
     }
 
-    return { cliente, total, abonado, saldo, prestamoActivo, estadoTexto, enMora };
+    // Prioridad para ordenar: mora primero (urge cobrarles), luego pendientes de aprobación, luego el resto.
+    const prioridad = enMora ? 0 : cliente.estado === "pendiente_aprobacion" ? 1 : 2;
+
+    return { cliente, total, abonado, saldo, progreso, prestamoActivo, estadoTexto, enMora, prioridad };
   });
+
+  filas.sort((a, b) => a.prioridad - b.prioridad);
 
   const totalCartera = filas.reduce((suma, f) => suma + f.total, 0);
   const abonadoCartera = filas.reduce((suma, f) => suma + f.abonado, 0);
   const saldoCartera = filas.reduce((suma, f) => suma + f.saldo, 0);
+  const clientesEnMora = filas.filter((f) => f.enMora).length;
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-bold">Mis clientes</h1>
-        <Link
-          href="/panel/clientes/nuevo"
-          className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
-        >
-          + Nuevo cliente
-        </Link>
+    <div className="space-y-8">
+      <div className="relative overflow-hidden rounded-2xl border border-amber-900/40 bg-gradient-to-br from-slate-900 via-slate-900 to-amber-950/30 p-6">
+        <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" />
+        <div className="relative flex flex-wrap items-center justify-between gap-4">
+          <div>
+            <p className="text-amber-400/80 text-xs font-medium uppercase tracking-wider">Panel del cobrador</p>
+            <h1 className="text-2xl font-bold mt-1">Hola, {sesion.nombreCompleto.split(" ")[0]}</h1>
+            <p className="text-slate-400 text-sm mt-1">
+              {clientes.length} cliente{clientes.length === 1 ? "" : "s"}
+              {clientesEnMora > 0 && (
+                <span className="text-red-400"> · {clientesEnMora} en mora</span>
+              )}
+            </p>
+          </div>
+          <Link
+            href="/panel/clientes/nuevo"
+            className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 transition-colors text-slate-950 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg shadow-amber-950/50"
+          >
+            <Plus className="h-4 w-4" strokeWidth={2.5} />
+            Nuevo cliente
+          </Link>
+        </div>
       </div>
 
       {error && (
@@ -94,42 +131,82 @@ export default async function PanelCobradorPage({
       )}
 
       <div className="grid sm:grid-cols-3 gap-4">
-        <ResumenCartera label="Total con interés" value={currency(totalCartera)} />
-        <ResumenCartera label="Abonado" value={currency(abonadoCartera)} />
-        <ResumenCartera label="Saldo pendiente" value={currency(saldoCartera)} destacado />
+        <ResumenCartera icon={Wallet} label="Total con interés" value={currency(totalCartera)} tone="amber" />
+        <ResumenCartera icon={TrendingUp} label="Abonado" value={currency(abonadoCartera)} tone="sky" />
+        <ResumenCartera icon={PiggyBank} label="Saldo pendiente" value={currency(saldoCartera)} tone="amber" destacado />
       </div>
 
       {clientes.length === 0 ? (
-        <p className="text-slate-400 text-sm">
-          Todavía no tienes clientes. Da de alta al primero con &quot;+ Nuevo cliente&quot;.
-        </p>
+        <div className="flex flex-col items-center justify-center gap-3 text-center bg-slate-900 border border-dashed border-slate-800 rounded-2xl py-16 px-6">
+          <div className="rounded-full bg-amber-500/10 p-3">
+            <UserPlus className="h-6 w-6 text-amber-400" />
+          </div>
+          <p className="text-slate-300 font-medium">Todavía no tienes clientes</p>
+          <p className="text-slate-500 text-sm max-w-xs">
+            Da de alta al primero con el botón &quot;Nuevo cliente&quot; de arriba.
+          </p>
+        </div>
       ) : (
         <div className="space-y-3">
-          {filas.map(({ cliente, total, abonado, saldo, prestamoActivo, estadoTexto, enMora }) => (
+          {filas.map(({ cliente, total, abonado, saldo, progreso, prestamoActivo, estadoTexto, enMora }) => (
             <div
               key={cliente.id}
-              className="bg-slate-900 border border-slate-800 rounded-xl p-4 flex flex-wrap items-center justify-between gap-4"
+              className={`group bg-slate-900 border rounded-xl p-4 flex flex-wrap items-center gap-4 border-l-4 transition-colors hover:bg-slate-900/70 ${
+                enMora
+                  ? "border-slate-800 border-l-red-500"
+                  : cliente.estado === "pendiente_aprobacion"
+                    ? "border-slate-800 border-l-amber-500"
+                    : "border-slate-800 border-l-sky-600"
+              }`}
             >
-              <div className="min-w-[10rem]">
-                <Link href={`/panel/clientes/${cliente.id}`} className="font-medium hover:text-amber-400">
-                  {cliente.nombre_completo}
-                </Link>
-                <p className="text-slate-500 text-xs">{cliente.telefono ?? "Sin teléfono"}</p>
-                <span
-                  className={`inline-block mt-1 text-xs border rounded-full px-2 py-0.5 ${
-                    cliente.estado === "pendiente_aprobacion"
-                      ? "bg-amber-950 text-amber-400 border-amber-900"
-                      : enMora
-                        ? "bg-red-950 text-red-400 border-red-900"
-                        : "bg-sky-950 text-sky-400 border-sky-900"
-                  }`}
-                >
-                  {estadoTexto}
-                </span>
+              <div className="flex items-center gap-3 min-w-[13rem]">
+                <div className="shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold text-sm">
+                  {iniciales(cliente.nombre_completo)}
+                </div>
+                <div>
+                  <Link href={`/panel/clientes/${cliente.id}`} className="font-medium hover:text-amber-400">
+                    {cliente.nombre_completo}
+                  </Link>
+                  <p className="text-slate-500 text-xs flex items-center gap-1">
+                    <Phone className="h-3 w-3" />
+                    {cliente.telefono ?? "Sin teléfono"}
+                  </p>
+                  <span
+                    className={`inline-flex items-center gap-1 mt-1 text-xs border rounded-full px-2 py-0.5 ${
+                      cliente.estado === "pendiente_aprobacion"
+                        ? "bg-amber-950 text-amber-400 border-amber-900"
+                        : enMora
+                          ? "bg-red-950 text-red-400 border-red-900"
+                          : "bg-sky-950 text-sky-400 border-sky-900"
+                    }`}
+                  >
+                    {cliente.estado === "pendiente_aprobacion" ? (
+                      <Clock className="h-3 w-3" />
+                    ) : enMora ? (
+                      <CircleAlert className="h-3 w-3" />
+                    ) : (
+                      <CircleCheck className="h-3 w-3" />
+                    )}
+                    {estadoTexto}
+                  </span>
+                </div>
               </div>
 
               {prestamoActivo ? (
                 <>
+                  <div className="flex-1 min-w-[10rem] max-w-[16rem] space-y-1">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>Progreso</span>
+                      <span>{progreso}%</span>
+                    </div>
+                    <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${enMora ? "bg-red-500" : "bg-amber-500"}`}
+                        style={{ width: `${progreso}%` }}
+                      />
+                    </div>
+                  </div>
+
                   <div className="flex gap-6 text-sm">
                     <div>
                       <p className="text-slate-500 text-xs">Total</p>
@@ -137,30 +214,32 @@ export default async function PanelCobradorPage({
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Abonado</p>
-                      <p className="font-semibold text-amber-400">{currency(abonado)}</p>
+                      <p className="font-semibold text-sky-400">{currency(abonado)}</p>
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Saldo</p>
                       <p className="font-semibold">{currency(saldo)}</p>
                     </div>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 ml-auto">
                     <form action={aplicarPagoDelDia}>
                       <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                      <button className="text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-1.5 rounded-md">
-                        Aplicar pago del día
+                      <button className="inline-flex items-center gap-1.5 text-sm bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold px-3 py-1.5 rounded-md">
+                        <CircleCheck className="h-4 w-4" />
+                        Pago del día
                       </button>
                     </form>
                     <form action={marcarIncumplidoDelDia}>
                       <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                      <button className="text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium px-3 py-1.5 rounded-md">
-                        No pagó hoy
+                      <button className="inline-flex items-center gap-1.5 text-sm bg-slate-800 hover:bg-slate-700 border border-slate-700 text-white font-medium px-3 py-1.5 rounded-md">
+                        <CircleAlert className="h-4 w-4" />
+                        No pagó
                       </button>
                     </form>
                   </div>
                 </>
               ) : (
-                <p className="text-xs text-slate-500">
+                <p className="text-xs text-slate-500 ml-auto">
                   {cliente.estado === "pendiente_aprobacion"
                     ? "Esperando que Empresa apruebe la solicitud."
                     : "Sin préstamo activo."}
@@ -174,11 +253,33 @@ export default async function PanelCobradorPage({
   );
 }
 
-function ResumenCartera({ label, value, destacado }: { label: string; value: string; destacado?: boolean }) {
+function ResumenCartera({
+  icon: Icon,
+  label,
+  value,
+  tone,
+  destacado,
+}: {
+  icon: typeof Wallet;
+  label: string;
+  value: string;
+  tone: "amber" | "sky";
+  destacado?: boolean;
+}) {
+  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-sky-500/10 text-sky-400";
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <p className="text-slate-500 text-xs">{label}</p>
-      <p className={`text-xl font-bold ${destacado ? "text-amber-400" : ""}`}>{value}</p>
+    <div
+      className={`bg-slate-900 border rounded-xl p-4 flex items-center gap-3 ${
+        destacado ? "border-amber-800" : "border-slate-800"
+      }`}
+    >
+      <div className={`shrink-0 rounded-lg p-2.5 ${toneClasses}`}>
+        <Icon className="h-5 w-5" />
+      </div>
+      <div>
+        <p className="text-slate-500 text-xs">{label}</p>
+        <p className={`text-xl font-bold ${destacado ? "text-amber-400" : ""}`}>{value}</p>
+      </div>
     </div>
   );
 }
