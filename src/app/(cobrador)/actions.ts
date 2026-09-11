@@ -374,3 +374,54 @@ export async function marcarIncumplidoDelDia(formData: FormData) {
     `/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent(`Incumplimiento marcado: mora de $${montoMora} aplicada`)}`
   );
 }
+
+/**
+ * El cobrador borra por completo la "tarjeta" de un cliente que él mismo dio
+ * de alta pero cuya solicitud Empresa ya rechazó (estado "inactivo") — nada
+ * más para quitarla de su lista, ya que nunca llegó a tener un préstamo real.
+ * La política de RLS `clientes_cobrador_delete_rechazado` es la que de
+ * verdad impide borrar cualquier cliente activo/pendiente o que no sea
+ * suyo; esta validación aquí es nada más para poder mostrar un error claro
+ * en vez de que Supabase regrese un borrado silencioso de 0 filas.
+ */
+export async function eliminarClienteRechazado(formData: FormData) {
+  const sesion = await exigirVistaCobrador();
+  const supabase = await createClient();
+
+  const clienteId = String(formData.get("cliente_id") || "");
+
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("id, cobrador_id, estado")
+    .eq("id", clienteId)
+    .single();
+
+  if (!cliente) {
+    redirect(`/panel?error=${encodeURIComponent("Cliente no encontrado")}`);
+  }
+  if (cliente.cobrador_id !== sesion.cobradorId || cliente.estado !== "inactivo") {
+    redirect(`/panel?error=${encodeURIComponent("Solo se puede eliminar un cliente tuyo cuya solicitud haya sido rechazada")}`);
+  }
+
+  // Antes de borrar, se recogen las rutas de sus documentos para también
+  // limpiarlos del storage (el borrado de la fila en `clientes` ya los
+  // borra de la base de datos por el ON DELETE CASCADE, pero los archivos
+  // en sí hay que borrarlos aparte).
+  const { data: documentos } = await supabase
+    .from("documentos_clientes")
+    .select("storage_path")
+    .eq("cliente_id", clienteId);
+
+  const { error: errorBorrado } = await supabase.from("clientes").delete().eq("id", clienteId);
+  if (errorBorrado) {
+    redirect(`/panel?error=${encodeURIComponent(errorBorrado.message)}`);
+  }
+
+  const rutas = (documentos ?? []).map((d) => d.storage_path).filter(Boolean);
+  if (rutas.length > 0) {
+    await supabase.storage.from("documentos-clientes").remove(rutas);
+  }
+
+  revalidatePath("/panel");
+  redirect("/panel?exito=" + encodeURIComponent("Cliente rechazado eliminado."));
+}

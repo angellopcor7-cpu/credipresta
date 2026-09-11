@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { formatoFechaCorta } from "@/lib/format";
 import { aplicarPagoDelDia } from "../../../actions";
+import { EliminarClienteButton } from "../../EliminarClienteButton";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
 import {
   ArrowLeft,
@@ -187,12 +188,17 @@ export default async function DetalleClientePage({
       )}
 
       {cliente.estado !== "pendiente_aprobacion" && solicitudRechazada && !prestamoActivo && (
-        <div className="flex items-start gap-2 bg-red-950/50 border border-red-900 rounded-md px-4 py-3 text-sm text-red-300">
-          <CircleX className="h-4 w-4 shrink-0 mt-0.5" />
-          <p>
-            Empresa rechazó la solicitud de {currency(Number(solicitudRechazada.monto_solicitado))}.
-            {solicitudRechazada.notas_revision ? ` Motivo: ${solicitudRechazada.notas_revision}` : ""}
-          </p>
+        <div className="flex items-start justify-between gap-3 bg-red-950/50 border border-red-900 rounded-md px-4 py-3 text-sm text-red-300">
+          <div className="flex items-start gap-2">
+            <CircleX className="h-4 w-4 shrink-0 mt-0.5" />
+            <p>
+              Empresa rechazó la solicitud de {currency(Number(solicitudRechazada.monto_solicitado))}.
+              {solicitudRechazada.notas_revision ? ` Motivo: ${solicitudRechazada.notas_revision}` : ""}
+            </p>
+          </div>
+          {cliente.estado === "inactivo" && (
+            <EliminarClienteButton clienteId={cliente.id} nombreCliente={cliente.nombre_completo} />
+          )}
         </div>
       )}
 

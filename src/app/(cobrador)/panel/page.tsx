@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { aplicarPagoDelDia } from "../actions";
 import { AbrirTodoButton } from "./AbrirTodoButton";
+import { EliminarClienteButton } from "./EliminarClienteButton";
 import type { Cliente, Prestamo } from "@/lib/types";
 import {
   Wallet,
@@ -275,13 +276,16 @@ export default async function PanelCobradorPage({
                     </div>
                   </details>
                 </>
+              ) : cliente.estado === "inactivo" ? (
+                <div className="flex items-center gap-3 ml-auto">
+                  <p className="text-xs text-slate-500">Solicitud rechazada por Empresa.</p>
+                  <EliminarClienteButton clienteId={cliente.id} nombreCliente={cliente.nombre_completo} />
+                </div>
               ) : (
                 <p className="text-xs text-slate-500 ml-auto">
                   {cliente.estado === "pendiente_aprobacion"
                     ? "Esperando que Empresa apruebe la solicitud."
-                    : cliente.estado === "inactivo"
-                      ? "Solicitud rechazada por Empresa."
-                      : "Sin préstamo activo."}
+                    : "Sin préstamo activo."}
                 </p>
               )}
             </div>
