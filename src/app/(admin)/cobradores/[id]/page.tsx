@@ -16,6 +16,8 @@ import {
 import { EditarCobradorForm } from "./EditarCobradorForm";
 import { RestablecerPasswordForm } from "./RestablecerPasswordForm";
 import { EstadoCobradorButton } from "./EstadoCobradorButton";
+import { ReasignarTodosForm } from "./ReasignarTodosForm";
+import { reasignarCliente } from "../actions";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -74,16 +76,27 @@ export default async function DetalleCobradorPage({
     email = null;
   }
 
-  const [{ data: clientes }, { data: rutas }, { data: prestamos }, { data: moras }] = await Promise.all([
-    supabase.from("clientes").select("id, nombre_completo, estado").eq("cobrador_id", id).order("nombre_completo"),
-    supabase.from("rutas").select("id, nombre, zona, activa").eq("cobrador_id", id).order("nombre"),
-    supabase.from("prestamos").select("estado, saldo_actual").eq("cobrador_id", id),
-    supabase
-      .from("moras")
-      .select("monto_mora, prestamos!inner(cobrador_id)")
-      .eq("estado", "pendiente")
-      .eq("prestamos.cobrador_id", id),
-  ]);
+  const [{ data: clientes }, { data: rutas }, { data: prestamos }, { data: moras }, { data: otrosCobradoresData }] =
+    await Promise.all([
+      supabase.from("clientes").select("id, nombre_completo, estado").eq("cobrador_id", id).order("nombre_completo"),
+      supabase.from("rutas").select("id, nombre, zona, activa").eq("cobrador_id", id).order("nombre"),
+      supabase.from("prestamos").select("estado, saldo_actual").eq("cobrador_id", id),
+      supabase
+        .from("moras")
+        .select("monto_mora, prestamos!inner(cobrador_id)")
+        .eq("estado", "pendiente")
+        .eq("prestamos.cobrador_id", id),
+      supabase
+        .from("cobradores")
+        .select("id, usuarios(nombre_completo)")
+        .eq("activo", true)
+        .neq("id", id),
+    ]);
+
+  const otrosCobradores = (otrosCobradoresData ?? []).map((c) => {
+    const co = c as unknown as { id: string; usuarios: { nombre_completo: string } | null };
+    return { id: co.id, nombre: co.usuarios?.nombre_completo ?? "—" };
+  });
 
   const listaClientes = clientes ?? [];
   const listaPrestamos = prestamos ?? [];
@@ -222,8 +235,16 @@ export default async function DetalleCobradorPage({
         )}
       </div>
 
-      <div>
-        <h2 className="text-sm font-semibold text-slate-300 mb-3">Clientes asignados ({listaClientes.length})</h2>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between flex-wrap gap-2">
+          <h2 className="text-sm font-semibold text-slate-300">Clientes asignados ({listaClientes.length})</h2>
+          <ReasignarTodosForm
+            cobradorOrigenId={cobradorTyped.id}
+            nombreCobrador={nombreCobrador}
+            cantidadClientes={listaClientes.length}
+            otrosCobradores={otrosCobradores}
+          />
+        </div>
         {listaClientes.length > 0 ? (
           <div className="border border-slate-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
@@ -231,6 +252,7 @@ export default async function DetalleCobradorPage({
                 <tr>
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Estado</th>
+                  {otrosCobradores.length > 0 && <th className="px-4 py-3">Reasignar</th>}
                 </tr>
               </thead>
               <tbody>
@@ -238,6 +260,32 @@ export default async function DetalleCobradorPage({
                   <tr key={c.id} className="border-t border-slate-800">
                     <td className="px-4 py-3">{c.nombre_completo}</td>
                     <td className="px-4 py-3 text-slate-300">{ESTADO_CLIENTE_LABEL[c.estado] ?? c.estado}</td>
+                    {otrosCobradores.length > 0 && (
+                      <td className="px-4 py-3">
+                        <form action={reasignarCliente} className="flex items-center gap-2">
+                          <input type="hidden" name="cliente_id" value={c.id} />
+                          <input type="hidden" name="cobrador_origen_id" value={cobradorTyped.id} />
+                          <select
+                            name="nuevo_cobrador_id"
+                            required
+                            defaultValue=""
+                            className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                          >
+                            <option value="" disabled>
+                              Mover a…
+                            </option>
+                            {otrosCobradores.map((o) => (
+                              <option key={o.id} value={o.id}>
+                                {o.nombre}
+                              </option>
+                            ))}
+                          </select>
+                          <button type="submit" className="text-xs text-amber-400 hover:underline">
+                            Mover
+                          </button>
+                        </form>
+                      </td>
+                    )}
                   </tr>
                 ))}
               </tbody>

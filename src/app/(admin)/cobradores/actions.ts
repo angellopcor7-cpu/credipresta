@@ -178,3 +178,149 @@ export async function restablecerPasswordCobrador(formData: FormData) {
 
   redirect(`/cobradores/${cobradorId}?exito=${encodeURIComponent("Contraseña actualizada")}`);
 }
+
+/**
+ * Mueve un cliente de un cobrador a otro. Sus préstamos activos o en mora se
+ * mueven con él (para que el nuevo cobrador los pueda cobrar); los ya
+ * liquidados o cancelados se quedan con su cobrador original para no alterar
+ * el historial de quién los cobró.
+ */
+export async function reasignarCliente(formData: FormData) {
+  const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+
+  const clienteId = String(formData.get("cliente_id") || "");
+  const cobradorOrigenId = String(formData.get("cobrador_origen_id") || "");
+  const nuevoCobradorId = String(formData.get("nuevo_cobrador_id") || "");
+
+  if (!nuevoCobradorId || nuevoCobradorId === cobradorOrigenId) {
+    redirect(
+      `/cobradores/${cobradorOrigenId}?error=${encodeURIComponent("Elige un cobrador distinto para reasignar")}`
+    );
+  }
+
+  const { data: destino } = await supabase
+    .from("cobradores")
+    .select("id, usuarios(nombre_completo)")
+    .eq("id", nuevoCobradorId)
+    .eq("activo", true)
+    .maybeSingle();
+
+  if (!destino) {
+    redirect(`/cobradores/${cobradorOrigenId}?error=${encodeURIComponent("Ese cobrador ya no está activo")}`);
+  }
+
+  const nombreDestino =
+    (destino as unknown as { usuarios: { nombre_completo: string } | null }).usuarios?.nombre_completo ??
+    "otro cobrador";
+
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("nombre_completo")
+    .eq("id", clienteId)
+    .single();
+
+  const { error: errorCliente } = await supabase
+    .from("clientes")
+    .update({ cobrador_id: nuevoCobradorId })
+    .eq("id", clienteId);
+
+  if (errorCliente) {
+    redirect(`/cobradores/${cobradorOrigenId}?error=${encodeURIComponent(errorCliente.message)}`);
+  }
+
+  await supabase
+    .from("prestamos")
+    .update({ cobrador_id: nuevoCobradorId })
+    .eq("cliente_id", clienteId)
+    .in("estado", ["activo", "en_mora"]);
+
+  await supabase.from("historial_movimientos").insert({
+    usuario_id: sesion.id,
+    cliente_id: clienteId,
+    tipo_movimiento: "reasignacion_cliente",
+    descripcion: `${cliente?.nombre_completo ?? "Cliente"} fue reasignado a ${nombreDestino}`,
+  });
+
+  revalidatePath("/cobradores");
+  revalidatePath(`/cobradores/${cobradorOrigenId}`);
+  revalidatePath(`/cobradores/${nuevoCobradorId}`);
+  redirect(`/cobradores/${cobradorOrigenId}?exito=${encodeURIComponent(`Cliente reasignado a ${nombreDestino}`)}`);
+}
+
+/**
+ * Mueve TODOS los clientes de un cobrador a otro de un jalón (junto con sus
+ * préstamos activos o en mora) — para cuando alguien deja de trabajar y hay
+ * que repartir su cartera.
+ */
+export async function reasignarTodosLosClientes(formData: FormData) {
+  const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+
+  const cobradorOrigenId = String(formData.get("cobrador_origen_id") || "");
+  const nuevoCobradorId = String(formData.get("nuevo_cobrador_id") || "");
+
+  if (!nuevoCobradorId || nuevoCobradorId === cobradorOrigenId) {
+    redirect(
+      `/cobradores/${cobradorOrigenId}?error=${encodeURIComponent("Elige un cobrador distinto para reasignar")}`
+    );
+  }
+
+  const { data: destino } = await supabase
+    .from("cobradores")
+    .select("id, usuarios(nombre_completo)")
+    .eq("id", nuevoCobradorId)
+    .eq("activo", true)
+    .maybeSingle();
+
+  if (!destino) {
+    redirect(`/cobradores/${cobradorOrigenId}?error=${encodeURIComponent("Ese cobrador ya no está activo")}`);
+  }
+
+  const { data: clientesAMover } = await supabase
+    .from("clientes")
+    .select("id")
+    .eq("cobrador_id", cobradorOrigenId);
+
+  const idsClientes = (clientesAMover ?? []).map((c) => c.id);
+
+  if (idsClientes.length === 0) {
+    redirect(
+      `/cobradores/${cobradorOrigenId}?error=${encodeURIComponent("Este cobrador no tiene clientes que reasignar")}`
+    );
+  }
+
+  const { error: errorClientes } = await supabase
+    .from("clientes")
+    .update({ cobrador_id: nuevoCobradorId })
+    .eq("cobrador_id", cobradorOrigenId);
+
+  if (errorClientes) {
+    redirect(`/cobradores/${cobradorOrigenId}?error=${encodeURIComponent(errorClientes.message)}`);
+  }
+
+  await supabase
+    .from("prestamos")
+    .update({ cobrador_id: nuevoCobradorId })
+    .in("cliente_id", idsClientes)
+    .in("estado", ["activo", "en_mora"]);
+
+  const nombreDestino =
+    (destino as unknown as { usuarios: { nombre_completo: string } | null }).usuarios?.nombre_completo ??
+    "otro cobrador";
+
+  await supabase.from("historial_movimientos").insert({
+    usuario_id: sesion.id,
+    tipo_movimiento: "reasignacion_cliente",
+    descripcion: `Se reasignaron ${idsClientes.length} clientes a ${nombreDestino}`,
+  });
+
+  revalidatePath("/cobradores");
+  revalidatePath(`/cobradores/${cobradorOrigenId}`);
+  revalidatePath(`/cobradores/${nuevoCobradorId}`);
+  redirect(
+    `/cobradores/${cobradorOrigenId}?exito=${encodeURIComponent(
+      `${idsClientes.length} clientes reasignados a ${nombreDestino}`
+    )}`
+  );
+}

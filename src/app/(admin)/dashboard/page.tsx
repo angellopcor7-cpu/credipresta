@@ -14,6 +14,7 @@ import {
   ChevronRight,
   FileText,
   Route,
+  UserRoundCog,
   type LucideIcon,
 } from "lucide-react";
 import { GraficaOtorgadoCobrado, GraficaMora, type PuntoOtorgadoCobrado, type PuntoMora } from "./AnalisisCharts";
@@ -77,6 +78,7 @@ const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
   aprobacion_solicitud: CircleCheck,
   rechazo_solicitud: CircleX,
   creacion_cobrador: UserPlus,
+  reasignacion_cliente: UserRoundCog,
 };
 
 const COLOR_MOVIMIENTO: Record<string, string> = {
@@ -85,6 +87,7 @@ const COLOR_MOVIMIENTO: Record<string, string> = {
   aprobacion_solicitud: "text-amber-400 bg-amber-950",
   rechazo_solicitud: "text-red-400 bg-red-950",
   creacion_cobrador: "text-sky-400 bg-sky-950",
+  reasignacion_cliente: "text-sky-400 bg-sky-950",
 };
 
 const ETIQUETA_MOVIMIENTO: Record<string, string> = {
@@ -93,6 +96,7 @@ const ETIQUETA_MOVIMIENTO: Record<string, string> = {
   aprobacion_solicitud: "Solicitud aprobada",
   rechazo_solicitud: "Solicitud rechazada",
   creacion_cobrador: "Cobrador dado de alta",
+  reasignacion_cliente: "Cliente reasignado",
 };
 
 export default async function DashboardPage() {
