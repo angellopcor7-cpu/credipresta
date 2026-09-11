@@ -16,6 +16,7 @@ import {
   Route,
   type LucideIcon,
 } from "lucide-react";
+import { GraficaOtorgadoCobrado, GraficaMora, type PuntoOtorgadoCobrado, type PuntoMora } from "./AnalisisCharts";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -30,6 +31,44 @@ function formatoFechaHora(iso: string) {
     minute: "2-digit",
     timeZone: "America/Mexico_City",
   }).format(new Date(iso));
+}
+
+/**
+ * Clave "YYYY-MM" de una fecha, en horario de Ciudad de México. Sirve tanto para
+ * columnas `timestamptz` (con hora) como `date` (solo fecha, ej. "2026-09-01").
+ */
+function claveMes(fechaTexto: string) {
+  const fecha = new Date(fechaTexto.length === 10 ? `${fechaTexto}T12:00:00Z` : fechaTexto);
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    timeZone: "America/Mexico_City",
+  })
+    .format(fecha)
+    .slice(0, 7);
+}
+
+/** Los últimos `cantidad` meses (incluyendo el actual), del más viejo al más nuevo, en hora de CDMX. */
+function ultimosMeses(cantidad: number) {
+  const partesHoy = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const valores: Record<string, string> = {};
+  for (const parte of partesHoy) valores[parte.type] = parte.value;
+  const hoyEnMexico = new Date(Date.UTC(Number(valores.year), Number(valores.month) - 1, 1));
+
+  const meses: { clave: string; etiqueta: string }[] = [];
+  for (let i = cantidad - 1; i >= 0; i--) {
+    const fecha = new Date(hoyEnMexico);
+    fecha.setUTCMonth(fecha.getUTCMonth() - i);
+    const clave = `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, "0")}`;
+    const etiqueta = new Intl.DateTimeFormat("es-MX", { month: "short", timeZone: "UTC" }).format(fecha);
+    meses.push({ clave, etiqueta });
+  }
+  return meses;
 }
 
 const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
@@ -66,17 +105,25 @@ export default async function DashboardPage() {
     { data: morasPendientes },
     { count: solicitudesPendientesCount },
     { data: actividadReciente },
+    { data: todasLasMoras },
+    { data: todosLosPagos },
+    { data: clientesActivosPorCobrador },
+    { data: cobradoresActivos },
   ] = await Promise.all([
     supabase.from("clientes").select("*", { count: "exact", head: true }).eq("estado", "activo"),
     supabase.from("cobradores").select("*", { count: "exact", head: true }).eq("activo", true),
-    supabase.from("prestamos").select("estado, saldo_actual, monto_prestado"),
-    supabase.from("moras").select("monto_mora").eq("estado", "pendiente"),
+    supabase.from("prestamos").select("estado, saldo_actual, monto_prestado, created_at, cobrador_id"),
+    supabase.from("moras").select("monto_mora, prestamos(cobrador_id)").eq("estado", "pendiente"),
     supabase.from("solicitudes_prestamo").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     supabase
       .from("historial_movimientos")
       .select("id, tipo_movimiento, descripcion, monto, created_at, clientes(nombre_completo)")
       .order("created_at", { ascending: false })
       .limit(8),
+    supabase.from("moras").select("monto_mora, fecha_generada"),
+    supabase.from("pagos").select("monto, fecha_pago"),
+    supabase.from("clientes").select("cobrador_id").eq("estado", "activo"),
+    supabase.from("cobradores").select("id, zona, usuarios(nombre_completo)").eq("activo", true),
   ]);
 
   const listaPrestamos = prestamos ?? [];
@@ -123,6 +170,66 @@ export default async function DashboardPage() {
     { label: "Préstamos", href: "/prestamos", icon: Landmark },
     { label: "Rutas", href: "/rutas", icon: Route },
   ];
+
+  // --- Análisis: tendencias de los últimos 6 meses ---
+  const meses = ultimosMeses(6);
+
+  const otorgadoPorMes = new Map(meses.map((m) => [m.clave, 0]));
+  for (const p of listaPrestamos) {
+    if (!p.created_at) continue;
+    const clave = claveMes(p.created_at);
+    if (otorgadoPorMes.has(clave)) otorgadoPorMes.set(clave, otorgadoPorMes.get(clave)! + Number(p.monto_prestado));
+  }
+
+  const cobradoPorMes = new Map(meses.map((m) => [m.clave, 0]));
+  for (const pago of todosLosPagos ?? []) {
+    const clave = claveMes(pago.fecha_pago);
+    if (cobradoPorMes.has(clave)) cobradoPorMes.set(clave, cobradoPorMes.get(clave)! + Number(pago.monto));
+  }
+
+  const moraPorMes = new Map(meses.map((m) => [m.clave, 0]));
+  for (const mora of todasLasMoras ?? []) {
+    const clave = claveMes(mora.fecha_generada);
+    if (moraPorMes.has(clave)) moraPorMes.set(clave, moraPorMes.get(clave)! + Number(mora.monto_mora));
+  }
+
+  const datosOtorgadoCobrado: PuntoOtorgadoCobrado[] = meses.map((m) => ({
+    mes: m.etiqueta,
+    otorgado: otorgadoPorMes.get(m.clave) ?? 0,
+    cobrado: cobradoPorMes.get(m.clave) ?? 0,
+  }));
+
+  const datosMora: PuntoMora[] = meses.map((m) => ({
+    mes: m.etiqueta,
+    monto: moraPorMes.get(m.clave) ?? 0,
+  }));
+
+  // --- Análisis: desempeño por cobrador ---
+  const filasCobrador = (cobradoresActivos ?? [])
+    .map((c) => {
+      const cobrador = c as unknown as { id: string; zona: string | null; usuarios: { nombre_completo: string } | null };
+      const clientesActivos = (clientesActivosPorCobrador ?? []).filter(
+        (cl) => cl.cobrador_id === cobrador.id
+      ).length;
+      const carteraCobrador = listaPrestamos
+        .filter((p) => p.cobrador_id === cobrador.id && (p.estado === "activo" || p.estado === "en_mora"))
+        .reduce((s, p) => s + Number(p.saldo_actual), 0);
+      const moraCobrador = (morasPendientes ?? [])
+        .filter(
+          (m) =>
+            (m as unknown as { prestamos: { cobrador_id: string } | null }).prestamos?.cobrador_id === cobrador.id
+        )
+        .reduce((s, m) => s + Number(m.monto_mora), 0);
+      return {
+        id: cobrador.id,
+        nombre: cobrador.usuarios?.nombre_completo ?? "—",
+        zona: cobrador.zona,
+        clientesActivos,
+        carteraActiva: carteraCobrador,
+        moraPendiente: moraCobrador,
+      };
+    })
+    .sort((a, b) => b.carteraActiva - a.carteraActiva);
 
   return (
     <div className="space-y-8">
@@ -180,6 +287,46 @@ export default async function DashboardPage() {
           ))}
         </div>
       </div>
+
+      <div>
+        <h2 className="text-sm font-semibold text-slate-300 mb-3">Análisis (últimos 6 meses)</h2>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <GraficaOtorgadoCobrado datos={datosOtorgadoCobrado} />
+          <GraficaMora datos={datosMora} />
+        </div>
+      </div>
+
+      {filasCobrador.length > 0 && (
+        <div>
+          <h2 className="text-sm font-semibold text-slate-300 mb-3">Desempeño por cobrador</h2>
+          <div className="border border-slate-800 rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-slate-900 text-slate-400 text-left">
+                <tr>
+                  <th className="px-4 py-3">Cobrador</th>
+                  <th className="px-4 py-3">Zona</th>
+                  <th className="px-4 py-3">Clientes activos</th>
+                  <th className="px-4 py-3">Cartera activa</th>
+                  <th className="px-4 py-3">Mora pendiente</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filasCobrador.map((c) => (
+                  <tr key={c.id} className="border-t border-slate-800">
+                    <td className="px-4 py-3 font-medium">{c.nombre}</td>
+                    <td className="px-4 py-3 text-slate-300">{c.zona ?? "—"}</td>
+                    <td className="px-4 py-3 text-slate-300">{c.clientesActivos}</td>
+                    <td className="px-4 py-3 text-slate-300">{currency(c.carteraActiva)}</td>
+                    <td className={`px-4 py-3 ${c.moraPendiente > 0 ? "text-red-400" : "text-slate-300"}`}>
+                      {currency(c.moraPendiente)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {actividadReciente && actividadReciente.length > 0 && (
         <div>
