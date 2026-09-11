@@ -425,3 +425,41 @@ export async function eliminarClienteRechazado(formData: FormData) {
   revalidatePath("/panel");
   redirect("/panel?exito=" + encodeURIComponent("Cliente rechazado eliminado."));
 }
+
+/**
+ * Corrige nombre/teléfono/dirección de un cliente ya dado de alta (para
+ * arreglar errores de captura). No cambia nada del préstamo, el pagaré ya
+ * firmado ni el estado del cliente — eso sigue dependiendo solo del flujo
+ * de aprobación de Empresa. Por eso se hace vía la función
+ * `actualizar_datos_cliente_cobrador` (que solo toca esas 3 columnas y
+ * valida que el cliente sea del cobrador en sesión) en vez de un `.update()`
+ * directo a la tabla.
+ */
+export async function actualizarDatosCliente(formData: FormData) {
+  await exigirVistaCobrador();
+  const supabase = await createClient();
+
+  const clienteId = String(formData.get("cliente_id") || "");
+  const nombreCompleto = String(formData.get("nombre_completo") || "").trim();
+  const telefono = String(formData.get("telefono") || "").trim() || null;
+  const direccion = String(formData.get("direccion") || "").trim() || null;
+
+  if (!nombreCompleto) {
+    redirect(`/panel/clientes/${clienteId}?error=${encodeURIComponent("El nombre del cliente es obligatorio")}`);
+  }
+
+  const { error } = await supabase.rpc("actualizar_datos_cliente_cobrador", {
+    p_cliente_id: clienteId,
+    p_nombre_completo: nombreCompleto,
+    p_telefono: telefono,
+    p_direccion: direccion,
+  });
+
+  if (error) {
+    redirect(`/panel/clientes/${clienteId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/panel");
+  revalidatePath(`/panel/clientes/${clienteId}`);
+  redirect(`/panel/clientes/${clienteId}?exito=${encodeURIComponent("Datos del cliente actualizados")}`);
+}

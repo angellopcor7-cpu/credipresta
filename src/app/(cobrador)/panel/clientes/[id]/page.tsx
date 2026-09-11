@@ -5,6 +5,7 @@ import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { formatoFechaCorta } from "@/lib/format";
 import { aplicarPagoDelDia } from "../../../actions";
 import { EliminarClienteButton } from "../../EliminarClienteButton";
+import { EditarClienteForm } from "./EditarClienteForm";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
 import {
   ArrowLeft,
@@ -159,6 +160,15 @@ export default async function DetalleClientePage({
               )}
             </div>
           </div>
+        </div>
+
+        <div className="mt-2">
+          <EditarClienteForm
+            clienteId={cliente.id}
+            nombreCompleto={cliente.nombre_completo}
+            telefono={cliente.telefono}
+            direccion={cliente.direccion}
+          />
         </div>
       </div>
 
