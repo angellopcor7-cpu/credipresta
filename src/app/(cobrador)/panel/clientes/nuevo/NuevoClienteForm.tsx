@@ -477,6 +477,7 @@ export function NuevoClienteForm({
               </div>
               <input type="hidden" name="firma_cliente_data_url" value={firmaCliente ?? ""} />
               <input type="hidden" name="firma_cobrador_data_url" value={firmaCobrador ?? ""} />
+              <input type="hidden" name="folio" value={folio} />
               {ambasFirmasListas && (
                 <p className="text-xs text-amber-400 flex items-center gap-1">
                   <CircleCheck className="h-3.5 w-3.5" />

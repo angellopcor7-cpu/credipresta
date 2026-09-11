@@ -57,6 +57,7 @@ export async function crearClienteYSolicitud(formData: FormData) {
   const fotoCliente = formData.get("doc_foto_cliente") as File | null;
   const firmaClienteDataUrl = formData.get("firma_cliente_data_url");
   const firmaCobradorDataUrl = formData.get("firma_cobrador_data_url");
+  const folioTexto = String(formData.get("folio") || "").trim();
 
   if (!nombreCompleto) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("El nombre del cliente es obligatorio")}`);
@@ -139,8 +140,11 @@ export async function crearClienteYSolicitud(formData: FormData) {
   const fechaFinEstimada = new Date(fechaFirma);
   fechaFinEstimada.setUTCDate(fechaFinEstimada.getUTCDate() + plazoDias);
 
+  // Usa el mismo folio que ya se le mostró al cobrador en la vista previa
+  // (generado al momento de dar clic en "Generar pagaré"), para que el "No."
+  // del PDF firmado sea siempre el mismo que vio antes de firmar.
   const bytesPagare = await generarPagarePDF({
-    folio: cliente.id.slice(0, 8).toUpperCase(),
+    folio: folioTexto || cliente.id.slice(0, 8).toUpperCase(),
     nombreCliente: nombreCompleto,
     montoPrestado: montoSolicitado,
     porcentajeInteres: porcentajeEfectivo,
