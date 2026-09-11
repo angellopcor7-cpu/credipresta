@@ -78,3 +78,103 @@ export async function crearCobrador(formData: FormData) {
   revalidatePath("/cobradores");
   redirect("/cobradores");
 }
+
+/** Corrige nombre/teléfono (tabla `usuarios`) y zona (tabla `cobradores`) de un cobrador ya existente. */
+export async function actualizarCobrador(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const cobradorId = String(formData.get("cobrador_id") || "");
+  const usuarioId = String(formData.get("usuario_id") || "");
+  const nombreCompleto = String(formData.get("nombre_completo") || "").trim();
+  const telefono = String(formData.get("telefono") || "").trim() || null;
+  const zona = String(formData.get("zona") || "").trim() || null;
+
+  if (!nombreCompleto) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent("El nombre es obligatorio")}`);
+  }
+
+  const { error: errorUsuario } = await supabase
+    .from("usuarios")
+    .update({ nombre_completo: nombreCompleto, telefono })
+    .eq("id", usuarioId);
+
+  if (errorUsuario) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(errorUsuario.message)}`);
+  }
+
+  const { error: errorCobrador } = await supabase.from("cobradores").update({ zona }).eq("id", cobradorId);
+
+  if (errorCobrador) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(errorCobrador.message)}`);
+  }
+
+  revalidatePath("/cobradores");
+  revalidatePath(`/cobradores/${cobradorId}`);
+  redirect(`/cobradores/${cobradorId}?exito=${encodeURIComponent("Datos actualizados")}`);
+}
+
+/**
+ * Activa o desactiva a un cobrador de un jalón: `usuarios.activo` (le
+ * bloquea/permite iniciar sesión) y `cobradores.activo` (lo saca/mete de la
+ * lista de elegibles para nuevas rutas y de los conteos del panel). No borra
+ * ni reasigna nada de su historial, clientes o préstamos.
+ */
+export async function cambiarEstadoCobrador(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const cobradorId = String(formData.get("cobrador_id") || "");
+  const usuarioId = String(formData.get("usuario_id") || "");
+  const nuevoEstado = String(formData.get("nuevo_estado") || "") === "activar";
+
+  const { error: errorCobrador } = await supabase
+    .from("cobradores")
+    .update({ activo: nuevoEstado })
+    .eq("id", cobradorId);
+
+  if (errorCobrador) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(errorCobrador.message)}`);
+  }
+
+  const { error: errorUsuario } = await supabase
+    .from("usuarios")
+    .update({ activo: nuevoEstado })
+    .eq("id", usuarioId);
+
+  if (errorUsuario) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(errorUsuario.message)}`);
+  }
+
+  revalidatePath("/cobradores");
+  revalidatePath(`/cobradores/${cobradorId}`);
+  redirect(
+    `/cobradores/${cobradorId}?exito=${encodeURIComponent(
+      nuevoEstado ? "Cobrador reactivado" : "Cobrador desactivado"
+    )}`
+  );
+}
+
+/** Le pone una contraseña nueva a la cuenta de acceso del cobrador (requiere la llave service_role). */
+export async function restablecerPasswordCobrador(formData: FormData) {
+  await exigirAdministrador();
+
+  const cobradorId = String(formData.get("cobrador_id") || "");
+  const usuarioId = String(formData.get("usuario_id") || "");
+  const password = String(formData.get("password") || "");
+
+  if (password.length < 6) {
+    redirect(
+      `/cobradores/${cobradorId}?error=${encodeURIComponent("La contraseña debe tener al menos 6 caracteres")}`
+    );
+  }
+
+  const admin = createAdminClient();
+  const { error } = await admin.auth.admin.updateUserById(usuarioId, { password });
+
+  if (error) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  redirect(`/cobradores/${cobradorId}?exito=${encodeURIComponent("Contraseña actualizada")}`);
+}
