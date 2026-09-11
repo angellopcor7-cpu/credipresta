@@ -13,6 +13,7 @@ import {
   PiggyBank,
   CircleCheck,
   CircleAlert,
+  CircleX,
   Clock,
   FileText,
   Phone,
@@ -127,6 +128,7 @@ export default async function DetalleClientePage({
       ? Math.min(100, Math.round((abonado / Number(prestamoActivo.monto_total)) * 100))
       : 0;
   const solicitudPendiente = solicitudes.find((s) => s.estado === "pendiente");
+  const solicitudRechazada = solicitudes.find((s) => s.estado === "rechazada");
   const enMora = !!prestamoActivo && prestamoActivo.estado === "en_mora";
 
   return (
@@ -180,6 +182,16 @@ export default async function DetalleClientePage({
             ) : (
               "Esperando aprobación de Empresa."
             )}
+          </p>
+        </div>
+      )}
+
+      {cliente.estado !== "pendiente_aprobacion" && solicitudRechazada && !prestamoActivo && (
+        <div className="flex items-start gap-2 bg-red-950/50 border border-red-900 rounded-md px-4 py-3 text-sm text-red-300">
+          <CircleX className="h-4 w-4 shrink-0 mt-0.5" />
+          <p>
+            Empresa rechazó la solicitud de {currency(Number(solicitudRechazada.monto_solicitado))}.
+            {solicitudRechazada.notas_revision ? ` Motivo: ${solicitudRechazada.notas_revision}` : ""}
           </p>
         </div>
       )}

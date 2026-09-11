@@ -11,6 +11,7 @@ import {
   Plus,
   CircleCheck,
   CircleAlert,
+  CircleX,
   Clock,
   Phone,
   UserPlus,
@@ -175,7 +176,9 @@ export default async function PanelCobradorPage({
                   ? "border-slate-800 border-l-red-500"
                   : cliente.estado === "pendiente_aprobacion"
                     ? "border-slate-800 border-l-amber-500"
-                    : "border-slate-800 border-l-sky-600"
+                    : cliente.estado === "inactivo"
+                      ? "border-slate-800 border-l-slate-600"
+                      : "border-slate-800 border-l-sky-600"
               }`}
             >
               <div className="flex items-center gap-3 min-w-[13rem]">
@@ -194,13 +197,17 @@ export default async function PanelCobradorPage({
                         ? "bg-amber-950 text-amber-400 border-amber-900"
                         : enMora
                           ? "bg-red-950 text-red-400 border-red-900"
-                          : "bg-sky-950 text-sky-400 border-sky-900"
+                          : cliente.estado === "inactivo"
+                            ? "bg-slate-800 text-slate-400 border-slate-700"
+                            : "bg-sky-950 text-sky-400 border-sky-900"
                     }`}
                   >
                     {cliente.estado === "pendiente_aprobacion" ? (
                       <Clock className="h-3 w-3" />
                     ) : enMora ? (
                       <CircleAlert className="h-3 w-3" />
+                    ) : cliente.estado === "inactivo" ? (
+                      <CircleX className="h-3 w-3" />
                     ) : (
                       <CircleCheck className="h-3 w-3" />
                     )}
@@ -272,7 +279,9 @@ export default async function PanelCobradorPage({
                 <p className="text-xs text-slate-500 ml-auto">
                   {cliente.estado === "pendiente_aprobacion"
                     ? "Esperando que Empresa apruebe la solicitud."
-                    : "Sin préstamo activo."}
+                    : cliente.estado === "inactivo"
+                      ? "Solicitud rechazada por Empresa."
+                      : "Sin préstamo activo."}
                 </p>
               )}
             </div>

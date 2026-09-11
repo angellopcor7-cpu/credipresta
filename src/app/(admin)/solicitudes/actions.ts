@@ -153,9 +153,15 @@ export async function aprobarSolicitud(formData: FormData) {
   redirect(`/prestamos/${prestamo.id}`);
 }
 
-/** Rechaza una solicitud pendiente, con una nota opcional de por qué. */
+/**
+ * Rechaza una solicitud pendiente, con una nota opcional de por qué.
+ * También pasa al cliente a "inactivo": si no se hiciera, el cliente se
+ * quedaba para siempre como "pendiente de aprobación" en el panel del
+ * cobrador aunque Empresa ya la hubiera rechazado, porque ese estado vive
+ * en la tabla `clientes` y solo `aprobarSolicitud` lo actualizaba.
+ */
 export async function rechazarSolicitud(formData: FormData) {
-  await exigirAdministrador();
+  const sesion = await exigirAdministrador();
   const supabase = await createClient();
 
   const solicitudId = String(formData.get("solicitud_id") || "");
@@ -169,6 +175,19 @@ export async function rechazarSolicitud(formData: FormData) {
     redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién rechaza esta solicitud")}`);
   }
 
+  const { data: solicitud } = await supabase
+    .from("solicitudes_prestamo")
+    .select("id, cliente_id, estado, monto_solicitado")
+    .eq("id", solicitudId)
+    .single();
+
+  if (!solicitud) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Solicitud no encontrada")}`);
+  }
+  if (solicitud.estado !== "pendiente") {
+    redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue revisada")}`);
+  }
+
   await supabase
     .from("solicitudes_prestamo")
     .update({
@@ -180,6 +199,17 @@ export async function rechazarSolicitud(formData: FormData) {
     .eq("id", solicitudId)
     .eq("estado", "pendiente");
 
+  await supabase.from("clientes").update({ estado: "inactivo" }).eq("id", solicitud.cliente_id);
+
+  await supabase.from("historial_movimientos").insert({
+    cliente_id: solicitud.cliente_id,
+    usuario_id: sesion.id,
+    tipo_movimiento: "rechazo_solicitud",
+    monto: solicitud.monto_solicitado,
+    descripcion: `Solicitud rechazada${notas ? `: ${notas}` : ""}`,
+  });
+
   revalidatePath("/solicitudes");
+  revalidatePath("/panel");
   redirect("/solicitudes");
 }
