@@ -6,12 +6,10 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdministrador } from "@/lib/auth/roles";
 import { obtenerConfiguraciones } from "@/lib/config";
 import {
-  calcularPorcentajeInteresPorPlan,
   calcularInteres,
   calcularMontoTotal,
   calcularCuotaSugerida,
   generarCalendarioPagos,
-  esPlanValido,
 } from "@/lib/finance/calculos";
 
 /**
@@ -38,10 +36,12 @@ async function validarAdministradorSeleccionado(
 
 /**
  * Aprueba una solicitud que armó un cobrador (datos del cliente + INE + foto
- * del pagaré ya firmado a mano + plan de 20 o 30 días). El interés total ya
- * viene fijo por el plan, así que aquí no se vuelve a pedir nada: un solo
- * click crea el préstamo, su calendario de cobro (respetando los días
- * personalizados que haya elegido el cobrador) y activa al cliente.
+ * del pagaré ya firmado a mano + plan de 20/30 días o uno personalizado). El
+ * % de interés total viene precargado en el formulario (el fijo del plan, o
+ * el propuesto por el cobrador), pero Empresa lo puede cambiar ahí mismo
+ * antes de aprobar — el que llega en "porcentaje_interes" es el que manda.
+ * Un solo click crea el préstamo, su calendario de cobro (respetando los
+ * días personalizados que haya elegido el cobrador) y activa al cliente.
  */
 export async function aprobarSolicitud(formData: FormData) {
   const sesion = await exigirAdministrador();
@@ -49,6 +49,7 @@ export async function aprobarSolicitud(formData: FormData) {
   const config = await obtenerConfiguraciones();
 
   const solicitudId = String(formData.get("solicitud_id") || "");
+  const porcentaje = Number(formData.get("porcentaje_interes"));
   const revisadoPorSeleccionado = await validarAdministradorSeleccionado(
     supabase,
     String(formData.get("revisado_por") || "")
@@ -56,6 +57,9 @@ export async function aprobarSolicitud(formData: FormData) {
 
   if (!revisadoPorSeleccionado) {
     redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién aprueba esta solicitud")}`);
+  }
+  if (!porcentaje || porcentaje <= 0) {
+    redirect(`/solicitudes?error=${encodeURIComponent("El % de interés debe ser mayor a 0")}`);
   }
 
   const { data: solicitud } = await supabase
@@ -70,15 +74,14 @@ export async function aprobarSolicitud(formData: FormData) {
   if (solicitud.estado !== "pendiente") {
     redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue revisada")}`);
   }
-  if (!esPlanValido(solicitud.plazo_dias)) {
-    redirect(`/solicitudes?error=${encodeURIComponent("Plan inválido: debe ser 20 o 30 días")}`);
+  if (!solicitud.plazo_dias || solicitud.plazo_dias <= 0) {
+    redirect(`/solicitudes?error=${encodeURIComponent("El plazo en días debe ser mayor a 0")}`);
   }
 
   const { data: cliente } = await supabase.from("clientes").select("cobrador_id").eq("id", solicitud.cliente_id).single();
 
   const montoPrestado = Number(solicitud.monto_solicitado);
   const plazoDias = solicitud.plazo_dias;
-  const porcentaje = calcularPorcentajeInteresPorPlan(plazoDias as 20 | 30);
   const montoInteres = calcularInteres(montoPrestado, porcentaje);
   const montoTotal = calcularMontoTotal(montoPrestado, porcentaje);
   const montoCuota = calcularCuotaSugerida(montoTotal, plazoDias);

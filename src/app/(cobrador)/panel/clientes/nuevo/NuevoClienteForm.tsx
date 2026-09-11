@@ -28,21 +28,32 @@ function currency(n: number) {
 
 export function NuevoClienteForm({ error }: { error?: string }) {
   const [monto, setMonto] = useState("");
-  const [plan, setPlan] = useState<PlanPrestamo>(20);
+  const [tipoPlan, setTipoPlan] = useState<PlanPrestamo | "personalizado">(20);
+  const [diasPersonalizado, setDiasPersonalizado] = useState("");
+  const [porcentajePersonalizado, setPorcentajePersonalizado] = useState("");
   const [personalizarDias, setPersonalizarDias] = useState(false);
   const [diasElegidos, setDiasElegidos] = useState<number[]>(DIAS_ENTRE_SEMANA);
 
   const preview = useMemo(() => {
     const montoNum = Number(monto);
-    if (!montoNum || montoNum <= 0) return null;
+    const dias = tipoPlan === "personalizado" ? Number(diasPersonalizado) : tipoPlan;
+    if (!montoNum || montoNum <= 0 || !dias || dias <= 0) return null;
 
-    const porcentaje = calcularPorcentajeInteresPorPlan(plan);
+    let porcentaje: number;
+    if (tipoPlan === "personalizado") {
+      const pct = Number(porcentajePersonalizado);
+      if (!pct || pct <= 0) return null;
+      porcentaje = pct;
+    } else {
+      porcentaje = calcularPorcentajeInteresPorPlan(tipoPlan);
+    }
+
     const interes = calcularInteres(montoNum, porcentaje);
     const total = calcularMontoTotal(montoNum, porcentaje);
-    const pagoDiario = calcularCuotaSugerida(total, plan);
+    const pagoDiario = calcularCuotaSugerida(total, dias);
 
     return { porcentaje, interes, total, pagoDiario };
-  }, [monto, plan]);
+  }, [monto, tipoPlan, diasPersonalizado, porcentajePersonalizado]);
 
   function alternarDia(dia: number) {
     setDiasElegidos((actual) => (actual.includes(dia) ? actual.filter((d) => d !== dia) : [...actual, dia].sort()));
@@ -119,7 +130,7 @@ export function NuevoClienteForm({ error }: { error?: string }) {
 
         <div className="space-y-1">
           <p className="text-sm text-slate-300">Plan</p>
-          <div className="grid grid-cols-2 gap-2 max-w-xs">
+          <div className="grid grid-cols-3 gap-2 max-w-md">
             {([20, 30] as const).map((opcion) => (
               <label
                 key={opcion}
@@ -127,18 +138,67 @@ export function NuevoClienteForm({ error }: { error?: string }) {
               >
                 <input
                   type="radio"
-                  name="plazo_dias"
-                  value={opcion}
-                  checked={plan === opcion}
-                  onChange={() => setPlan(opcion)}
+                  checked={tipoPlan === opcion}
+                  onChange={() => setTipoPlan(opcion)}
                   className="accent-amber-500"
                 />
                 <span className="font-semibold">{opcion} días</span>
                 <span className="text-xs">{calcularPorcentajeInteresPorPlan(opcion)}% total</span>
               </label>
             ))}
+            <label className="flex flex-col items-center gap-0.5 rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-sm text-slate-300 has-[:checked]:border-amber-500 has-[:checked]:text-amber-400 cursor-pointer">
+              <input
+                type="radio"
+                checked={tipoPlan === "personalizado"}
+                onChange={() => setTipoPlan("personalizado")}
+                className="accent-amber-500"
+              />
+              <span className="font-semibold">Personalizado</span>
+              <span className="text-xs">Tú pones el %</span>
+            </label>
           </div>
+          {tipoPlan === "personalizado" ? (
+            <input type="hidden" name="plazo_dias" value={diasPersonalizado} />
+          ) : (
+            <input type="hidden" name="plazo_dias" value={tipoPlan} />
+          )}
         </div>
+
+        {tipoPlan === "personalizado" && (
+          <div className="grid grid-cols-2 gap-3 max-w-xs">
+            <div className="space-y-1">
+              <label className="text-sm text-slate-300" htmlFor="dias_personalizado">
+                Días del plazo
+              </label>
+              <input
+                id="dias_personalizado"
+                type="number"
+                min="1"
+                step="1"
+                required
+                value={diasPersonalizado}
+                onChange={(e) => setDiasPersonalizado(e.target.value)}
+                className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+            <div className="space-y-1">
+              <label className="text-sm text-slate-300" htmlFor="porcentaje_personalizado">
+                % de interés total
+              </label>
+              <input
+                id="porcentaje_personalizado"
+                name="porcentaje_interes_personalizado"
+                type="number"
+                min="0.01"
+                step="0.01"
+                required
+                value={porcentajePersonalizado}
+                onChange={(e) => setPorcentajePersonalizado(e.target.value)}
+                className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              />
+            </div>
+          </div>
+        )}
 
         {preview ? (
           <div className="grid grid-cols-3 gap-3 bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm max-w-md">
@@ -158,7 +218,11 @@ export function NuevoClienteForm({ error }: { error?: string }) {
             </div>
           </div>
         ) : (
-          <p className="text-xs text-slate-500">Escribe el valor del préstamo para ver el total y el pago diario.</p>
+          <p className="text-xs text-slate-500">
+            {tipoPlan === "personalizado"
+              ? "Escribe el valor del préstamo, los días y el % para ver el total y el pago diario."
+              : "Escribe el valor del préstamo para ver el total y el pago diario."}
+          </p>
         )}
       </div>
 

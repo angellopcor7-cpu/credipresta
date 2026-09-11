@@ -173,6 +173,9 @@ export default async function SolicitudesPage({
                     solicitudId={s.id}
                     montoSolicitado={Number(s.monto_solicitado)}
                     plazoDias={s.plazo_dias}
+                    porcentajePersonalizado={
+                      s.porcentaje_interes_personalizado != null ? Number(s.porcentaje_interes_personalizado) : null
+                    }
                     diasPersonalizados={s.dias_cobro_personalizados}
                     administradores={listaAdministradores}
                   />

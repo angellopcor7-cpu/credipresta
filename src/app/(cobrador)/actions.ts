@@ -23,10 +23,11 @@ function leerDiasPersonalizados(formData: FormData): number[] | null {
 
 /**
  * El cobrador da de alta a un cliente nuevo y arma su solicitud de préstamo
- * en un solo paso: datos del cliente, el plan (20 o 30 días, interés ya
- * fijo), foto de su INE y foto del pagaré ya firmado a mano (el cliente no
- * tiene cuenta ni firma nada dentro de la app). Queda pendiente hasta que
- * Empresa la apruebe.
+ * en un solo paso: datos del cliente, el plan (20 o 30 días con interés
+ * fijo, o uno personalizado con sus propios días y % de interés), foto de
+ * su INE y foto del pagaré ya firmado a mano (el cliente no tiene cuenta ni
+ * firma nada dentro de la app). Queda pendiente hasta que Empresa la
+ * apruebe (y Empresa puede ajustar el % antes de aprobar).
  */
 export async function crearClienteYSolicitud(formData: FormData) {
   const sesion = await exigirVistaCobrador();
@@ -37,6 +38,8 @@ export async function crearClienteYSolicitud(formData: FormData) {
   const direccion = String(formData.get("direccion") || "").trim() || null;
   const montoSolicitado = Number(formData.get("monto_solicitado"));
   const plazoDias = Number(formData.get("plazo_dias"));
+  const porcentajePersonalizadoTexto = formData.get("porcentaje_interes_personalizado");
+  const porcentajePersonalizado = porcentajePersonalizadoTexto ? Number(porcentajePersonalizadoTexto) : null;
   const ineFrente = formData.get("doc_ine_frente") as File | null;
   const ineReverso = formData.get("doc_ine_reverso") as File | null;
   const pagareFirmado = formData.get("doc_pagare_firmado") as File | null;
@@ -47,8 +50,15 @@ export async function crearClienteYSolicitud(formData: FormData) {
   if (!montoSolicitado || montoSolicitado <= 0) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("El monto debe ser mayor a 0")}`);
   }
-  if (!esPlanValido(plazoDias)) {
-    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Elige un plan de 20 o 30 días")}`);
+  if (porcentajePersonalizado != null) {
+    if (porcentajePersonalizado <= 0) {
+      redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("El % de interés personalizado debe ser mayor a 0")}`);
+    }
+    if (!plazoDias || plazoDias <= 0) {
+      redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Los días del plazo deben ser mayor a 0")}`);
+    }
+  } else if (!esPlanValido(plazoDias)) {
+    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Elige un plan de 20 o 30 días, o pon un % personalizado")}`);
   }
   if (!ineFrente || ineFrente.size === 0) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la foto del INE")}`);
@@ -102,6 +112,7 @@ export async function crearClienteYSolicitud(formData: FormData) {
     cliente_id: cliente.id,
     monto_solicitado: montoSolicitado,
     plazo_dias: plazoDias,
+    porcentaje_interes_personalizado: porcentajePersonalizado,
     dias_cobro_personalizados: diasPersonalizados,
   });
 

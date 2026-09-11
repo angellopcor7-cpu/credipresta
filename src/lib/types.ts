@@ -159,6 +159,8 @@ export type SolicitudPrestamo = {
   cliente_id: string;
   monto_solicitado: number;
   plazo_dias: number;
+  /** Si no es null, este % de interés TOTAL sustituye al fijo por plan (20%/32%). */
+  porcentaje_interes_personalizado: number | null;
   estado: EstadoSolicitud;
   fecha_solicitud: string;
   metodo_pago: MetodoPago;

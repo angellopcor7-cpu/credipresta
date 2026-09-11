@@ -1,6 +1,7 @@
 "use client";
 
-import { calcularPorcentajeInteresPorPlan, calcularInteres, calcularMontoTotal, calcularCuotaSugerida } from "@/lib/finance/calculos";
+import { useState } from "react";
+import { calcularPorcentajeInteresPorPlan, calcularInteres, calcularMontoTotal, calcularCuotaSugerida, esPlanValido } from "@/lib/finance/calculos";
 import { aprobarSolicitud } from "./actions";
 
 function currency(n: number) {
@@ -9,33 +10,57 @@ function currency(n: number) {
 
 const DIAS_SEMANA_LABEL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
-/** Aprobar/rechazar ya no depende de una firma digital: el plan (20 o 30 días) ya trae el interés fijo, así que solo falta elegir quién aprueba. */
+/**
+ * Aprobar/rechazar: el % de interés total viene precargado (el fijo del
+ * plan, o el que haya propuesto el cobrador si mandó uno personalizado),
+ * pero Empresa lo puede cambiar aquí mismo antes de aprobar — el número que
+ * quede en el cuadro es el que se usa para crear el préstamo.
+ */
 export function SolicitudAprobarForm({
   solicitudId,
   montoSolicitado,
   plazoDias,
+  porcentajePersonalizado,
   diasPersonalizados,
   administradores,
 }: {
   solicitudId: string;
   montoSolicitado: number;
   plazoDias: number;
+  porcentajePersonalizado: number | null;
   diasPersonalizados: number[] | null;
   administradores: { id: string; nombre: string }[];
 }) {
-  const porcentajeTotal = calcularPorcentajeInteresPorPlan(plazoDias === 30 ? 30 : 20);
-  const interes = calcularInteres(montoSolicitado, porcentajeTotal);
-  const total = calcularMontoTotal(montoSolicitado, porcentajeTotal);
-  const pagoDiario = calcularCuotaSugerida(total, plazoDias);
+  const porcentajeInicial =
+    porcentajePersonalizado ?? (esPlanValido(plazoDias) ? calcularPorcentajeInteresPorPlan(plazoDias) : 0);
+  const [porcentajeTexto, setPorcentajeTexto] = useState(String(porcentajeInicial));
+
+  const porcentaje = Number(porcentajeTexto) || 0;
+  const interes = porcentaje > 0 ? calcularInteres(montoSolicitado, porcentaje) : 0;
+  const total = porcentaje > 0 ? calcularMontoTotal(montoSolicitado, porcentaje) : montoSolicitado;
+  const pagoDiario = porcentaje > 0 && plazoDias > 0 ? calcularCuotaSugerida(total, plazoDias) : 0;
 
   return (
     <div className="space-y-3">
-      <div className="grid grid-cols-3 gap-3 bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm max-w-md">
+      <div className="flex flex-wrap items-end gap-4 bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm max-w-xl">
+        <div className="space-y-1">
+          <label className="text-slate-500 text-xs" htmlFor={`porcentaje-${solicitudId}`}>
+            % de interés total ({plazoDias} días)
+            {porcentajePersonalizado != null && <span className="text-amber-400"> · propuesto por el cobrador</span>}
+          </label>
+          <input
+            id={`porcentaje-${solicitudId}`}
+            type="number"
+            min="0.01"
+            step="0.01"
+            value={porcentajeTexto}
+            onChange={(e) => setPorcentajeTexto(e.target.value)}
+            className="w-24 rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+        </div>
         <div>
-          <p className="text-slate-500 text-xs">Interés total ({plazoDias} días)</p>
-          <p className="font-semibold">
-            {porcentajeTotal}% ({currency(interes)})
-          </p>
+          <p className="text-slate-500 text-xs">Interés</p>
+          <p className="font-semibold">{currency(interes)}</p>
         </div>
         <div>
           <p className="text-slate-500 text-xs">Total a pagar</p>
@@ -56,6 +81,7 @@ export function SolicitudAprobarForm({
 
       <form action={aprobarSolicitud} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="solicitud_id" value={solicitudId} />
+        <input type="hidden" name="porcentaje_interes" value={porcentajeTexto} />
         <select
           name="revisado_por"
           required
