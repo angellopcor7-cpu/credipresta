@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { formatoFechaCorta } from "@/lib/format";
-import { aplicarPagoDelDia, marcarIncumplidoDelDia } from "../../../actions";
+import { aplicarPagoDelDia } from "../../../actions";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
 import {
   ArrowLeft,
@@ -114,11 +114,11 @@ export default async function DetalleClientePage({
       .filter((d) => d.url);
   }
 
-  // Para bloquear los botones de hoy: un préstamo no puede recibir dos
-  // "pago del día" ni dos "no pagó" (mora) el mismo día.
+  // Para bloquear el botón de "pago del día": un préstamo no puede recibir
+  // dos pagos de cuota diaria el mismo día. La mora ya no la aplica el
+  // cobrador — se genera sola cuando pasan 24 horas sin pago.
   const hoy = new Date().toISOString().slice(0, 10);
   const yaPagoHoy = pagos.some((p) => p.tipo === "cuota_diaria" && p.fecha_pago?.slice(0, 10) === hoy);
-  const yaMoraHoy = moras.some((m) => m.fecha_generada === hoy);
 
   const puedeCobrar = !!prestamoActivo && (prestamoActivo.estado === "activo" || prestamoActivo.estado === "en_mora");
   const abonado = prestamoActivo ? Number(prestamoActivo.monto_total) - Number(prestamoActivo.saldo_actual) : 0;
@@ -268,21 +268,6 @@ export default async function DetalleClientePage({
                   <button className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
                     <CircleCheck className="h-4 w-4" />
                     Aplicar pago del día
-                  </button>
-                </form>
-              )}
-
-              {yaMoraHoy ? (
-                <span className="inline-flex items-center gap-1.5 text-sm bg-slate-900 border border-slate-800 text-slate-400 rounded-xl px-4 py-3">
-                  <CircleAlert className="h-4 w-4" />
-                  Ya se marcó como no pagó hoy
-                </span>
-              ) : (
-                <form action={marcarIncumplidoDelDia} className="flex items-center bg-slate-900 border border-slate-800 rounded-xl px-4 py-3">
-                  <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                  <button className="inline-flex items-center gap-1.5 text-sm bg-red-500/90 hover:bg-red-500 text-white font-semibold px-3 py-1.5 rounded-md">
-                    <CircleAlert className="h-4 w-4" />
-                    No pagó hoy (marcar incumplido)
                   </button>
                 </form>
               )}

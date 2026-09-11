@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdministrador } from "@/lib/auth/roles";
 import { generarPagarePDF } from "@/lib/pdf/pagare";
 import { obtenerFechaLimitePorPrestamo } from "@/lib/supabase/calendario";
+import { obtenerConfiguraciones } from "@/lib/config";
 
 type PrestamoParaPagare = {
   id: string;
@@ -22,6 +23,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
   await exigirAdministrador();
   const { id } = await params;
   const supabase = await createClient();
+  const config = await obtenerConfiguraciones();
 
   const { data: prestamo } = await supabase
     .from("prestamos")
@@ -69,6 +71,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ id:
     // ese nombre tiene prioridad.
     nombreCobrador:
       p.cobradores?.usuarios?.nombre_completo ?? p.usuarios?.nombre_completo ?? "Administración de CrediPresta",
+    lugar: config.lugarPagare,
+    interesMoratorioDiarioPorcentaje: config.interesMoratorioDiarioPagare,
     firmaClienteDataUrl: solicitud?.firma_cliente_data_url ?? null,
   });
 

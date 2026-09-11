@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { NuevoClienteForm } from "./NuevoClienteForm";
+import { exigirVistaCobrador } from "@/lib/auth/roles";
+import { obtenerConfiguraciones } from "@/lib/config";
 
 /** "Crear nuevo cliente" — solo lo usa el cobrador (QUE SOLO LA USE EL COBRADOR). */
 export default async function NuevoClientePage({
@@ -9,6 +11,8 @@ export default async function NuevoClientePage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+  const sesion = await exigirVistaCobrador();
+  const config = await obtenerConfiguraciones();
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -24,12 +28,17 @@ export default async function NuevoClientePage({
           <h1 className="text-2xl font-bold">Nuevo cliente</h1>
         </div>
         <p className="text-slate-400 text-sm mt-1">
-          Sube la foto del pagaré ya firmado a mano y del INE, elige el plan y esta solicitud queda pendiente hasta
-          que Empresa la apruebe.
+          Sube la foto del INE, elige el plan, genera el pagaré y fírmalo con el cliente. Esta solicitud queda
+          pendiente hasta que Empresa la apruebe.
         </p>
       </div>
 
-      <NuevoClienteForm error={error} />
+      <NuevoClienteForm
+        error={error}
+        nombreCobrador={sesion.nombreCompleto}
+        lugarPagare={config.lugarPagare}
+        interesMoratorioDiarioPagare={config.interesMoratorioDiarioPagare}
+      />
     </div>
   );
 }

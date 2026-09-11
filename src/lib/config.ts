@@ -38,6 +38,15 @@ export async function obtenerConfiguraciones() {
   const diasCobroMenorUmbral = arregloDeDias("dias_cobro_menor_umbral", [1, 2, 3, 4, 5, 6]);
   const diasCobroMayorIgualUmbral = arregloDeDias("dias_cobro_mayor_igual_umbral", [1, 2, 3, 4, 5]);
 
+  const cadena = (clave: string, porDefecto: string) => mapa.get(clave) || porDefecto;
+
+  // Estos dos son solo para el texto del PAGARÉ (documento legal): el lugar
+  // donde se firma y el % de interés moratorio diario que se declara ahí.
+  // El cálculo real de la mora sigue siendo el de mora_baja/mora_alta de
+  // arriba — esto es únicamente lo que se imprime en el documento.
+  const lugarPagare = cadena("lugar_pagare", "");
+  const interesMoratorioDiarioPagare = numero("interes_moratorio_diario_pagare", 5);
+
   const reglaDiasCobro: ReglaDiasCobro = {
     umbral: umbralMora,
     diasMenorUmbral: diasCobroMenorUmbral,
@@ -60,5 +69,7 @@ export async function obtenerConfiguraciones() {
     diasCobroMayorIgualUmbral,
     reglaDiasCobro,
     reglaMora,
+    lugarPagare,
+    interesMoratorioDiarioPagare,
   };
 }

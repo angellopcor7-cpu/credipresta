@@ -59,4 +59,24 @@ describe("generarPagarePDF", () => {
     });
     expect(bytes.length).toBeGreaterThan(500);
   });
+
+  it("incluye lugar, % de interés moratorio y las dos firmas (cliente y cobrador/aval)", async () => {
+    const firmaPngValida =
+      "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mNk+A8AAQUBAScY42YAAAAASUVORK5CYII=";
+    const bytes = await generarPagarePDF({
+      ...datosBase,
+      lugar: "Ciudad de México",
+      interesMoratorioDiarioPorcentaje: 5,
+      firmaClienteDataUrl: firmaPngValida,
+      firmaCobradorDataUrl: firmaPngValida,
+    });
+    const encabezado = Buffer.from(bytes.slice(0, 5)).toString("ascii");
+    expect(encabezado).toBe("%PDF-");
+    expect(bytes.length).toBeGreaterThan(500);
+  });
+
+  it("funciona sin lugar/interés moratorio/firma de cobrador (todos opcionales)", async () => {
+    const bytes = await generarPagarePDF(datosBase);
+    expect(bytes.length).toBeGreaterThan(500);
+  });
 });

@@ -9,9 +9,18 @@ import {
   calcularMontoMora,
   calcularSaldoConMora,
   tieneCuotaVencidaSinPagar,
+  calcularPorcentajeInteresPorPlan,
+  calcularMontoTotal,
+  calcularCuotaSugerida,
 } from "@/lib/finance/calculos";
 import { obtenerConfiguraciones } from "@/lib/config";
+import { generarPagarePDF } from "@/lib/pdf/pagare";
 import type { TipoDocumento } from "@/lib/types";
+
+/** Un data URL de PNG con contenido real (no solo el prefijo, dibujado a mano en la cuadrícula de firma). */
+function esFirmaValida(valor: FormDataEntryValue | null): valor is string {
+  return typeof valor === "string" && valor.startsWith("data:image/png;base64,") && valor.length > 100;
+}
 
 const DIAS_SEMANA = [0, 1, 2, 3, 4, 5, 6];
 
@@ -25,8 +34,10 @@ function leerDiasPersonalizados(formData: FormData): number[] | null {
  * El cobrador da de alta a un cliente nuevo y arma su solicitud de préstamo
  * en un solo paso: datos del cliente, el plan (20 o 30 días con interés
  * fijo, o uno personalizado con sus propios días y % de interés), foto de
- * su INE y foto del pagaré ya firmado a mano (el cliente no tiene cuenta ni
- * firma nada dentro de la app). Queda pendiente hasta que Empresa la
+ * su INE, y las dos firmas (cliente y cobrador) que se dibujaron en la
+ * pantalla al momento de dar de alta. El pagaré ya no se sube como foto: se
+ * genera aquí mismo (PDF con los datos del préstamo y ambas firmas) y ese es
+ * el documento que queda guardado. Queda pendiente hasta que Empresa la
  * apruebe (y Empresa puede ajustar el % antes de aprobar).
  */
 export async function crearClienteYSolicitud(formData: FormData) {
@@ -42,7 +53,8 @@ export async function crearClienteYSolicitud(formData: FormData) {
   const porcentajePersonalizado = porcentajePersonalizadoTexto ? Number(porcentajePersonalizadoTexto) : null;
   const ineFrente = formData.get("doc_ine_frente") as File | null;
   const ineReverso = formData.get("doc_ine_reverso") as File | null;
-  const pagareFirmado = formData.get("doc_pagare_firmado") as File | null;
+  const firmaClienteDataUrl = formData.get("firma_cliente_data_url");
+  const firmaCobradorDataUrl = formData.get("firma_cobrador_data_url");
 
   if (!nombreCompleto) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("El nombre del cliente es obligatorio")}`);
@@ -63,8 +75,8 @@ export async function crearClienteYSolicitud(formData: FormData) {
   if (!ineFrente || ineFrente.size === 0) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la foto del INE")}`);
   }
-  if (!pagareFirmado || pagareFirmado.size === 0) {
-    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la foto del pagaré ya firmado")}`);
+  if (!esFirmaValida(firmaClienteDataUrl) || !esFirmaValida(firmaCobradorDataUrl)) {
+    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la firma del cliente y/o del cobrador en el pagaré")}`);
   }
 
   const diasPersonalizados = leerDiasPersonalizados(formData);
@@ -90,7 +102,6 @@ export async function crearClienteYSolicitud(formData: FormData) {
 
   const documentos: { archivo: File; tipo: TipoDocumento }[] = [{ archivo: ineFrente, tipo: "ine_frente" }];
   if (ineReverso && ineReverso.size > 0) documentos.push({ archivo: ineReverso, tipo: "ine_reverso" });
-  documentos.push({ archivo: pagareFirmado, tipo: "pagare_firmado" });
 
   for (const { archivo, tipo } of documentos) {
     const rutaArchivo = `${cliente.id}/${tipo}/${Date.now()}-${archivo.name}`;
@@ -106,6 +117,52 @@ export async function crearClienteYSolicitud(formData: FormData) {
         subido_por: sesion.id,
       });
     }
+  }
+
+  // El pagaré ya no se sube como foto: se genera aquí mismo con los datos
+  // que el cobrador acaba de capturar y las dos firmas dibujadas en la
+  // pantalla (cliente y cobrador), y ese PDF es el que queda como
+  // "pagare_firmado". Fecha de inicio/vencimiento son un estimado (el
+  // calendario real, saltando días según la regla del negocio, se genera
+  // hasta que Empresa apruebe el préstamo).
+  const config = await obtenerConfiguraciones();
+  const porcentajeEfectivo = porcentajePersonalizado ?? calcularPorcentajeInteresPorPlan(plazoDias as 20 | 30);
+  const montoTotalPagare = calcularMontoTotal(montoSolicitado, porcentajeEfectivo);
+  const montoCuotaPagare = calcularCuotaSugerida(montoTotalPagare, plazoDias);
+  const fechaFirma = new Date();
+  const fechaFinEstimada = new Date(fechaFirma);
+  fechaFinEstimada.setUTCDate(fechaFinEstimada.getUTCDate() + plazoDias);
+
+  const bytesPagare = await generarPagarePDF({
+    folio: cliente.id.slice(0, 8).toUpperCase(),
+    nombreCliente: nombreCompleto,
+    montoPrestado: montoSolicitado,
+    porcentajeInteres: porcentajeEfectivo,
+    montoTotal: montoTotalPagare,
+    montoCuotaDiaria: montoCuotaPagare,
+    plazoDias,
+    fechaInicio: fechaFirma,
+    fechaFin: fechaFinEstimada,
+    fechaFirma,
+    nombreCobrador: sesion.nombreCompleto,
+    lugar: config.lugarPagare,
+    interesMoratorioDiarioPorcentaje: config.interesMoratorioDiarioPagare,
+    firmaClienteDataUrl: String(firmaClienteDataUrl),
+    firmaCobradorDataUrl: String(firmaCobradorDataUrl),
+  });
+
+  const rutaPagare = `${cliente.id}/pagare_firmado/${Date.now()}-pagare-firmado.pdf`;
+  const { error: errorSubidaPagare } = await supabase.storage
+    .from("documentos-clientes")
+    .upload(rutaPagare, Buffer.from(bytesPagare), { contentType: "application/pdf" });
+
+  if (!errorSubidaPagare) {
+    await supabase.from("documentos_clientes").insert({
+      cliente_id: cliente.id,
+      tipo_documento: "pagare_firmado",
+      storage_path: rutaPagare,
+      subido_por: sesion.id,
+    });
   }
 
   const { error: errorSolicitud } = await supabase.from("solicitudes_prestamo").insert({
