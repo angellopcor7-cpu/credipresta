@@ -360,7 +360,7 @@ export function NuevoClienteForm({
           </div>
           <div className="space-y-1">
             <label className="text-sm text-slate-300" htmlFor="doc_ine_reverso">
-              Foto del INE (reverso, opcional)
+              Foto del INE (reverso)
             </label>
             <input
               id="doc_ine_reverso"
@@ -368,12 +368,13 @@ export function NuevoClienteForm({
               type="file"
               accept="image/*"
               capture="environment"
+              required
               className="w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-white"
             />
           </div>
           <div className="space-y-1">
             <label className="text-sm text-slate-300" htmlFor="doc_comprobante_domicilio">
-              Comprobante de domicilio (opcional)
+              Comprobante de domicilio
             </label>
             <input
               id="doc_comprobante_domicilio"
@@ -381,12 +382,13 @@ export function NuevoClienteForm({
               type="file"
               accept="image/*"
               capture="environment"
+              required
               className="w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-white"
             />
           </div>
           <div className="space-y-1">
             <label className="text-sm text-slate-300" htmlFor="doc_foto_cliente">
-              Foto de la cara del cliente (opcional)
+              Foto de la cara del cliente
             </label>
             <input
               id="doc_foto_cliente"
@@ -394,6 +396,7 @@ export function NuevoClienteForm({
               type="file"
               accept="image/*"
               capture="user"
+              required
               className="w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-white"
             />
           </div>

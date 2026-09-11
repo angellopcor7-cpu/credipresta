@@ -27,10 +27,21 @@ export type DatosPagare = {
   firmaCobradorDataUrl?: string | null;
 };
 
+/**
+ * Se formatea en la hora de México (no UTC): el servidor corre en UTC, así
+ * que formatear "Fecha" con timeZone UTC podía mostrar el día siguiente al
+ * real cuando ya es "mañana" en UTC pero sigue siendo "hoy" en México (por
+ * ejemplo, de noche). México ya no tiene horario de verano, así que la
+ * diferencia con UTC es constante y esto no afecta al cálculo de fechas
+ * (que sigue haciéndose con setUTCDate en actions.ts), solo a cómo se ve.
+ */
 function formatoFecha(d: Date): string {
-  return new Intl.DateTimeFormat("es-MX", { day: "2-digit", month: "long", year: "numeric", timeZone: "UTC" }).format(
-    d
-  );
+  return new Intl.DateTimeFormat("es-MX", {
+    day: "2-digit",
+    month: "long",
+    year: "numeric",
+    timeZone: "America/Mexico_City",
+  }).format(d);
 }
 
 function formatoMoneda(n: number): string {

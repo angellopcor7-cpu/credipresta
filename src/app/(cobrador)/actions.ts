@@ -77,7 +77,16 @@ export async function crearClienteYSolicitud(formData: FormData) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Elige un plan de 20 o 30 días, o pon un % personalizado")}`);
   }
   if (!ineFrente || ineFrente.size === 0) {
-    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la foto del INE")}`);
+    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la foto del INE (frente)")}`);
+  }
+  if (!ineReverso || ineReverso.size === 0) {
+    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la foto del INE (reverso)")}`);
+  }
+  if (!comprobanteDomicilio || comprobanteDomicilio.size === 0) {
+    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta el comprobante de domicilio")}`);
+  }
+  if (!fotoCliente || fotoCliente.size === 0) {
+    redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la foto de la cara del cliente")}`);
   }
   if (!esFirmaValida(firmaClienteDataUrl) || !esFirmaValida(firmaCobradorDataUrl)) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("Falta la firma del cliente y/o del cobrador en el pagaré")}`);
@@ -104,12 +113,14 @@ export async function crearClienteYSolicitud(formData: FormData) {
     );
   }
 
-  const documentos: { archivo: File; tipo: TipoDocumento }[] = [{ archivo: ineFrente, tipo: "ine_frente" }];
-  if (ineReverso && ineReverso.size > 0) documentos.push({ archivo: ineReverso, tipo: "ine_reverso" });
-  if (comprobanteDomicilio && comprobanteDomicilio.size > 0) {
-    documentos.push({ archivo: comprobanteDomicilio, tipo: "comprobante_domicilio" });
-  }
-  if (fotoCliente && fotoCliente.size > 0) documentos.push({ archivo: fotoCliente, tipo: "foto_cliente" });
+  // Los 4 documentos ya son obligatorios (se validó arriba), así que siempre
+  // se suben los 4.
+  const documentos: { archivo: File; tipo: TipoDocumento }[] = [
+    { archivo: ineFrente, tipo: "ine_frente" },
+    { archivo: ineReverso, tipo: "ine_reverso" },
+    { archivo: comprobanteDomicilio, tipo: "comprobante_domicilio" },
+    { archivo: fotoCliente, tipo: "foto_cliente" },
+  ];
 
   for (const { archivo, tipo } of documentos) {
     const rutaArchivo = `${cliente.id}/${tipo}/${Date.now()}-${archivo.name}`;
