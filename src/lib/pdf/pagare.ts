@@ -320,19 +320,5 @@ export async function generarPagarePDF(datos: DatosPagare): Promise<Uint8Array> 
   textoCentradoAjustado(datos.nombreCobrador, X_FIRMA_COBRADOR, y, ANCHO_FIRMA - 6);
   lineaH(X_FIRMA_CLIENTE, y - 4, X_FIRMA_CLIENTE + ANCHO_FIRMA, 0.75, NEGRO);
   lineaH(X_FIRMA_COBRADOR, y - 4, X_FIRMA_COBRADOR + ANCHO_FIRMA, 0.75, NEGRO);
-  y -= 26;
-
-  // ---- Pie: avisos legales, en cursiva y más pequeño ----
-  linea("El presente documento es un PAGARÉ y constituye título de crédito. Copia para control de CREDIPRESTA $$.", {
-    tamano: 7.5,
-    cursiva: true,
-    centrado: true,
-    espacio: 11,
-  });
-  linea(
-    "Documento generado automáticamente a partir de los datos del préstamo. Se recomienda revisión legal antes de su uso formal.",
-    { tamano: 7.5, cursiva: true, centrado: true, espacio: 11 }
-  );
-
   return pdf.save();
 }
