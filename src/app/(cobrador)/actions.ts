@@ -53,6 +53,8 @@ export async function crearClienteYSolicitud(formData: FormData) {
   const porcentajePersonalizado = porcentajePersonalizadoTexto ? Number(porcentajePersonalizadoTexto) : null;
   const ineFrente = formData.get("doc_ine_frente") as File | null;
   const ineReverso = formData.get("doc_ine_reverso") as File | null;
+  const comprobanteDomicilio = formData.get("doc_comprobante_domicilio") as File | null;
+  const fotoCliente = formData.get("doc_foto_cliente") as File | null;
   const firmaClienteDataUrl = formData.get("firma_cliente_data_url");
   const firmaCobradorDataUrl = formData.get("firma_cobrador_data_url");
 
@@ -102,6 +104,10 @@ export async function crearClienteYSolicitud(formData: FormData) {
 
   const documentos: { archivo: File; tipo: TipoDocumento }[] = [{ archivo: ineFrente, tipo: "ine_frente" }];
   if (ineReverso && ineReverso.size > 0) documentos.push({ archivo: ineReverso, tipo: "ine_reverso" });
+  if (comprobanteDomicilio && comprobanteDomicilio.size > 0) {
+    documentos.push({ archivo: comprobanteDomicilio, tipo: "comprobante_domicilio" });
+  }
+  if (fotoCliente && fotoCliente.size > 0) documentos.push({ archivo: fotoCliente, tipo: "foto_cliente" });
 
   for (const { archivo, tipo } of documentos) {
     const rutaArchivo = `${cliente.id}/${tipo}/${Date.now()}-${archivo.name}`;

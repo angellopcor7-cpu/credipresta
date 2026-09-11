@@ -369,6 +369,32 @@ export function NuevoClienteForm({
               className="w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-white"
             />
           </div>
+          <div className="space-y-1">
+            <label className="text-sm text-slate-300" htmlFor="doc_comprobante_domicilio">
+              Comprobante de domicilio (opcional)
+            </label>
+            <input
+              id="doc_comprobante_domicilio"
+              name="doc_comprobante_domicilio"
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-white"
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-sm text-slate-300" htmlFor="doc_foto_cliente">
+              Foto de la cara del cliente (opcional)
+            </label>
+            <input
+              id="doc_foto_cliente"
+              name="doc_foto_cliente"
+              type="file"
+              accept="image/*"
+              capture="user"
+              className="w-full text-xs text-slate-300 file:mr-3 file:rounded-md file:border-0 file:bg-slate-700 file:px-3 file:py-1.5 file:text-white"
+            />
+          </div>
         </div>
       </div>
 
