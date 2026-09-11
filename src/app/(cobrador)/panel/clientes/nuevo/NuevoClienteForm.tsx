@@ -52,6 +52,7 @@ export function NuevoClienteForm({
 
   const [pagareGenerado, setPagareGenerado] = useState(false);
   const [folio, setFolio] = useState("");
+  const [lugar, setLugar] = useState(lugarPagare || "");
   const [firmaCliente, setFirmaCliente] = useState<string | null>(null);
   const [firmaCobrador, setFirmaCobrador] = useState<string | null>(null);
 
@@ -83,7 +84,8 @@ export function NuevoClienteForm({
 
   function generarPagare() {
     if (!preview || !nombreCompleto.trim()) return;
-    setFolio(Date.now().toString(36).toUpperCase());
+    // Folio de solo números (más fácil de leer/dictar que uno alfanumérico).
+    setFolio(String(Date.now()));
     setPagareGenerado(true);
   }
 
@@ -404,6 +406,23 @@ export function NuevoClienteForm({
           Pagaré
         </p>
 
+        <div className="space-y-1 max-w-xs">
+          <label className="text-sm text-slate-300" htmlFor="lugar_firma">
+            Lugar donde se firma
+          </label>
+          <input
+            id="lugar_firma"
+            name="lugar"
+            value={lugar}
+            onChange={(e) => {
+              setLugar(e.target.value);
+              invalidarPagareSiHacia();
+            }}
+            placeholder="Ej. Ciudad de México"
+            className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+        </div>
+
         {!pagareGenerado ? (
           <div className="space-y-2">
             <p className="text-xs text-slate-500">
@@ -433,7 +452,7 @@ export function NuevoClienteForm({
                 <span className="text-slate-500">Fecha:</span> {fechaCorta(hoy)}
               </p>
               <p>
-                <span className="text-slate-500">Lugar:</span> {lugarPagare || "—"}
+                <span className="text-slate-500">Lugar:</span> {lugar || "—"}
               </p>
               <p>
                 <span className="text-slate-500">Cantidad $:</span> {currency(Number(monto))}

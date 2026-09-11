@@ -58,6 +58,7 @@ export async function crearClienteYSolicitud(formData: FormData) {
   const firmaClienteDataUrl = formData.get("firma_cliente_data_url");
   const firmaCobradorDataUrl = formData.get("firma_cobrador_data_url");
   const folioTexto = String(formData.get("folio") || "").trim();
+  const lugarTexto = String(formData.get("lugar") || "").trim();
 
   if (!nombreCompleto) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent("El nombre del cliente es obligatorio")}`);
@@ -155,7 +156,9 @@ export async function crearClienteYSolicitud(formData: FormData) {
     fechaFin: fechaFinEstimada,
     fechaFirma,
     nombreCobrador: sesion.nombreCompleto,
-    lugar: config.lugarPagare,
+    // El cobrador escribe el lugar de la firma en el propio formulario;
+    // si lo deja vacío, se usa el valor configurado por defecto.
+    lugar: lugarTexto || config.lugarPagare,
     interesMoratorioDiarioPorcentaje: config.interesMoratorioDiarioPagare,
     firmaClienteDataUrl: String(firmaClienteDataUrl),
     firmaCobradorDataUrl: String(firmaCobradorDataUrl),
