@@ -82,12 +82,12 @@ const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
 };
 
 const COLOR_MOVIMIENTO: Record<string, string> = {
-  pago: "text-sky-400 bg-sky-950",
+  pago: "text-slate-300 bg-slate-800",
   mora: "text-red-400 bg-red-950",
   aprobacion_solicitud: "text-amber-400 bg-amber-950",
   rechazo_solicitud: "text-red-400 bg-red-950",
-  creacion_cobrador: "text-sky-400 bg-sky-950",
-  reasignacion_cliente: "text-sky-400 bg-sky-950",
+  creacion_cobrador: "text-slate-300 bg-slate-800",
+  reasignacion_cliente: "text-slate-300 bg-slate-800",
 };
 
 const ETIQUETA_MOVIMIENTO: Record<string, string> = {
@@ -138,10 +138,10 @@ export default async function DashboardPage() {
   const moraTotal = (morasPendientes ?? []).reduce((s, m) => s + Number(m.monto_mora), 0);
   const solicitudesPendientes = solicitudesPendientesCount ?? 0;
 
-  const stats: { label: string; value: string; icon: LucideIcon; tono: "neutral" | "amber" | "red" | "sky" }[] = [
-    { label: "Clientes activos", value: String(clientesCount ?? 0), icon: UserRound, tono: "sky" },
-    { label: "Cobradores activos", value: String(cobradoresCount ?? 0), icon: Users, tono: "sky" },
-    { label: "Préstamos activos", value: String(activos.length), icon: Landmark, tono: "sky" },
+  const stats: { label: string; value: string; icon: LucideIcon; tono: "neutral" | "amber" | "red" }[] = [
+    { label: "Clientes activos", value: String(clientesCount ?? 0), icon: UserRound, tono: "neutral" },
+    { label: "Cobradores activos", value: String(cobradoresCount ?? 0), icon: Users, tono: "neutral" },
+    { label: "Préstamos activos", value: String(activos.length), icon: Landmark, tono: "neutral" },
     { label: "Préstamos en mora", value: String(enMora.length), icon: CircleAlert, tono: enMora.length > 0 ? "red" : "neutral" },
     { label: "Cartera pendiente", value: currency(carteraActiva), icon: Wallet, tono: "amber" },
     { label: "Mora pendiente", value: currency(moraTotal), icon: CircleAlert, tono: moraTotal > 0 ? "red" : "neutral" },
@@ -152,19 +152,16 @@ export default async function DashboardPage() {
     neutral: "text-slate-400",
     amber: "text-amber-400",
     red: "text-red-400",
-    sky: "text-sky-400",
   };
   const colorValor: Record<string, string> = {
     neutral: "text-white",
     amber: "text-amber-400",
     red: "text-red-400",
-    sky: "text-white",
   };
   const bordeTono: Record<string, string> = {
     neutral: "border-slate-800",
     amber: "border-slate-800",
     red: "border-red-900/50",
-    sky: "border-slate-800",
   };
 
   const accesos: { label: string; href: string; icon: LucideIcon }[] = [

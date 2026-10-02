@@ -239,7 +239,7 @@ export default async function SolicitudesPage({
                       <span
                         className={`text-xs border rounded-full px-2 py-1 ${
                           s.estado === "aprobada"
-                            ? "bg-sky-950 text-sky-400 border-sky-900"
+                            ? "bg-amber-950 text-amber-400 border-amber-900"
                             : "bg-red-950 text-red-400 border-red-900"
                         }`}
                       >

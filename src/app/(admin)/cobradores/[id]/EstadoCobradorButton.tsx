@@ -37,7 +37,7 @@ export function EstadoCobradorButton({
         className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-md border ${
           activo
             ? "bg-red-950/60 hover:bg-red-900 border-red-900 text-red-300"
-            : "bg-emerald-950/60 hover:bg-emerald-900 border-emerald-900 text-emerald-300"
+            : "bg-amber-950/60 hover:bg-amber-900 border-amber-900 text-amber-300"
         }`}
       >
         {activo ? <UserRoundX className="h-3.5 w-3.5" /> : <UserRoundCheck className="h-3.5 w-3.5" />}

@@ -31,11 +31,11 @@ export function GraficaOtorgadoCobrado({ datos }: { datos: PuntoOtorgadoCobrado[
         <h3 className="text-sm font-semibold text-slate-300">Otorgado vs. cobrado</h3>
         <div className="flex items-center gap-3 text-xs text-slate-400">
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-sky-600" />
+            <span className="h-2 w-2 rounded-full bg-red-700" />
             Otorgado
           </span>
           <span className="flex items-center gap-1.5">
-            <span className="h-2 w-2 rounded-full bg-emerald-600" />
+            <span className="h-2 w-2 rounded-full bg-amber-600" />
             Cobrado
           </span>
         </div>
@@ -61,17 +61,17 @@ export function GraficaOtorgadoCobrado({ datos }: { datos: PuntoOtorgadoCobrado[
               {activo === i && (
                 <div className="absolute bottom-full mb-1.5 z-10 bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-[11px] whitespace-nowrap shadow-lg">
                   <p className="text-slate-300 font-medium mb-1 capitalize">{d.mes}</p>
-                  <p className="text-sky-400">
+                  <p className="text-red-400">
                     Otorgado: <span className="text-white font-medium">{currency(d.otorgado)}</span>
                   </p>
-                  <p className="text-emerald-400">
+                  <p className="text-amber-400">
                     Cobrado: <span className="text-white font-medium">{currency(d.cobrado)}</span>
                   </p>
                 </div>
               )}
               <div className="w-full max-w-[16px] flex flex-col items-center justify-end h-full">
                 <div
-                  className="w-full rounded-t-[4px] bg-sky-600 transition-opacity"
+                  className="w-full rounded-t-[4px] bg-red-700 transition-opacity"
                   style={{
                     height: `${Math.max(1, (d.otorgado / techo) * 100)}%`,
                     opacity: activo === null || activo === i ? 1 : 0.45,
@@ -80,7 +80,7 @@ export function GraficaOtorgadoCobrado({ datos }: { datos: PuntoOtorgadoCobrado[
               </div>
               <div className="w-full max-w-[16px] flex flex-col items-center justify-end h-full">
                 <div
-                  className="w-full rounded-t-[4px] bg-emerald-600 transition-opacity"
+                  className="w-full rounded-t-[4px] bg-amber-600 transition-opacity"
                   style={{
                     height: `${Math.max(1, (d.cobrado / techo) * 100)}%`,
                     opacity: activo === null || activo === i ? 1 : 0.45,

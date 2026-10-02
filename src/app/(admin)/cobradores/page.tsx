@@ -64,7 +64,7 @@ export default async function CobradoresPage() {
                     <span
                       className={`text-xs border rounded-full px-2 py-1 ${
                         c.activo
-                          ? "bg-sky-950 text-sky-400 border-sky-900"
+                          ? "bg-slate-800 text-slate-200 border-slate-600"
                           : "bg-slate-800 text-slate-500 border-slate-700"
                       }`}
                     >

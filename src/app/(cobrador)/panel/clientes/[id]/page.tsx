@@ -215,9 +215,9 @@ export default async function DetalleClientePage({
       {prestamoActivo && (
         <>
           <div className="grid sm:grid-cols-4 gap-4">
-            <Resumen icon={Landmark} label="Prestado" value={currency(Number(prestamoActivo.monto_prestado))} tone="sky" />
+            <Resumen icon={Landmark} label="Prestado" value={currency(Number(prestamoActivo.monto_prestado))} tone="neutral" />
             <Resumen icon={Wallet} label="Total con interés" value={currency(Number(prestamoActivo.monto_total))} tone="amber" />
-            <Resumen icon={TrendingUp} label="Abonado" value={currency(abonado)} tone="sky" />
+            <Resumen icon={TrendingUp} label="Abonado" value={currency(abonado)} tone="neutral" />
             <Resumen icon={PiggyBank} label="Saldo" value={currency(Number(prestamoActivo.saldo_actual))} tone="amber" destacado />
           </div>
 
@@ -237,7 +237,7 @@ export default async function DetalleClientePage({
                 enMora
                   ? "bg-red-950 text-red-400 border-red-900"
                   : prestamoActivo.estado === "activo"
-                    ? "bg-sky-950 text-sky-400 border-sky-900"
+                    ? "bg-slate-800 text-slate-200 border-slate-600"
                     : "border-slate-700"
               }`}
             >
@@ -374,7 +374,7 @@ export default async function DetalleClientePage({
                 {pagos.map((p) => (
                   <tr key={p.id} className="border-t border-slate-800">
                     <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(p.fecha_pago?.slice(0, 10))}</td>
-                    <td className="px-3 py-2 text-sky-400">{currency(Number(p.monto))}</td>
+                    <td className="px-3 py-2">{currency(Number(p.monto))}</td>
                     <td className="px-3 py-2 text-slate-400">{p.tipo === "cuota_diaria" ? "Cuota diaria" : p.tipo}</td>
                     <td className="px-3 py-2">{currency(Number(p.saldo_posterior))}</td>
                   </tr>
@@ -426,10 +426,10 @@ function Resumen({
   icon: typeof Wallet;
   label: string;
   value: string;
-  tone: "amber" | "sky";
+  tone: "amber" | "neutral";
   destacado?: boolean;
 }) {
-  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-sky-500/10 text-sky-400";
+  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-300";
   return (
     <div className={`bg-slate-900 border rounded-xl p-4 flex items-center gap-3 ${destacado ? "border-amber-800" : "border-slate-800"}`}>
       <div className={`shrink-0 rounded-lg p-2 ${toneClasses}`}>

@@ -128,7 +128,7 @@ export default async function DetalleCobradorPage({
             <span
               className={`text-xs border rounded-full px-2 py-1 ${
                 cobradorTyped.activo
-                  ? "bg-sky-950 text-sky-400 border-sky-900"
+                  ? "bg-slate-800 text-slate-200 border-slate-600"
                   : "bg-slate-800 text-slate-500 border-slate-700"
               }`}
             >
@@ -174,7 +174,7 @@ export default async function DetalleCobradorPage({
         <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
       )}
       {exito && (
-        <p className="text-sm text-emerald-400 bg-emerald-950/50 border border-emerald-900 rounded-md px-3 py-2">
+        <p className="text-sm text-amber-400 bg-amber-950/50 border border-amber-900 rounded-md px-3 py-2">
           {exito}
         </p>
       )}

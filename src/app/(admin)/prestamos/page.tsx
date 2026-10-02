@@ -16,7 +16,7 @@ const estadoLabel: Record<string, string> = {
 };
 
 const estadoColor: Record<string, string> = {
-  activo: "bg-sky-950 text-sky-400 border-sky-900",
+  activo: "bg-slate-800 text-slate-200 border-slate-600",
   en_mora: "bg-amber-950 text-amber-400 border-amber-900",
   liquidado: "bg-slate-800 text-slate-400 border-slate-700",
   cancelado: "bg-red-950 text-red-400 border-red-900",

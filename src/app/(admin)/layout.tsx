@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdministrador } from "@/lib/auth/roles";
+import { AdminNav } from "./AdminNav";
 
 async function signOut() {
   "use server";
@@ -29,41 +30,11 @@ export default async function AdminLayout({
           <Link href="/dashboard" className="font-bold text-lg">
             Credi<span className="text-amber-400">Presta</span>
           </Link>
-          <nav className="flex items-center gap-5 text-sm text-slate-300 flex-wrap">
-            <Link href="/dashboard" className="hover:text-white">
-              Panel
-            </Link>
-            <Link href="/cobradores" className="hover:text-white">
-              Cobradores
-            </Link>
-            <Link href="/rutas" className="hover:text-white">
-              Rutas
-            </Link>
-            <Link href="/clientes" className="hover:text-white">
-              Clientes
-            </Link>
-            <Link href="/prestamos" className="hover:text-white">
-              Préstamos
-            </Link>
-            <Link href="/solicitudes" className="hover:text-white relative">
-              Solicitudes
-              {!!solicitudesPendientes && (
-                <span className="ml-1 inline-flex items-center justify-center bg-amber-500 text-slate-950 text-xs font-bold rounded-full h-5 min-w-5 px-1">
-                  {solicitudesPendientes}
-                </span>
-              )}
-            </Link>
-            <Link
-              href="/panel"
-              className="text-xs border border-slate-700 rounded-full px-3 py-1 hover:border-slate-500"
-            >
-              Vista Cobrador
-            </Link>
-            <span className="text-slate-500">{sesion.nombreCompleto}</span>
-            <form action={signOut}>
-              <button className="text-slate-400 hover:text-white">Cerrar sesión</button>
-            </form>
-          </nav>
+          <AdminNav
+            solicitudesPendientes={solicitudesPendientes ?? 0}
+            nombreUsuario={sesion.nombreCompleto}
+            signOutAction={signOut}
+          />
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>

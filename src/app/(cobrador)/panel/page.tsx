@@ -150,7 +150,7 @@ export default async function PanelCobradorPage({
 
       <div className="grid sm:grid-cols-3 gap-4">
         <ResumenCartera icon={Wallet} label="Total con interés" value={currency(totalCartera)} tone="amber" />
-        <ResumenCartera icon={TrendingUp} label="Abonado" value={currency(abonadoCartera)} tone="sky" />
+        <ResumenCartera icon={TrendingUp} label="Abonado" value={currency(abonadoCartera)} tone="neutral" />
         <ResumenCartera icon={PiggyBank} label="Saldo pendiente" value={currency(saldoCartera)} tone="amber" destacado />
       </div>
 
@@ -179,7 +179,7 @@ export default async function PanelCobradorPage({
                     ? "border-slate-800 border-l-amber-500"
                     : cliente.estado === "inactivo"
                       ? "border-slate-800 border-l-slate-600"
-                      : "border-slate-800 border-l-sky-600"
+                      : "border-slate-800 border-l-slate-300"
               }`}
             >
               <div className="flex items-center gap-3 min-w-[13rem]">
@@ -200,7 +200,7 @@ export default async function PanelCobradorPage({
                           ? "bg-red-950 text-red-400 border-red-900"
                           : cliente.estado === "inactivo"
                             ? "bg-slate-800 text-slate-400 border-slate-700"
-                            : "bg-sky-950 text-sky-400 border-sky-900"
+                            : "bg-slate-800 text-slate-200 border-slate-600"
                     }`}
                   >
                     {cliente.estado === "pendiente_aprobacion" ? (
@@ -246,7 +246,7 @@ export default async function PanelCobradorPage({
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Abonado</p>
-                      <p className="font-semibold text-sky-400">{currency(abonado)}</p>
+                      <p className="font-semibold">{currency(abonado)}</p>
                     </div>
                     <div>
                       <p className="text-slate-500 text-xs">Saldo</p>
@@ -306,10 +306,10 @@ function ResumenCartera({
   icon: typeof Wallet;
   label: string;
   value: string;
-  tone: "amber" | "sky";
+  tone: "amber" | "neutral";
   destacado?: boolean;
 }) {
-  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-sky-500/10 text-sky-400";
+  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-300";
   return (
     <div
       className={`bg-slate-900 border rounded-xl p-4 flex items-center gap-3 ${
