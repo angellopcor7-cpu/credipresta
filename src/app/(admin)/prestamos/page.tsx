@@ -16,9 +16,9 @@ const estadoLabel: Record<string, string> = {
 };
 
 const estadoColor: Record<string, string> = {
-  activo: "bg-slate-800 text-slate-200 border-slate-600",
+  activo: "bg-neutral-800 text-neutral-200 border-neutral-600",
   en_mora: "bg-amber-950 text-amber-400 border-amber-900",
-  liquidado: "bg-slate-800 text-slate-400 border-slate-700",
+  liquidado: "bg-neutral-800 text-neutral-400 border-neutral-700",
   cancelado: "bg-red-950 text-red-400 border-red-900",
 };
 
@@ -39,15 +39,15 @@ export default async function PrestamosPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Préstamos</h1>
-        <p className="text-slate-500 text-sm">Se crean al aprobar una solicitud del cobrador.</p>
+        <p className="text-neutral-500 text-sm">Se crean al aprobar una solicitud del cobrador.</p>
       </div>
 
       {prestamos.length === 0 ? (
-        <p className="text-slate-400 text-sm">Aún no hay préstamos.</p>
+        <p className="text-neutral-400 text-sm">Aún no hay préstamos.</p>
       ) : (
-        <div className="border border-slate-800 rounded-xl overflow-hidden">
+        <div className="border border-neutral-800 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-slate-400 text-left">
+            <thead className="bg-neutral-900 text-neutral-400 text-left">
               <tr>
                 <th className="px-4 py-3">Cliente</th>
                 <th className="px-4 py-3">Prestado</th>
@@ -60,17 +60,17 @@ export default async function PrestamosPage() {
             </thead>
             <tbody>
               {prestamos.map((p) => (
-                <tr key={p.id} className="border-t border-slate-800 hover:bg-slate-900/50">
+                <tr key={p.id} className="border-t border-neutral-800 hover:bg-neutral-900/50">
                   <td className="px-4 py-3">
                     <Link href={`/prestamos/${p.id}`} className="hover:text-amber-400">
                       {p.clientes?.nombre_completo ?? "—"}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{currency(Number(p.monto_prestado))}</td>
-                  <td className="px-4 py-3 text-slate-300">{currency(Number(p.monto_total))}</td>
+                  <td className="px-4 py-3 text-neutral-300">{currency(Number(p.monto_prestado))}</td>
+                  <td className="px-4 py-3 text-neutral-300">{currency(Number(p.monto_total))}</td>
                   <td className="px-4 py-3 font-medium">{currency(Number(p.saldo_actual))}</td>
-                  <td className="px-4 py-3 text-slate-400">{formatoFechaCorta(p.fecha_inicio)}</td>
-                  <td className="px-4 py-3 text-slate-400">
+                  <td className="px-4 py-3 text-neutral-400">{formatoFechaCorta(p.fecha_inicio)}</td>
+                  <td className="px-4 py-3 text-neutral-400">
                     {formatoFechaCorta(fechaLimitePorPrestamo.get(p.id))}
                   </td>
                   <td className="px-4 py-3">

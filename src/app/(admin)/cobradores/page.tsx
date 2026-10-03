@@ -28,18 +28,18 @@ export default async function CobradoresPage() {
         <h1 className="text-2xl font-bold">Cobradores</h1>
         <Link
           href="/cobradores/nuevo"
-          className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
+          className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-4 py-2 rounded-md"
         >
           + Nuevo cobrador
         </Link>
       </div>
 
       {cobradores.length === 0 ? (
-        <p className="text-slate-400 text-sm">Aún no hay cobradores registrados.</p>
+        <p className="text-neutral-400 text-sm">Aún no hay cobradores registrados.</p>
       ) : (
-        <div className="border border-slate-800 rounded-xl overflow-hidden">
+        <div className="border border-neutral-800 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-slate-400 text-left">
+            <thead className="bg-neutral-900 text-neutral-400 text-left">
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Teléfono</th>
@@ -51,21 +51,21 @@ export default async function CobradoresPage() {
             </thead>
             <tbody>
               {cobradores.map((c) => (
-                <tr key={c.id} className="border-t border-slate-800 hover:bg-slate-900/50">
+                <tr key={c.id} className="border-t border-neutral-800 hover:bg-neutral-900/50">
                   <td className="px-4 py-3">
                     <Link href={`/cobradores/${c.id}`} className="font-medium hover:text-amber-400 hover:underline">
                       {c.usuarios?.nombre_completo ?? "—"}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{c.usuarios?.telefono ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-300">{c.zona ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-300">{conteoClientes.get(c.id) ?? 0}</td>
+                  <td className="px-4 py-3 text-neutral-300">{c.usuarios?.telefono ?? "—"}</td>
+                  <td className="px-4 py-3 text-neutral-300">{c.zona ?? "—"}</td>
+                  <td className="px-4 py-3 text-neutral-300">{conteoClientes.get(c.id) ?? 0}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs border rounded-full px-2 py-1 ${
                         c.activo
-                          ? "bg-slate-800 text-slate-200 border-slate-600"
-                          : "bg-slate-800 text-slate-500 border-slate-700"
+                          ? "bg-neutral-800 text-neutral-200 border-neutral-600"
+                          : "bg-neutral-800 text-neutral-500 border-neutral-700"
                       }`}
                     >
                       {c.activo ? "Activo" : "Inactivo"}
@@ -74,7 +74,7 @@ export default async function CobradoresPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/cobradores/${c.id}`}
-                      className="inline-flex items-center text-slate-500 hover:text-white"
+                      className="inline-flex items-center text-neutral-500 hover:text-white"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Link>

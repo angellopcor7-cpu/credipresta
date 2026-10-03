@@ -136,24 +136,24 @@ export default async function DetalleClientePage({
   return (
     <div className="space-y-6">
       <div>
-        <Link href="/panel" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+        <Link href="/panel" className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-white">
           <ArrowLeft className="h-3.5 w-3.5" />
           Mis clientes
         </Link>
 
         <div className="flex items-center gap-3 mt-3">
-          <div className="shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-slate-950 font-bold">
+          <div className="shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-neutral-950 font-bold">
             {iniciales(cliente.nombre_completo)}
           </div>
           <div>
             <h1 className="text-2xl font-bold leading-tight">{cliente.nombre_completo}</h1>
-            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-slate-400 text-sm">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-neutral-400 text-sm">
               <span className="inline-flex items-center gap-1">
                 <Phone className="h-3.5 w-3.5" />
                 {cliente.telefono ?? "Sin teléfono"}
               </span>
               {cliente.direccion && (
-                <span className="inline-flex items-center gap-1 text-slate-500 text-xs">
+                <span className="inline-flex items-center gap-1 text-neutral-500 text-xs">
                   <MapPin className="h-3.5 w-3.5" />
                   {cliente.direccion}
                 </span>
@@ -222,43 +222,43 @@ export default async function DetalleClientePage({
           </div>
 
           <div className="space-y-1.5">
-            <div className="flex justify-between text-xs text-slate-500">
+            <div className="flex justify-between text-xs text-neutral-500">
               <span>Progreso del préstamo</span>
               <span>{progreso}%</span>
             </div>
-            <div className="h-2 rounded-full bg-slate-800 overflow-hidden">
+            <div className="h-2 rounded-full bg-neutral-800 overflow-hidden">
               <div className={`h-full rounded-full ${enMora ? "bg-red-500" : "bg-amber-500"}`} style={{ width: `${progreso}%` }} />
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center gap-2 text-sm text-slate-400">
+          <div className="flex flex-wrap items-center gap-2 text-sm text-neutral-400">
             <span
               className={`inline-flex items-center gap-1 border rounded-full px-2 py-1 ${
                 enMora
                   ? "bg-red-950 text-red-400 border-red-900"
                   : prestamoActivo.estado === "activo"
-                    ? "bg-slate-800 text-slate-200 border-slate-600"
-                    : "border-slate-700"
+                    ? "bg-neutral-800 text-neutral-200 border-neutral-600"
+                    : "border-neutral-700"
               }`}
             >
               {enMora ? <CircleAlert className="h-3.5 w-3.5" /> : <CircleCheck className="h-3.5 w-3.5" />}
               {ETIQUETAS_ESTADO_PRESTAMO[prestamoActivo.estado]}
             </span>
-            <span className="inline-flex items-center gap-1 border border-slate-800 rounded-full px-2 py-1">
+            <span className="inline-flex items-center gap-1 border border-neutral-800 rounded-full px-2 py-1">
               <CalendarDays className="h-3.5 w-3.5" />
               Plan {prestamoActivo.plazo_dias} días
             </span>
-            <span className="border border-slate-800 rounded-full px-2 py-1">
+            <span className="border border-neutral-800 rounded-full px-2 py-1">
               Pago diario: {currency(Number(prestamoActivo.monto_cuota_sugerida))}
             </span>
-            <span className="border border-slate-800 rounded-full px-2 py-1">
+            <span className="border border-neutral-800 rounded-full px-2 py-1">
               Inicio: {formatoFechaCorta(prestamoActivo.fecha_inicio)}
             </span>
-            <span className="border border-slate-800 rounded-full px-2 py-1">
+            <span className="border border-neutral-800 rounded-full px-2 py-1">
               Vence: {formatoFechaCorta(calendario.at(-1)?.fecha_programada)}
             </span>
             {prestamoActivo.dias_cobro_personalizados && (
-              <span className="border border-slate-800 rounded-full px-2 py-1">
+              <span className="border border-neutral-800 rounded-full px-2 py-1">
                 Días de cobro:{" "}
                 {prestamoActivo.dias_cobro_personalizados.length === 0
                   ? "ninguno fijo"
@@ -270,17 +270,17 @@ export default async function DetalleClientePage({
           {puedeCobrar && (
             <div className="flex flex-wrap gap-3">
               {yaPagoHoy ? (
-                <span className="inline-flex items-center gap-1.5 text-sm bg-slate-900 border border-slate-800 text-slate-400 rounded-xl px-4 py-3">
+                <span className="inline-flex items-center gap-1.5 text-sm bg-neutral-900 border border-neutral-800 text-neutral-400 rounded-xl px-4 py-3">
                   <CircleCheck className="h-4 w-4" />
                   Ya se cobró el pago de hoy
                 </span>
               ) : (
                 <form
                   action={aplicarPagoDelDia}
-                  className="flex items-center gap-2 bg-slate-900 border border-slate-800 rounded-xl px-4 py-3"
+                  className="flex items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3"
                 >
                   <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                  <label className="text-sm text-slate-300" htmlFor="monto">
+                  <label className="text-sm text-neutral-300" htmlFor="monto">
                     Monto
                   </label>
                   <input
@@ -291,9 +291,9 @@ export default async function DetalleClientePage({
                     step="0.01"
                     max={prestamoActivo.saldo_actual}
                     defaultValue={prestamoActivo.monto_cuota_sugerida}
-                    className="w-28 rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    className="w-28 rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
-                  <button className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+                  <button className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-3 py-1.5 rounded-md">
                     <CircleCheck className="h-4 w-4" />
                     Aplicar pago del día
                   </button>
@@ -306,11 +306,11 @@ export default async function DetalleClientePage({
 
       <div>
         <h2 className="font-semibold mb-2 flex items-center gap-1.5">
-          <FileText className="h-4 w-4 text-slate-500" />
+          <FileText className="h-4 w-4 text-neutral-500" />
           Documentos
         </h2>
         {documentosConUrl.length === 0 ? (
-          <p className="text-sm text-slate-500">Sin documentos subidos.</p>
+          <p className="text-sm text-neutral-500">Sin documentos subidos.</p>
         ) : (
           <div className="flex flex-wrap gap-2">
             {documentosConUrl.map((doc, i) => (
@@ -319,7 +319,7 @@ export default async function DetalleClientePage({
                 href={doc.url}
                 target="_blank"
                 rel="noreferrer"
-                className="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-full px-3 py-1"
+                className="inline-flex items-center gap-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-full px-3 py-1"
               >
                 <FileText className="h-3 w-3" />
                 {ETIQUETAS_DOCUMENTO[doc.tipo]}
@@ -332,9 +332,9 @@ export default async function DetalleClientePage({
       {moras.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Moras</h2>
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <div className="border border-neutral-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
+              <thead className="bg-neutral-900 text-neutral-400 text-left">
                 <tr>
                   <th className="px-3 py-2">Fecha</th>
                   <th className="px-3 py-2">Día de atraso</th>
@@ -344,8 +344,8 @@ export default async function DetalleClientePage({
               </thead>
               <tbody>
                 {moras.map((m) => (
-                  <tr key={m.id} className="border-t border-slate-800">
-                    <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(m.fecha_generada)}</td>
+                  <tr key={m.id} className="border-t border-neutral-800">
+                    <td className="px-3 py-2 text-neutral-400">{formatoFechaCorta(m.fecha_generada)}</td>
                     <td className="px-3 py-2">{m.dia_atraso}</td>
                     <td className="px-3 py-2 text-red-400">{currency(Number(m.monto_mora))}</td>
                     <td className="px-3 py-2">{currency(Number(m.saldo_posterior))}</td>
@@ -360,9 +360,9 @@ export default async function DetalleClientePage({
       {pagos.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Pagos registrados</h2>
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <div className="border border-neutral-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
+              <thead className="bg-neutral-900 text-neutral-400 text-left">
                 <tr>
                   <th className="px-3 py-2">Fecha</th>
                   <th className="px-3 py-2">Monto</th>
@@ -372,10 +372,10 @@ export default async function DetalleClientePage({
               </thead>
               <tbody>
                 {pagos.map((p) => (
-                  <tr key={p.id} className="border-t border-slate-800">
-                    <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(p.fecha_pago?.slice(0, 10))}</td>
+                  <tr key={p.id} className="border-t border-neutral-800">
+                    <td className="px-3 py-2 text-neutral-400">{formatoFechaCorta(p.fecha_pago?.slice(0, 10))}</td>
                     <td className="px-3 py-2">{currency(Number(p.monto))}</td>
-                    <td className="px-3 py-2 text-slate-400">{p.tipo === "cuota_diaria" ? "Cuota diaria" : p.tipo}</td>
+                    <td className="px-3 py-2 text-neutral-400">{p.tipo === "cuota_diaria" ? "Cuota diaria" : p.tipo}</td>
                     <td className="px-3 py-2">{currency(Number(p.saldo_posterior))}</td>
                   </tr>
                 ))}
@@ -388,9 +388,9 @@ export default async function DetalleClientePage({
       {prestamos.length > 1 && (
         <div>
           <h2 className="font-semibold mb-2">Historial de préstamos</h2>
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <div className="border border-neutral-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
+              <thead className="bg-neutral-900 text-neutral-400 text-left">
                 <tr>
                   <th className="px-3 py-2">Inicio</th>
                   <th className="px-3 py-2">Plan</th>
@@ -400,11 +400,11 @@ export default async function DetalleClientePage({
               </thead>
               <tbody>
                 {prestamos.map((p) => (
-                  <tr key={p.id} className="border-t border-slate-800">
-                    <td className="px-3 py-2 text-slate-400">{formatoFechaCorta(p.fecha_inicio)}</td>
+                  <tr key={p.id} className="border-t border-neutral-800">
+                    <td className="px-3 py-2 text-neutral-400">{formatoFechaCorta(p.fecha_inicio)}</td>
                     <td className="px-3 py-2">{p.plazo_dias} días</td>
                     <td className="px-3 py-2">{currency(Number(p.monto_total))}</td>
-                    <td className="px-3 py-2 text-slate-400">{ETIQUETAS_ESTADO_PRESTAMO[p.estado]}</td>
+                    <td className="px-3 py-2 text-neutral-400">{ETIQUETAS_ESTADO_PRESTAMO[p.estado]}</td>
                   </tr>
                 ))}
               </tbody>
@@ -429,14 +429,14 @@ function Resumen({
   tone: "amber" | "neutral";
   destacado?: boolean;
 }) {
-  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-slate-800 text-slate-300";
+  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-neutral-800 text-neutral-300";
   return (
-    <div className={`bg-slate-900 border rounded-xl p-4 flex items-center gap-3 ${destacado ? "border-amber-800" : "border-slate-800"}`}>
+    <div className={`bg-neutral-900 border rounded-xl p-4 flex items-center gap-3 ${destacado ? "border-amber-800" : "border-neutral-800"}`}>
       <div className={`shrink-0 rounded-lg p-2 ${toneClasses}`}>
         <Icon className="h-4 w-4" />
       </div>
       <div>
-        <p className="text-slate-500 text-xs">{label}</p>
+        <p className="text-neutral-500 text-xs">{label}</p>
         <p className={`text-lg font-bold ${destacado ? "text-amber-400" : ""}`}>{value}</p>
       </div>
     </div>

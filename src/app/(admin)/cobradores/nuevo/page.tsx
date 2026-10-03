@@ -12,7 +12,7 @@ export default async function NuevoCobradorPage({
       <h1 className="text-2xl font-bold">Nuevo cobrador</h1>
       <form
         action={crearCobrador}
-        className="space-y-4 bg-slate-900 p-6 rounded-xl border border-slate-800"
+        className="space-y-4 bg-neutral-900 p-6 rounded-xl border border-neutral-800"
       >
         <Field label="Nombre completo" name="nombre_completo" required />
         <Field label="Correo (para iniciar sesión)" name="email" type="email" required />
@@ -26,7 +26,7 @@ export default async function NuevoCobradorPage({
           </p>
         )}
 
-        <button className="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold rounded-md py-2 text-sm">
+        <button className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold rounded-md py-2 text-sm">
           Crear cobrador
         </button>
       </form>
@@ -49,7 +49,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-sm text-slate-300" htmlFor={name}>
+      <label className="text-sm text-neutral-300" htmlFor={name}>
         {label}
       </label>
       <input
@@ -57,9 +57,9 @@ function Field({
         name={name}
         type={type}
         required={required}
-        className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+        className="w-full rounded-md bg-neutral-800 border border-neutral-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
       />
-      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs text-neutral-500">{hint}</p>}
     </div>
   );
 }

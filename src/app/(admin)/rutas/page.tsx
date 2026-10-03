@@ -22,18 +22,18 @@ export default async function RutasPage() {
         <h1 className="text-2xl font-bold">Rutas</h1>
         <Link
           href="/rutas/nueva"
-          className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-4 py-2 rounded-md"
+          className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-4 py-2 rounded-md"
         >
           + Nueva ruta
         </Link>
       </div>
 
       {rutas.length === 0 ? (
-        <p className="text-slate-400 text-sm">Aún no hay rutas.</p>
+        <p className="text-neutral-400 text-sm">Aún no hay rutas.</p>
       ) : (
-        <div className="border border-slate-800 rounded-xl overflow-hidden">
+        <div className="border border-neutral-800 rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-slate-900 text-slate-400 text-left">
+            <thead className="bg-neutral-900 text-neutral-400 text-left">
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Zona</th>
@@ -43,13 +43,13 @@ export default async function RutasPage() {
             </thead>
             <tbody>
               {rutas.map((r) => (
-                <tr key={r.id} className="border-t border-slate-800">
+                <tr key={r.id} className="border-t border-neutral-800">
                   <td className="px-4 py-3">{r.nombre}</td>
-                  <td className="px-4 py-3 text-slate-300">{r.zona ?? "—"}</td>
-                  <td className="px-4 py-3 text-slate-300">
+                  <td className="px-4 py-3 text-neutral-300">{r.zona ?? "—"}</td>
+                  <td className="px-4 py-3 text-neutral-300">
                     {r.cobradores?.usuarios?.nombre_completo ?? "Sin asignar"}
                   </td>
-                  <td className="px-4 py-3 text-slate-300">{r.activa ? "Activa" : "Inactiva"}</td>
+                  <td className="px-4 py-3 text-neutral-300">{r.activa ? "Activa" : "Inactiva"}</td>
                 </tr>
               ))}
             </tbody>

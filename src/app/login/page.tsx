@@ -14,14 +14,14 @@ export default async function LoginPage({
           <h1 className="text-2xl font-bold text-white">
             Credi<span className="text-amber-400">Presta</span>
           </h1>
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-neutral-400 text-sm mt-1">
             Accede a tu panel de gestión
           </p>
         </div>
 
-        <form className="space-y-4 bg-slate-900 p-6 rounded-xl border border-slate-800">
+        <form className="space-y-4 bg-neutral-900 p-6 rounded-xl border border-neutral-800">
           <div className="space-y-1">
-            <label className="text-sm text-slate-300" htmlFor="email">
+            <label className="text-sm text-neutral-300" htmlFor="email">
               Correo
             </label>
             <input
@@ -29,11 +29,11 @@ export default async function LoginPage({
               name="email"
               type="email"
               required
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full rounded-md bg-neutral-800 border border-neutral-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
           <div className="space-y-1">
-            <label className="text-sm text-slate-300" htmlFor="password">
+            <label className="text-sm text-neutral-300" htmlFor="password">
               Contraseña
             </label>
             <input
@@ -42,7 +42,7 @@ export default async function LoginPage({
               type="password"
               required
               minLength={6}
-              className="w-full rounded-md bg-slate-800 border border-slate-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+              className="w-full rounded-md bg-neutral-800 border border-neutral-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
             />
           </div>
 
@@ -59,13 +59,13 @@ export default async function LoginPage({
 
           <button
             formAction={signIn}
-            className="w-full bg-amber-500 hover:bg-amber-400 transition-colors text-slate-950 font-semibold rounded-md py-2 text-sm"
+            className="w-full bg-amber-500 hover:bg-amber-400 transition-colors text-neutral-950 font-semibold rounded-md py-2 text-sm"
           >
             Iniciar sesión
           </button>
         </form>
 
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-xs text-neutral-500">
           Las cuentas de cobradores las crea un administrador desde el panel.
         </p>
       </div>

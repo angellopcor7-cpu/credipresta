@@ -131,16 +131,16 @@ export default async function SolicitudesPage({
       <div>
         <h2 className="font-semibold mb-2">Pendientes de revisión ({listaPendientes.length})</h2>
         {listaPendientes.length === 0 ? (
-          <p className="text-slate-500 text-sm">No hay solicitudes pendientes.</p>
+          <p className="text-neutral-500 text-sm">No hay solicitudes pendientes.</p>
         ) : (
           <div className="space-y-3">
             {listaPendientes.map((s) => (
-              <div key={s.id} className="bg-slate-900 border border-slate-800 rounded-xl p-4 space-y-3">
+              <div key={s.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{s.clientes?.nombre_completo ?? "—"}</p>
-                    <p className="text-slate-500 text-xs">{s.clientes?.telefono ?? "Sin teléfono"}</p>
-                    <p className="text-slate-500 text-xs">
+                    <p className="text-neutral-500 text-xs">{s.clientes?.telefono ?? "Sin teléfono"}</p>
+                    <p className="text-neutral-500 text-xs">
                       Dado de alta por: {cobradorPorCliente.get(s.cliente_id) ?? "—"}
                     </p>
                   </div>
@@ -158,7 +158,7 @@ export default async function SolicitudesPage({
                       href={doc.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-full px-3 py-1"
+                      className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-full px-3 py-1"
                     >
                       {ETIQUETAS_DOCUMENTO[doc.tipo]}
                     </a>
@@ -186,7 +186,7 @@ export default async function SolicitudesPage({
                       name="revisado_por"
                       required
                       defaultValue=""
-                      className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
                       <option value="" disabled>
                         ¿Quién rechaza?
@@ -200,7 +200,7 @@ export default async function SolicitudesPage({
                     <input
                       name="notas"
                       placeholder="Motivo (opcional)"
-                      className="w-40 rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-40 rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
                     <button className="bg-red-500/90 hover:bg-red-500 text-white font-semibold text-sm px-3 py-1.5 rounded-md">
                       Rechazar
@@ -216,11 +216,11 @@ export default async function SolicitudesPage({
       <div>
         <h2 className="font-semibold mb-2">Revisadas recientemente</h2>
         {listaRevisadas.length === 0 ? (
-          <p className="text-slate-500 text-sm">Todavía no has revisado ninguna.</p>
+          <p className="text-neutral-500 text-sm">Todavía no has revisado ninguna.</p>
         ) : (
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <div className="border border-neutral-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
+              <thead className="bg-neutral-900 text-neutral-400 text-left">
                 <tr>
                   <th className="px-3 py-2">Cliente</th>
                   <th className="px-3 py-2">Monto</th>
@@ -231,10 +231,10 @@ export default async function SolicitudesPage({
               </thead>
               <tbody>
                 {listaRevisadas.map((s) => (
-                  <tr key={s.id} className="border-t border-slate-800">
+                  <tr key={s.id} className="border-t border-neutral-800">
                     <td className="px-3 py-2">{s.clientes?.nombre_completo ?? "—"}</td>
                     <td className="px-3 py-2">{currency(Number(s.monto_solicitado))}</td>
-                    <td className="px-3 py-2 text-slate-400">{s.plazo_dias} días</td>
+                    <td className="px-3 py-2 text-neutral-400">{s.plazo_dias} días</td>
                     <td className="px-3 py-2">
                       <span
                         className={`text-xs border rounded-full px-2 py-1 ${
@@ -246,7 +246,7 @@ export default async function SolicitudesPage({
                         {s.estado === "aprobada" ? "Aprobada" : "Rechazada"}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-slate-400">{s.usuarios?.nombre_completo ?? "—"}</td>
+                    <td className="px-3 py-2 text-neutral-400">{s.usuarios?.nombre_completo ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

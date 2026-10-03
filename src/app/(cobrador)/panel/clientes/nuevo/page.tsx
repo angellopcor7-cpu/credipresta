@@ -17,7 +17,7 @@ export default async function NuevoClientePage({
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
-        <Link href="/panel" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+        <Link href="/panel" className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-white">
           <ArrowLeft className="h-3.5 w-3.5" />
           Mis clientes
         </Link>
@@ -27,7 +27,7 @@ export default async function NuevoClientePage({
           </div>
           <h1 className="text-2xl font-bold">Nuevo cliente</h1>
         </div>
-        <p className="text-slate-400 text-sm mt-1">
+        <p className="text-neutral-400 text-sm mt-1">
           Sube la foto del INE, elige el plan, genera el pagaré y fírmalo con el cliente. Esta solicitud queda
           pendiente hasta que Empresa la apruebe.
         </p>

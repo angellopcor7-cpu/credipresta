@@ -22,7 +22,7 @@ export function AbrirTodoButton() {
         });
         setAbierto(nuevoEstado);
       }}
-      className="inline-flex items-center gap-1.5 text-xs bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 font-medium px-3 py-1.5 rounded-full"
+      className="inline-flex items-center gap-1.5 text-xs bg-neutral-800 hover:bg-neutral-700 border border-neutral-700 text-neutral-200 font-medium px-3 py-1.5 rounded-full"
     >
       {abierto ? <ChevronsDownUp className="h-3.5 w-3.5" /> : <ChevronsUpDown className="h-3.5 w-3.5" />}
       {abierto ? "Cerrar todo" : "Abrir todo"}

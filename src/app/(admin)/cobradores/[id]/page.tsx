@@ -116,7 +116,7 @@ export default async function DetalleCobradorPage({
 
   return (
     <div className="space-y-6">
-      <Link href="/cobradores" className="inline-flex items-center gap-1 text-sm text-slate-400 hover:text-white">
+      <Link href="/cobradores" className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-white">
         <ChevronLeft className="h-4 w-4" />
         Cobradores
       </Link>
@@ -128,14 +128,14 @@ export default async function DetalleCobradorPage({
             <span
               className={`text-xs border rounded-full px-2 py-1 ${
                 cobradorTyped.activo
-                  ? "bg-slate-800 text-slate-200 border-slate-600"
-                  : "bg-slate-800 text-slate-500 border-slate-700"
+                  ? "bg-neutral-800 text-neutral-200 border-neutral-600"
+                  : "bg-neutral-800 text-neutral-500 border-neutral-700"
               }`}
             >
               {cobradorTyped.activo ? "Activo" : "Inactivo"}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-slate-400">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-neutral-400">
             {cobradorTyped.usuarios?.telefono && (
               <span className="inline-flex items-center gap-1">
                 <Phone className="h-3.5 w-3.5" />
@@ -181,8 +181,8 @@ export default async function DetalleCobradorPage({
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-            <div className="flex items-center gap-1.5 text-slate-400">
+          <div key={s.label} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+            <div className="flex items-center gap-1.5 text-neutral-400">
               <s.icon className="h-3.5 w-3.5" />
               <p className="text-xs">{s.label}</p>
             </div>
@@ -203,11 +203,11 @@ export default async function DetalleCobradorPage({
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-slate-300 mb-3">Rutas asignadas</h2>
+        <h2 className="text-sm font-semibold text-neutral-300 mb-3">Rutas asignadas</h2>
         {rutas && rutas.length > 0 ? (
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <div className="border border-neutral-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
+              <thead className="bg-neutral-900 text-neutral-400 text-left">
                 <tr>
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Zona</th>
@@ -216,17 +216,17 @@ export default async function DetalleCobradorPage({
               </thead>
               <tbody>
                 {rutas.map((r) => (
-                  <tr key={r.id} className="border-t border-slate-800">
+                  <tr key={r.id} className="border-t border-neutral-800">
                     <td className="px-4 py-3">{r.nombre}</td>
-                    <td className="px-4 py-3 text-slate-300">{r.zona ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-300">{r.activa ? "Activa" : "Inactiva"}</td>
+                    <td className="px-4 py-3 text-neutral-300">{r.zona ?? "—"}</td>
+                    <td className="px-4 py-3 text-neutral-300">{r.activa ? "Activa" : "Inactiva"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-slate-500 text-sm">
+          <p className="text-neutral-500 text-sm">
             Sin rutas asignadas todavía.{" "}
             <Link href="/rutas/nueva" className="text-amber-400 hover:underline">
               Crear una
@@ -237,7 +237,7 @@ export default async function DetalleCobradorPage({
 
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-slate-300">Clientes asignados ({listaClientes.length})</h2>
+          <h2 className="text-sm font-semibold text-neutral-300">Clientes asignados ({listaClientes.length})</h2>
           <ReasignarTodosForm
             cobradorOrigenId={cobradorTyped.id}
             nombreCobrador={nombreCobrador}
@@ -246,9 +246,9 @@ export default async function DetalleCobradorPage({
           />
         </div>
         {listaClientes.length > 0 ? (
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <div className="border border-neutral-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
+              <thead className="bg-neutral-900 text-neutral-400 text-left">
                 <tr>
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Estado</th>
@@ -257,9 +257,9 @@ export default async function DetalleCobradorPage({
               </thead>
               <tbody>
                 {listaClientes.map((c) => (
-                  <tr key={c.id} className="border-t border-slate-800">
+                  <tr key={c.id} className="border-t border-neutral-800">
                     <td className="px-4 py-3">{c.nombre_completo}</td>
-                    <td className="px-4 py-3 text-slate-300">{ESTADO_CLIENTE_LABEL[c.estado] ?? c.estado}</td>
+                    <td className="px-4 py-3 text-neutral-300">{ESTADO_CLIENTE_LABEL[c.estado] ?? c.estado}</td>
                     {otrosCobradores.length > 0 && (
                       <td className="px-4 py-3">
                         <form action={reasignarCliente} className="flex items-center gap-2">
@@ -269,7 +269,7 @@ export default async function DetalleCobradorPage({
                             name="nuevo_cobrador_id"
                             required
                             defaultValue=""
-                            className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            className="rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
                           >
                             <option value="" disabled>
                               Mover a…
@@ -292,7 +292,7 @@ export default async function DetalleCobradorPage({
             </table>
           </div>
         ) : (
-          <p className="text-slate-500 text-sm">Este cobrador aún no tiene clientes asignados.</p>
+          <p className="text-neutral-500 text-sm">Este cobrador aún no tiene clientes asignados.</p>
         )}
       </div>
     </div>

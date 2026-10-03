@@ -26,10 +26,10 @@ export function GraficaOtorgadoCobrado({ datos }: { datos: PuntoOtorgadoCobrado[
   const ticks = [techo, techo / 2, 0];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
+    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-        <h3 className="text-sm font-semibold text-slate-300">Otorgado vs. cobrado</h3>
-        <div className="flex items-center gap-3 text-xs text-slate-400">
+        <h3 className="text-sm font-semibold text-neutral-300">Otorgado vs. cobrado</h3>
+        <div className="flex items-center gap-3 text-xs text-neutral-400">
           <span className="flex items-center gap-1.5">
             <span className="h-2 w-2 rounded-full bg-red-700" />
             Otorgado
@@ -42,12 +42,12 @@ export function GraficaOtorgadoCobrado({ datos }: { datos: PuntoOtorgadoCobrado[
       </div>
 
       <div className="grid grid-cols-[52px_1fr]">
-        <div className="flex flex-col justify-between h-40 text-[10px] text-slate-500 text-right pr-2">
+        <div className="flex flex-col justify-between h-40 text-[10px] text-neutral-500 text-right pr-2">
           {ticks.map((t) => (
             <span key={t}>{currency(t)}</span>
           ))}
         </div>
-        <div className="h-40 flex items-end gap-2 border-l border-slate-800 pl-2">
+        <div className="h-40 flex items-end gap-2 border-l border-neutral-800 pl-2">
           {datos.map((d, i) => (
             <div
               key={d.mes}
@@ -59,8 +59,8 @@ export function GraficaOtorgadoCobrado({ datos }: { datos: PuntoOtorgadoCobrado[
               className="flex-1 h-full flex items-end justify-center gap-0.5 relative outline-none"
             >
               {activo === i && (
-                <div className="absolute bottom-full mb-1.5 z-10 bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-[11px] whitespace-nowrap shadow-lg">
-                  <p className="text-slate-300 font-medium mb-1 capitalize">{d.mes}</p>
+                <div className="absolute bottom-full mb-1.5 z-10 bg-neutral-800 border border-neutral-700 rounded-md px-2.5 py-1.5 text-[11px] whitespace-nowrap shadow-lg">
+                  <p className="text-neutral-300 font-medium mb-1 capitalize">{d.mes}</p>
                   <p className="text-red-400">
                     Otorgado: <span className="text-white font-medium">{currency(d.otorgado)}</span>
                   </p>
@@ -91,7 +91,7 @@ export function GraficaOtorgadoCobrado({ datos }: { datos: PuntoOtorgadoCobrado[
           ))}
         </div>
         <div />
-        <div className="flex justify-around text-[10px] text-slate-500 pt-1.5 pl-2">
+        <div className="flex justify-around text-[10px] text-neutral-500 pt-1.5 pl-2">
           {datos.map((d) => (
             <span key={d.mes} className="capitalize">
               {d.mes}
@@ -112,16 +112,16 @@ export function GraficaMora({ datos }: { datos: PuntoMora[] }) {
   const ticks = [techo, techo / 2, 0];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-xl p-4">
-      <h3 className="text-sm font-semibold text-slate-300 mb-4">Mora generada por mes</h3>
+    <div className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
+      <h3 className="text-sm font-semibold text-neutral-300 mb-4">Mora generada por mes</h3>
 
       <div className="grid grid-cols-[52px_1fr]">
-        <div className="flex flex-col justify-between h-40 text-[10px] text-slate-500 text-right pr-2">
+        <div className="flex flex-col justify-between h-40 text-[10px] text-neutral-500 text-right pr-2">
           {ticks.map((t) => (
             <span key={t}>{currency(t)}</span>
           ))}
         </div>
-        <div className="h-40 flex items-end gap-2 border-l border-slate-800 pl-2">
+        <div className="h-40 flex items-end gap-2 border-l border-neutral-800 pl-2">
           {datos.map((d, i) => (
             <div
               key={d.mes}
@@ -133,8 +133,8 @@ export function GraficaMora({ datos }: { datos: PuntoMora[] }) {
               className="flex-1 h-full flex items-end justify-center relative outline-none"
             >
               {activo === i && (
-                <div className="absolute bottom-full mb-1.5 z-10 bg-slate-800 border border-slate-700 rounded-md px-2.5 py-1.5 text-[11px] whitespace-nowrap shadow-lg">
-                  <p className="text-slate-300 font-medium capitalize mb-0.5">{d.mes}</p>
+                <div className="absolute bottom-full mb-1.5 z-10 bg-neutral-800 border border-neutral-700 rounded-md px-2.5 py-1.5 text-[11px] whitespace-nowrap shadow-lg">
+                  <p className="text-neutral-300 font-medium capitalize mb-0.5">{d.mes}</p>
                   <p className="text-red-400">
                     Mora: <span className="text-white font-medium">{currency(d.monto)}</span>
                   </p>
@@ -153,7 +153,7 @@ export function GraficaMora({ datos }: { datos: PuntoMora[] }) {
           ))}
         </div>
         <div />
-        <div className="flex justify-around text-[10px] text-slate-500 pt-1.5 pl-2">
+        <div className="flex justify-around text-[10px] text-neutral-500 pt-1.5 pl-2">
           {datos.map((d) => (
             <span key={d.mes} className="capitalize">
               {d.mes}

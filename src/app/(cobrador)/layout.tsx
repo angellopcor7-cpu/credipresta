@@ -15,12 +15,12 @@ export default async function CobradorLayout({ children }: { children: React.Rea
 
   return (
     <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-slate-800">
+      <header className="border-b border-neutral-800">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/panel" className="font-bold text-lg">
             Credi<span className="text-amber-400">Presta</span>
           </Link>
-          <nav className="flex items-center gap-5 text-sm text-slate-300 flex-wrap">
+          <nav className="flex items-center gap-5 text-sm text-neutral-300 flex-wrap">
             <Link href="/panel" className="hover:text-white">
               Mis clientes
             </Link>
@@ -30,14 +30,14 @@ export default async function CobradorLayout({ children }: { children: React.Rea
             {sesion.rol === "administrador" && (
               <Link
                 href="/dashboard"
-                className="text-xs border border-slate-700 rounded-full px-3 py-1 hover:border-slate-500"
+                className="text-xs border border-neutral-700 rounded-full px-3 py-1 hover:border-neutral-500"
               >
                 Vista Empresa
               </Link>
             )}
-            <span className="text-slate-500">{sesion.nombreCompleto}</span>
+            <span className="text-neutral-500">{sesion.nombreCompleto}</span>
             <form action={signOut}>
-              <button className="text-slate-400 hover:text-white">Cerrar sesión</button>
+              <button className="text-neutral-400 hover:text-white">Cerrar sesión</button>
             </form>
           </nav>
         </div>

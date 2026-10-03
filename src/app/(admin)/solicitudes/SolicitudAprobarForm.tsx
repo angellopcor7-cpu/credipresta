@@ -42,9 +42,9 @@ export function SolicitudAprobarForm({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-4 bg-black border border-slate-800 rounded-lg p-3 text-sm max-w-xl">
+      <div className="flex flex-wrap items-end gap-4 bg-black border border-neutral-800 rounded-lg p-3 text-sm max-w-xl">
         <div className="space-y-1">
-          <label className="text-slate-500 text-xs" htmlFor={`porcentaje-${solicitudId}`}>
+          <label className="text-neutral-500 text-xs" htmlFor={`porcentaje-${solicitudId}`}>
             % de interés total ({plazoDias} días)
             {porcentajePersonalizado != null && <span className="text-amber-400"> · propuesto por el cobrador</span>}
           </label>
@@ -55,19 +55,19 @@ export function SolicitudAprobarForm({
             step="0.01"
             value={porcentajeTexto}
             onChange={(e) => setPorcentajeTexto(e.target.value)}
-            className="w-24 rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-24 rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div>
-          <p className="text-slate-500 text-xs">Interés</p>
+          <p className="text-neutral-500 text-xs">Interés</p>
           <p className="font-semibold">{currency(interes)}</p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs">Total a pagar</p>
+          <p className="text-neutral-500 text-xs">Total a pagar</p>
           <p className="font-semibold text-amber-400">{currency(total)}</p>
         </div>
         <div>
-          <p className="text-slate-500 text-xs">Pago diario</p>
+          <p className="text-neutral-500 text-xs">Pago diario</p>
           <p className="font-semibold">{currency(pagoDiario)}</p>
         </div>
       </div>
@@ -86,7 +86,7 @@ export function SolicitudAprobarForm({
           name="revisado_por"
           required
           defaultValue=""
-          className="rounded-md bg-slate-800 border border-slate-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          className="rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
           <option value="" disabled>
             ¿Quién aprueba?
@@ -97,7 +97,7 @@ export function SolicitudAprobarForm({
             </option>
           ))}
         </select>
-        <button className="bg-amber-500 hover:bg-amber-400 text-slate-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+        <button className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-3 py-1.5 rounded-md">
           Aprobar
         </button>
       </form>

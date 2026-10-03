@@ -82,12 +82,12 @@ const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
 };
 
 const COLOR_MOVIMIENTO: Record<string, string> = {
-  pago: "text-slate-300 bg-slate-800",
+  pago: "text-neutral-300 bg-neutral-800",
   mora: "text-red-400 bg-red-950",
   aprobacion_solicitud: "text-amber-400 bg-amber-950",
   rechazo_solicitud: "text-red-400 bg-red-950",
-  creacion_cobrador: "text-slate-300 bg-slate-800",
-  reasignacion_cliente: "text-slate-300 bg-slate-800",
+  creacion_cobrador: "text-neutral-300 bg-neutral-800",
+  reasignacion_cliente: "text-neutral-300 bg-neutral-800",
 };
 
 const ETIQUETA_MOVIMIENTO: Record<string, string> = {
@@ -149,7 +149,7 @@ export default async function DashboardPage() {
   ];
 
   const colorIcono: Record<string, string> = {
-    neutral: "text-slate-400",
+    neutral: "text-neutral-400",
     amber: "text-amber-400",
     red: "text-red-400",
   };
@@ -159,8 +159,8 @@ export default async function DashboardPage() {
     red: "text-red-400",
   };
   const bordeTono: Record<string, string> = {
-    neutral: "border-slate-800",
-    amber: "border-slate-800",
+    neutral: "border-neutral-800",
+    amber: "border-neutral-800",
     red: "border-red-900/50",
   };
 
@@ -236,7 +236,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Panel</h1>
-        <p className="text-slate-400 text-sm mt-1">Resumen general de CrediPresta.</p>
+        <p className="text-neutral-400 text-sm mt-1">Resumen general de CrediPresta.</p>
       </div>
 
       {solicitudesPendientes > 0 && (
@@ -261,8 +261,8 @@ export default async function DashboardPage() {
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className={`bg-slate-900 border rounded-xl p-4 ${bordeTono[s.tono]}`}>
-            <div className="flex items-center gap-1.5 text-slate-400">
+          <div key={s.label} className={`bg-neutral-900 border rounded-xl p-4 ${bordeTono[s.tono]}`}>
+            <div className="flex items-center gap-1.5 text-neutral-400">
               <s.icon className={`h-3.5 w-3.5 ${colorIcono[s.tono]}`} />
               <p className="text-xs">{s.label}</p>
             </div>
@@ -272,25 +272,25 @@ export default async function DashboardPage() {
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-slate-300 mb-3">Accesos rápidos</h2>
+        <h2 className="text-sm font-semibold text-neutral-300 mb-3">Accesos rápidos</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {accesos.map((a) => (
             <Link
               key={a.href}
               href={a.href}
-              className="flex flex-col items-center gap-2 bg-slate-900 border border-slate-800 hover:border-amber-500/50 hover:bg-slate-900/70 rounded-xl p-4 text-center transition-colors"
+              className="flex flex-col items-center gap-2 bg-neutral-900 border border-neutral-800 hover:border-amber-500/50 hover:bg-neutral-900/70 rounded-xl p-4 text-center transition-colors"
             >
-              <div className="rounded-full bg-slate-800 p-2">
+              <div className="rounded-full bg-neutral-800 p-2">
                 <a.icon className="h-5 w-5 text-amber-400" />
               </div>
-              <span className="text-sm text-slate-200">{a.label}</span>
+              <span className="text-sm text-neutral-200">{a.label}</span>
             </Link>
           ))}
         </div>
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-slate-300 mb-3">Análisis (últimos 6 meses)</h2>
+        <h2 className="text-sm font-semibold text-neutral-300 mb-3">Análisis (últimos 6 meses)</h2>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           <GraficaOtorgadoCobrado datos={datosOtorgadoCobrado} />
           <GraficaMora datos={datosMora} />
@@ -299,10 +299,10 @@ export default async function DashboardPage() {
 
       {filasCobrador.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 mb-3">Desempeño por cobrador</h2>
-          <div className="border border-slate-800 rounded-xl overflow-hidden">
+          <h2 className="text-sm font-semibold text-neutral-300 mb-3">Desempeño por cobrador</h2>
+          <div className="border border-neutral-800 rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-slate-900 text-slate-400 text-left">
+              <thead className="bg-neutral-900 text-neutral-400 text-left">
                 <tr>
                   <th className="px-4 py-3">Cobrador</th>
                   <th className="px-4 py-3">Zona</th>
@@ -313,12 +313,12 @@ export default async function DashboardPage() {
               </thead>
               <tbody>
                 {filasCobrador.map((c) => (
-                  <tr key={c.id} className="border-t border-slate-800">
+                  <tr key={c.id} className="border-t border-neutral-800">
                     <td className="px-4 py-3 font-medium">{c.nombre}</td>
-                    <td className="px-4 py-3 text-slate-300">{c.zona ?? "—"}</td>
-                    <td className="px-4 py-3 text-slate-300">{c.clientesActivos}</td>
-                    <td className="px-4 py-3 text-slate-300">{currency(c.carteraActiva)}</td>
-                    <td className={`px-4 py-3 ${c.moraPendiente > 0 ? "text-red-400" : "text-slate-300"}`}>
+                    <td className="px-4 py-3 text-neutral-300">{c.zona ?? "—"}</td>
+                    <td className="px-4 py-3 text-neutral-300">{c.clientesActivos}</td>
+                    <td className="px-4 py-3 text-neutral-300">{currency(c.carteraActiva)}</td>
+                    <td className={`px-4 py-3 ${c.moraPendiente > 0 ? "text-red-400" : "text-neutral-300"}`}>
                       {currency(c.moraPendiente)}
                     </td>
                   </tr>
@@ -331,11 +331,11 @@ export default async function DashboardPage() {
 
       {actividadReciente && actividadReciente.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-slate-300 mb-3">Actividad reciente</h2>
-          <div className="bg-slate-900 border border-slate-800 rounded-xl divide-y divide-slate-800">
+          <h2 className="text-sm font-semibold text-neutral-300 mb-3">Actividad reciente</h2>
+          <div className="bg-neutral-900 border border-neutral-800 rounded-xl divide-y divide-neutral-800">
             {actividadReciente.map((m) => {
               const Icono = ICONO_MOVIMIENTO[m.tipo_movimiento] ?? CircleCheck;
-              const colorIcono = COLOR_MOVIMIENTO[m.tipo_movimiento] ?? "text-slate-400 bg-slate-800";
+              const colorIcono = COLOR_MOVIMIENTO[m.tipo_movimiento] ?? "text-neutral-400 bg-neutral-800";
               const cliente = (m as unknown as { clientes: { nombre_completo: string } | null }).clientes;
               return (
                 <div key={m.id} className="flex items-center gap-3 px-4 py-3">
@@ -343,10 +343,10 @@ export default async function DashboardPage() {
                     <Icono className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-slate-200 truncate">
+                    <p className="text-sm text-neutral-200 truncate">
                       {m.descripcion || ETIQUETA_MOVIMIENTO[m.tipo_movimiento] || m.tipo_movimiento}
                     </p>
-                    <p className="text-xs text-slate-500">
+                    <p className="text-xs text-neutral-500">
                       {cliente?.nombre_completo ?? "—"} · {formatoFechaHora(m.created_at)}
                     </p>
                   </div>

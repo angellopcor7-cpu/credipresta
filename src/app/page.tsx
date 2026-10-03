@@ -8,10 +8,10 @@ export default function Home() {
         <h1 className="text-4xl sm:text-5xl font-bold tracking-tight">
           Credi<span className="text-amber-400">Presta</span>
         </h1>
-        <p className="text-slate-300 text-lg">Acceso privado para Empresa y Cobrador.</p>
+        <p className="text-neutral-300 text-lg">Acceso privado para Empresa y Cobrador.</p>
         <Link
           href="/login"
-          className="inline-block bg-amber-500 hover:bg-amber-400 transition-colors text-slate-950 font-semibold px-6 py-3 rounded-lg"
+          className="inline-block bg-amber-500 hover:bg-amber-400 transition-colors text-neutral-950 font-semibold px-6 py-3 rounded-lg"
         >
           Iniciar sesión
         </Link>
