@@ -14,7 +14,7 @@ export default async function CobradorLayout({ children }: { children: React.Rea
   const sesion = await exigirVistaCobrador();
 
   return (
-    <div className="min-h-screen bg-slate-950 text-white">
+    <div className="min-h-screen bg-black text-white">
       <header className="border-b border-slate-800">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/panel" className="font-bold text-lg">

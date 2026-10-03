@@ -274,7 +274,7 @@ export function NuevoClienteForm({
         )}
 
         {preview ? (
-          <div className="grid grid-cols-3 gap-3 bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm max-w-md">
+          <div className="grid grid-cols-3 gap-3 bg-black border border-slate-800 rounded-lg p-3 text-sm max-w-md">
             <div>
               <p className="text-slate-500 text-xs">Interés total</p>
               <p className="font-semibold">
@@ -443,7 +443,7 @@ export function NuevoClienteForm({
           </div>
         ) : (
           <div className="space-y-4">
-            <div className="bg-slate-950 border border-slate-800 rounded-lg p-4 text-xs space-y-1 max-w-md">
+            <div className="bg-black border border-slate-800 rounded-lg p-4 text-xs space-y-1 max-w-md">
               <p className="text-center font-bold text-sm mb-1">PAGARÉ · SIN PROTESTO</p>
               <p>
                 <span className="text-slate-500">Bueno por:</span> {currency(preview?.total ?? 0)}

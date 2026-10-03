@@ -133,13 +133,13 @@ export default async function DetallePrestamoPage({
                 mora acumulada.
               </p>
               <div className="grid sm:grid-cols-2 gap-3 pt-1">
-                <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
+                <div className="bg-black border border-slate-800 rounded-lg p-3">
                   <p className="text-slate-300 font-medium mb-1">Ejemplo con mora de $50</p>
                   <p>Saldo pendiente: $4,000</p>
                   <p>Día 1 de atraso → mora $50 → nuevo saldo $4,050</p>
                   <p>Día 2 de atraso → mora acumulada $100 → nuevo saldo $4,100</p>
                 </div>
-                <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
+                <div className="bg-black border border-slate-800 rounded-lg p-3">
                   <p className="text-slate-300 font-medium mb-1">Ejemplo con mora de $100</p>
                   <p>Saldo pendiente: $6,000</p>
                   <p>Día 1 de atraso → mora $100 → nuevo saldo $6,100</p>

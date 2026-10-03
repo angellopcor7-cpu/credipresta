@@ -42,7 +42,7 @@ export function SolicitudAprobarForm({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-4 bg-slate-950 border border-slate-800 rounded-lg p-3 text-sm max-w-xl">
+      <div className="flex flex-wrap items-end gap-4 bg-black border border-slate-800 rounded-lg p-3 text-sm max-w-xl">
         <div className="space-y-1">
           <label className="text-slate-500 text-xs" htmlFor={`porcentaje-${solicitudId}`}>
             % de interés total ({plazoDias} días)
