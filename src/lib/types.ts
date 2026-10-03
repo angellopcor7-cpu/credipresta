@@ -189,3 +189,54 @@ export type SolicitudPrestamo = {
 export type SolicitudConCliente = SolicitudPrestamo & {
   clientes: { nombre_completo: string; telefono: string | null; direccion: string | null } | null;
 };
+
+/** Una fila del corte semanal (desglose por cobrador) — ver src/app/(admin)/corte/calcular.ts. */
+export type FilaCorteCobrador = {
+  id: string;
+  nombre: string;
+  zona: string | null;
+  rutas: string[];
+  clientesActivos: number;
+  prestadoSemana: number;
+  cobradoSemana: number;
+  moraGeneradaSemana: number;
+  saldoPendiente: number;
+  moraAcumulada: number;
+  faltaPorCobrar: number;
+  tipoComision: TipoComision;
+  porcentajeComision: number;
+  comision: number;
+};
+
+export type TotalesCorte = {
+  clientesActivos: number;
+  prestadoSemana: number;
+  cobradoSemana: number;
+  moraGeneradaSemana: number;
+  saldoPendiente: number;
+  moraAcumulada: number;
+  faltaPorCobrar: number;
+  comision: number;
+};
+
+/**
+ * Registro permanente de un corte semanal ya confirmado (botón "Confirmar
+ * corte" en /corte). `detalle` guarda el arreglo de FilaCorteCobrador tal
+ * como estaba al momento de cerrar la semana — es la foto fija que no
+ * cambia aunque después se editen pagos o moras de esa semana.
+ */
+export type CorteSemanal = {
+  id: string;
+  clave_lunes: string;
+  clave_domingo: string;
+  fecha_corte: string;
+  creado_por: string | null;
+  total_clientes_activos: number;
+  total_prestado_semana: number;
+  total_cobrado_semana: number;
+  total_mora_generada_semana: number;
+  total_mora_acumulada: number;
+  total_falta_por_cobrar: number;
+  total_comision: number;
+  detalle: FilaCorteCobrador[];
+};
