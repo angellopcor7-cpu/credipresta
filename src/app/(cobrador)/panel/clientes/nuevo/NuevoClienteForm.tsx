@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { UserRound, Landmark, CalendarClock, FileImage, CircleCheck, FileText, PenLine } from "lucide-react";
 import { crearClienteYSolicitud } from "../../../actions";
 import { FirmaCanvas } from "./FirmaCanvas";
+import { comprimirImagen } from "./comprimirImagen";
 import {
   calcularPorcentajeInteresPorPlan,
   calcularInteres,
@@ -55,6 +56,36 @@ export function NuevoClienteForm({
   const [lugar, setLugar] = useState(lugarPagare || "");
   const [firmaCliente, setFirmaCliente] = useState<string | null>(null);
   const [firmaCobrador, setFirmaCobrador] = useState<string | null>(null);
+
+  // Cuántas fotos de documentos se están comprimiendo en este momento — se
+  // bloquea el botón de enviar mientras alguna siga en proceso, para no
+  // mandar el archivo pesado original por ganarle a la compresión.
+  const [fotosProcesando, setFotosProcesando] = useState(0);
+
+  /**
+   * Las 4 fotos de documentos se toman con la cámara del celular, que
+   * fácilmente pesan varios MB cada una — entre las 4 revientan el límite de
+   * tamaño del formulario y tronaba toda el alta del cliente (sin crear ni
+   * el cliente ni la solicitud). Se recomprime cada foto en el navegador
+   * antes de que el formulario la mande, reemplazando el archivo del propio
+   * input (así no hay que tocar nada del envío nativo del formulario).
+   */
+  async function comprimirDocumento(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
+    const archivo = input.files?.[0];
+    if (!archivo) return;
+    setFotosProcesando((n) => n + 1);
+    try {
+      const comprimida = await comprimirImagen(archivo);
+      if (comprimida !== archivo) {
+        const dt = new DataTransfer();
+        dt.items.add(comprimida);
+        input.files = dt.files;
+      }
+    } finally {
+      setFotosProcesando((n) => Math.max(0, n - 1));
+    }
+  }
 
   const preview = useMemo(() => {
     const montoNum = Number(monto);
@@ -355,6 +386,7 @@ export function NuevoClienteForm({
               accept="image/*"
               capture="environment"
               required
+              onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
             />
           </div>
@@ -369,6 +401,7 @@ export function NuevoClienteForm({
               accept="image/*"
               capture="environment"
               required
+              onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
             />
           </div>
@@ -383,6 +416,7 @@ export function NuevoClienteForm({
               accept="image/*"
               capture="environment"
               required
+              onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
             />
           </div>
@@ -397,6 +431,7 @@ export function NuevoClienteForm({
               accept="image/*"
               capture="user"
               required
+              onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
             />
           </div>
@@ -516,11 +551,15 @@ export function NuevoClienteForm({
       )}
 
       <button
-        disabled={!ambasFirmasListas}
+        disabled={!ambasFirmasListas || fotosProcesando > 0}
         className="w-full inline-flex items-center justify-center gap-1.5 bg-amber-500 hover:bg-amber-400 disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:bg-amber-500 text-neutral-950 font-semibold rounded-md py-2 text-sm"
       >
         <CircleCheck className="h-4 w-4" />
-        {ambasFirmasListas ? "Crear cliente y enviar a Empresa" : "Falta generar el pagaré y firmarlo"}
+        {fotosProcesando > 0
+          ? "Procesando fotos…"
+          : ambasFirmasListas
+            ? "Crear cliente y enviar a Empresa"
+            : "Falta generar el pagaré y firmarlo"}
       </button>
     </form>
   );
