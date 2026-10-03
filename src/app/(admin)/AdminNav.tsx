@@ -11,6 +11,7 @@ const ENLACES = [
   { href: "/rutas", label: "Rutas" },
   { href: "/clientes", label: "Clientes" },
   { href: "/prestamos", label: "Préstamos" },
+  { href: "/corte", label: "Corte" },
 ];
 
 /**

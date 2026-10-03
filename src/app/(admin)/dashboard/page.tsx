@@ -15,10 +15,12 @@ import {
   FileText,
   Route,
   UserRoundCog,
+  Scissors,
   type LucideIcon,
 } from "lucide-react";
 import type { PuntoOtorgadoCobrado, PuntoMora } from "./AnalisisCharts";
 import { AnalisisPeriodos } from "./AnalisisPeriodos";
+import { claveMes, ultimosMeses, claveDia, ultimosDias, claveSemana, ultimasSemanas } from "@/lib/fechas";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -33,121 +35,6 @@ function formatoFechaHora(iso: string) {
     minute: "2-digit",
     timeZone: "America/Mexico_City",
   }).format(new Date(iso));
-}
-
-/**
- * Clave "YYYY-MM" de una fecha, en horario de Ciudad de México. Sirve tanto para
- * columnas `timestamptz` (con hora) como `date` (solo fecha, ej. "2026-09-01").
- */
-function claveMes(fechaTexto: string) {
-  const fecha = new Date(fechaTexto.length === 10 ? `${fechaTexto}T12:00:00Z` : fechaTexto);
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    timeZone: "America/Mexico_City",
-  })
-    .format(fecha)
-    .slice(0, 7);
-}
-
-/** Los últimos `cantidad` meses (incluyendo el actual), del más viejo al más nuevo, en hora de CDMX. */
-function ultimosMeses(cantidad: number) {
-  const partesHoy = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Mexico_City",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const valores: Record<string, string> = {};
-  for (const parte of partesHoy) valores[parte.type] = parte.value;
-  const hoyEnMexico = new Date(Date.UTC(Number(valores.year), Number(valores.month) - 1, 1));
-
-  const meses: { clave: string; etiqueta: string }[] = [];
-  for (let i = cantidad - 1; i >= 0; i--) {
-    const fecha = new Date(hoyEnMexico);
-    fecha.setUTCMonth(fecha.getUTCMonth() - i);
-    const clave = `${fecha.getUTCFullYear()}-${String(fecha.getUTCMonth() + 1).padStart(2, "0")}`;
-    const etiqueta = new Intl.DateTimeFormat("es-MX", { month: "short", timeZone: "UTC" }).format(fecha);
-    meses.push({ clave, etiqueta });
-  }
-  return meses;
-}
-
-/** La fecha de hoy ("YYYY-MM-DD") en hora de CDMX, como objeto Date en UTC a mediodía (evita saltos de día). */
-function hoyEnMexicoComoFecha() {
-  const partes = new Intl.DateTimeFormat("en-CA", {
-    timeZone: "America/Mexico_City",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(new Date());
-  const valores: Record<string, string> = {};
-  for (const parte of partes) valores[parte.type] = parte.value;
-  return new Date(Date.UTC(Number(valores.year), Number(valores.month) - 1, Number(valores.day), 12));
-}
-
-/** Clave "YYYY-MM-DD" de una fecha, en hora de CDMX (funciona con columnas `date` y `timestamptz`). */
-function claveDia(fechaTexto: string) {
-  const fecha = new Date(fechaTexto.length === 10 ? `${fechaTexto}T12:00:00Z` : fechaTexto);
-  return new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: "America/Mexico_City",
-  }).format(fecha);
-}
-
-/** Los últimos `cantidad` días (incluyendo hoy), del más viejo al más nuevo, en hora de CDMX. */
-function ultimosDias(cantidad: number) {
-  const hoy = hoyEnMexicoComoFecha();
-  const dias: { clave: string; etiqueta: string }[] = [];
-  for (let i = cantidad - 1; i >= 0; i--) {
-    const fecha = new Date(hoy);
-    fecha.setUTCDate(fecha.getUTCDate() - i);
-    const clave = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(fecha);
-    const etiqueta = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", timeZone: "UTC" }).format(
-      fecha
-    );
-    dias.push({ clave, etiqueta });
-  }
-  return dias;
-}
-
-/** Clave "YYYY-MM-DD" del lunes de la semana que contiene `fechaTexto`, en hora de CDMX. */
-function claveSemana(fechaTexto: string) {
-  const fecha = new Date(fechaTexto.length === 10 ? `${fechaTexto}T12:00:00Z` : fechaTexto);
-  const partes = new Intl.DateTimeFormat("en-CA", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    timeZone: "America/Mexico_City",
-  }).formatToParts(fecha);
-  const valores: Record<string, string> = {};
-  for (const parte of partes) valores[parte.type] = parte.value;
-  const diaUTC = new Date(Date.UTC(Number(valores.year), Number(valores.month) - 1, Number(valores.day), 12));
-  const diaSemana = diaUTC.getUTCDay(); // 0 = domingo
-  const diasDesdeElLunes = diaSemana === 0 ? 6 : diaSemana - 1;
-  diaUTC.setUTCDate(diaUTC.getUTCDate() - diasDesdeElLunes);
-  return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(diaUTC);
-}
-
-/** Las últimas `cantidad` semanas (lunes a domingo, incluyendo la actual), del más vieja a la más nueva, en hora de CDMX. */
-function ultimasSemanas(cantidad: number) {
-  const hoy = hoyEnMexicoComoFecha();
-  const claveHoy = claveSemana(new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(hoy));
-  const lunesActual = new Date(`${claveHoy}T12:00:00Z`);
-
-  const semanas: { clave: string; etiqueta: string }[] = [];
-  for (let i = cantidad - 1; i >= 0; i--) {
-    const fecha = new Date(lunesActual);
-    fecha.setUTCDate(fecha.getUTCDate() - i * 7);
-    const clave = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(fecha);
-    const etiqueta = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", timeZone: "UTC" }).format(
-      fecha
-    );
-    semanas.push({ clave, etiqueta });
-  }
-  return semanas;
 }
 
 const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
@@ -251,6 +138,7 @@ export default async function DashboardPage() {
     { label: "Cobradores", href: "/cobradores", icon: Users },
     { label: "Préstamos", href: "/prestamos", icon: Landmark },
     { label: "Rutas", href: "/rutas", icon: Route },
+    { label: "Hacer corte", href: "/corte", icon: Scissors },
   ];
 
   // --- Análisis: tendencias por periodo (semana = días, mes = semanas, 6 meses = meses) ---
