@@ -17,7 +17,8 @@ import {
   UserRoundCog,
   type LucideIcon,
 } from "lucide-react";
-import { GraficaOtorgadoCobrado, GraficaMora, type PuntoOtorgadoCobrado, type PuntoMora } from "./AnalisisCharts";
+import type { PuntoOtorgadoCobrado, PuntoMora } from "./AnalisisCharts";
+import { AnalisisPeriodos } from "./AnalisisPeriodos";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -72,6 +73,83 @@ function ultimosMeses(cantidad: number) {
   return meses;
 }
 
+/** La fecha de hoy ("YYYY-MM-DD") en hora de CDMX, como objeto Date en UTC a mediodía (evita saltos de día). */
+function hoyEnMexicoComoFecha() {
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    timeZone: "America/Mexico_City",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+  const valores: Record<string, string> = {};
+  for (const parte of partes) valores[parte.type] = parte.value;
+  return new Date(Date.UTC(Number(valores.year), Number(valores.month) - 1, Number(valores.day), 12));
+}
+
+/** Clave "YYYY-MM-DD" de una fecha, en hora de CDMX (funciona con columnas `date` y `timestamptz`). */
+function claveDia(fechaTexto: string) {
+  const fecha = new Date(fechaTexto.length === 10 ? `${fechaTexto}T12:00:00Z` : fechaTexto);
+  return new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "America/Mexico_City",
+  }).format(fecha);
+}
+
+/** Los últimos `cantidad` días (incluyendo hoy), del más viejo al más nuevo, en hora de CDMX. */
+function ultimosDias(cantidad: number) {
+  const hoy = hoyEnMexicoComoFecha();
+  const dias: { clave: string; etiqueta: string }[] = [];
+  for (let i = cantidad - 1; i >= 0; i--) {
+    const fecha = new Date(hoy);
+    fecha.setUTCDate(fecha.getUTCDate() - i);
+    const clave = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(fecha);
+    const etiqueta = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+      fecha
+    );
+    dias.push({ clave, etiqueta });
+  }
+  return dias;
+}
+
+/** Clave "YYYY-MM-DD" del lunes de la semana que contiene `fechaTexto`, en hora de CDMX. */
+function claveSemana(fechaTexto: string) {
+  const fecha = new Date(fechaTexto.length === 10 ? `${fechaTexto}T12:00:00Z` : fechaTexto);
+  const partes = new Intl.DateTimeFormat("en-CA", {
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    timeZone: "America/Mexico_City",
+  }).formatToParts(fecha);
+  const valores: Record<string, string> = {};
+  for (const parte of partes) valores[parte.type] = parte.value;
+  const diaUTC = new Date(Date.UTC(Number(valores.year), Number(valores.month) - 1, Number(valores.day), 12));
+  const diaSemana = diaUTC.getUTCDay(); // 0 = domingo
+  const diasDesdeElLunes = diaSemana === 0 ? 6 : diaSemana - 1;
+  diaUTC.setUTCDate(diaUTC.getUTCDate() - diasDesdeElLunes);
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(diaUTC);
+}
+
+/** Las últimas `cantidad` semanas (lunes a domingo, incluyendo la actual), del más vieja a la más nueva, en hora de CDMX. */
+function ultimasSemanas(cantidad: number) {
+  const hoy = hoyEnMexicoComoFecha();
+  const claveHoy = claveSemana(new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(hoy));
+  const lunesActual = new Date(`${claveHoy}T12:00:00Z`);
+
+  const semanas: { clave: string; etiqueta: string }[] = [];
+  for (let i = cantidad - 1; i >= 0; i--) {
+    const fecha = new Date(lunesActual);
+    fecha.setUTCDate(fecha.getUTCDate() - i * 7);
+    const clave = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(fecha);
+    const etiqueta = new Intl.DateTimeFormat("es-MX", { day: "numeric", month: "short", timeZone: "UTC" }).format(
+      fecha
+    );
+    semanas.push({ clave, etiqueta });
+  }
+  return semanas;
+}
+
 const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
   pago: CircleCheck,
   mora: CircleAlert,
@@ -82,12 +160,12 @@ const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
 };
 
 const COLOR_MOVIMIENTO: Record<string, string> = {
-  pago: "text-neutral-300 bg-neutral-800",
-  mora: "text-red-400 bg-red-950",
-  aprobacion_solicitud: "text-amber-400 bg-amber-950",
-  rechazo_solicitud: "text-red-400 bg-red-950",
-  creacion_cobrador: "text-neutral-300 bg-neutral-800",
-  reasignacion_cliente: "text-neutral-300 bg-neutral-800",
+  pago: "text-ink-secondary bg-surface-2",
+  mora: "text-danger-text bg-danger-chip-bg",
+  aprobacion_solicitud: "text-accent-text bg-accent-chip-bg",
+  rechazo_solicitud: "text-danger-text bg-danger-chip-bg",
+  creacion_cobrador: "text-ink-secondary bg-surface-2",
+  reasignacion_cliente: "text-ink-secondary bg-surface-2",
 };
 
 const ETIQUETA_MOVIMIENTO: Record<string, string> = {
@@ -149,19 +227,19 @@ export default async function DashboardPage() {
   ];
 
   const colorIcono: Record<string, string> = {
-    neutral: "text-neutral-400",
-    amber: "text-amber-400",
-    red: "text-red-400",
+    neutral: "text-ink-muted",
+    amber: "text-accent-text",
+    red: "text-danger-text",
   };
   const colorValor: Record<string, string> = {
-    neutral: "text-white",
-    amber: "text-amber-400",
-    red: "text-red-400",
+    neutral: "text-ink",
+    amber: "text-accent-text",
+    red: "text-danger-text",
   };
   const bordeTono: Record<string, string> = {
-    neutral: "border-neutral-800",
-    amber: "border-neutral-800",
-    red: "border-red-900/50",
+    neutral: "border-border",
+    amber: "border-border",
+    red: "border-danger-chip-border/50",
   };
 
   const accesos: { label: string; href: string; icon: LucideIcon }[] = [
@@ -172,38 +250,43 @@ export default async function DashboardPage() {
     { label: "Rutas", href: "/rutas", icon: Route },
   ];
 
-  // --- Análisis: tendencias de los últimos 6 meses ---
-  const meses = ultimosMeses(6);
+  // --- Análisis: tendencias por periodo (semana = días, mes = semanas, 6 meses = meses) ---
+  function construirAnalisis(
+    buckets: { clave: string; etiqueta: string }[],
+    claveDe: (fechaTexto: string) => string
+  ): { otorgadoCobrado: PuntoOtorgadoCobrado[]; mora: PuntoMora[] } {
+    const otorgadoPor = new Map(buckets.map((b) => [b.clave, 0]));
+    for (const p of listaPrestamos) {
+      if (!p.created_at) continue;
+      const clave = claveDe(p.created_at);
+      if (otorgadoPor.has(clave)) otorgadoPor.set(clave, otorgadoPor.get(clave)! + Number(p.monto_prestado));
+    }
 
-  const otorgadoPorMes = new Map(meses.map((m) => [m.clave, 0]));
-  for (const p of listaPrestamos) {
-    if (!p.created_at) continue;
-    const clave = claveMes(p.created_at);
-    if (otorgadoPorMes.has(clave)) otorgadoPorMes.set(clave, otorgadoPorMes.get(clave)! + Number(p.monto_prestado));
+    const cobradoPor = new Map(buckets.map((b) => [b.clave, 0]));
+    for (const pago of todosLosPagos ?? []) {
+      const clave = claveDe(pago.fecha_pago);
+      if (cobradoPor.has(clave)) cobradoPor.set(clave, cobradoPor.get(clave)! + Number(pago.monto));
+    }
+
+    const moraPor = new Map(buckets.map((b) => [b.clave, 0]));
+    for (const mora of todasLasMoras ?? []) {
+      const clave = claveDe(mora.fecha_generada);
+      if (moraPor.has(clave)) moraPor.set(clave, moraPor.get(clave)! + Number(mora.monto_mora));
+    }
+
+    return {
+      otorgadoCobrado: buckets.map((b) => ({
+        mes: b.etiqueta,
+        otorgado: otorgadoPor.get(b.clave) ?? 0,
+        cobrado: cobradoPor.get(b.clave) ?? 0,
+      })),
+      mora: buckets.map((b) => ({ mes: b.etiqueta, monto: moraPor.get(b.clave) ?? 0 })),
+    };
   }
 
-  const cobradoPorMes = new Map(meses.map((m) => [m.clave, 0]));
-  for (const pago of todosLosPagos ?? []) {
-    const clave = claveMes(pago.fecha_pago);
-    if (cobradoPorMes.has(clave)) cobradoPorMes.set(clave, cobradoPorMes.get(clave)! + Number(pago.monto));
-  }
-
-  const moraPorMes = new Map(meses.map((m) => [m.clave, 0]));
-  for (const mora of todasLasMoras ?? []) {
-    const clave = claveMes(mora.fecha_generada);
-    if (moraPorMes.has(clave)) moraPorMes.set(clave, moraPorMes.get(clave)! + Number(mora.monto_mora));
-  }
-
-  const datosOtorgadoCobrado: PuntoOtorgadoCobrado[] = meses.map((m) => ({
-    mes: m.etiqueta,
-    otorgado: otorgadoPorMes.get(m.clave) ?? 0,
-    cobrado: cobradoPorMes.get(m.clave) ?? 0,
-  }));
-
-  const datosMora: PuntoMora[] = meses.map((m) => ({
-    mes: m.etiqueta,
-    monto: moraPorMes.get(m.clave) ?? 0,
-  }));
+  const analisisSemana = construirAnalisis(ultimosDias(7), claveDia);
+  const analisisMes = construirAnalisis(ultimasSemanas(5), claveSemana);
+  const analisisSeisMeses = construirAnalisis(ultimosMeses(6), claveMes);
 
   // --- Análisis: desempeño por cobrador ---
   const filasCobrador = (cobradoresActivos ?? [])
@@ -236,7 +319,7 @@ export default async function DashboardPage() {
     <div className="space-y-8">
       <div>
         <h1 className="text-2xl font-bold">Panel</h1>
-        <p className="text-neutral-400 text-sm mt-1">Resumen general de CrediPresta.</p>
+        <p className="text-ink-muted text-sm mt-1">Resumen general de CrediPresta.</p>
       </div>
 
       {solicitudesPendientes > 0 && (
@@ -246,23 +329,23 @@ export default async function DashboardPage() {
         >
           <div className="flex items-center gap-3">
             <div className="rounded-full bg-amber-500/20 p-2 shrink-0">
-              <Clock className="h-5 w-5 text-amber-400" />
+              <Clock className="h-5 w-5 text-accent-text" />
             </div>
             <div>
-              <p className="font-semibold text-amber-300">
+              <p className="font-semibold text-accent-text">
                 {solicitudesPendientes} {solicitudesPendientes === 1 ? "solicitud" : "solicitudes"} esperando aprobación
               </p>
-              <p className="text-xs text-amber-200/70">Revísalas antes de que el cliente se quede esperando.</p>
+              <p className="text-xs text-accent-text/70">Revísalas antes de que el cliente se quede esperando.</p>
             </div>
           </div>
-          <ChevronRight className="h-4 w-4 text-amber-400 shrink-0" />
+          <ChevronRight className="h-4 w-4 text-accent-text shrink-0" />
         </Link>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className={`bg-neutral-900 border rounded-xl p-4 ${bordeTono[s.tono]}`}>
-            <div className="flex items-center gap-1.5 text-neutral-400">
+          <div key={s.label} className={`bg-surface border rounded-xl p-4 ${bordeTono[s.tono]}`}>
+            <div className="flex items-center gap-1.5 text-ink-muted">
               <s.icon className={`h-3.5 w-3.5 ${colorIcono[s.tono]}`} />
               <p className="text-xs">{s.label}</p>
             </div>
@@ -272,37 +355,35 @@ export default async function DashboardPage() {
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-neutral-300 mb-3">Accesos rápidos</h2>
+        <h2 className="text-sm font-semibold text-ink-secondary mb-3">Accesos rápidos</h2>
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {accesos.map((a) => (
             <Link
               key={a.href}
               href={a.href}
-              className="flex flex-col items-center gap-2 bg-neutral-900 border border-neutral-800 hover:border-amber-500/50 hover:bg-neutral-900/70 rounded-xl p-4 text-center transition-colors"
+              className="flex flex-col items-center gap-2 bg-surface border border-border hover:border-amber-500/50 hover:bg-surface-2 rounded-xl p-4 text-center transition-colors"
             >
-              <div className="rounded-full bg-neutral-800 p-2">
-                <a.icon className="h-5 w-5 text-amber-400" />
+              <div className="rounded-full bg-surface-2 p-2">
+                <a.icon className="h-5 w-5 text-accent-text" />
               </div>
-              <span className="text-sm text-neutral-200">{a.label}</span>
+              <span className="text-sm text-ink-strong">{a.label}</span>
             </Link>
           ))}
         </div>
       </div>
 
-      <div>
-        <h2 className="text-sm font-semibold text-neutral-300 mb-3">Análisis (últimos 6 meses)</h2>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-          <GraficaOtorgadoCobrado datos={datosOtorgadoCobrado} />
-          <GraficaMora datos={datosMora} />
-        </div>
-      </div>
+      <AnalisisPeriodos
+        semana={analisisSemana}
+        mes={analisisMes}
+        seisMeses={analisisSeisMeses}
+      />
 
       {filasCobrador.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-neutral-300 mb-3">Desempeño por cobrador</h2>
-          <div className="border border-neutral-800 rounded-xl overflow-hidden">
+          <h2 className="text-sm font-semibold text-ink-secondary mb-3">Desempeño por cobrador</h2>
+          <div className="border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-900 text-neutral-400 text-left">
+              <thead className="bg-surface text-ink-muted text-left">
                 <tr>
                   <th className="px-4 py-3">Cobrador</th>
                   <th className="px-4 py-3">Zona</th>
@@ -313,12 +394,12 @@ export default async function DashboardPage() {
               </thead>
               <tbody>
                 {filasCobrador.map((c) => (
-                  <tr key={c.id} className="border-t border-neutral-800">
+                  <tr key={c.id} className="border-t border-border">
                     <td className="px-4 py-3 font-medium">{c.nombre}</td>
-                    <td className="px-4 py-3 text-neutral-300">{c.zona ?? "—"}</td>
-                    <td className="px-4 py-3 text-neutral-300">{c.clientesActivos}</td>
-                    <td className="px-4 py-3 text-neutral-300">{currency(c.carteraActiva)}</td>
-                    <td className={`px-4 py-3 ${c.moraPendiente > 0 ? "text-red-400" : "text-neutral-300"}`}>
+                    <td className="px-4 py-3 text-ink-secondary">{c.zona ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{c.clientesActivos}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{currency(c.carteraActiva)}</td>
+                    <td className={`px-4 py-3 ${c.moraPendiente > 0 ? "text-danger-text" : "text-ink-secondary"}`}>
                       {currency(c.moraPendiente)}
                     </td>
                   </tr>
@@ -331,11 +412,11 @@ export default async function DashboardPage() {
 
       {actividadReciente && actividadReciente.length > 0 && (
         <div>
-          <h2 className="text-sm font-semibold text-neutral-300 mb-3">Actividad reciente</h2>
-          <div className="bg-neutral-900 border border-neutral-800 rounded-xl divide-y divide-neutral-800">
+          <h2 className="text-sm font-semibold text-ink-secondary mb-3">Actividad reciente</h2>
+          <div className="bg-surface border border-border rounded-xl divide-y divide-border">
             {actividadReciente.map((m) => {
               const Icono = ICONO_MOVIMIENTO[m.tipo_movimiento] ?? CircleCheck;
-              const colorIcono = COLOR_MOVIMIENTO[m.tipo_movimiento] ?? "text-neutral-400 bg-neutral-800";
+              const colorIcono = COLOR_MOVIMIENTO[m.tipo_movimiento] ?? "text-ink-muted bg-surface-2";
               const cliente = (m as unknown as { clientes: { nombre_completo: string } | null }).clientes;
               return (
                 <div key={m.id} className="flex items-center gap-3 px-4 py-3">
@@ -343,10 +424,10 @@ export default async function DashboardPage() {
                     <Icono className="h-3.5 w-3.5" />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm text-neutral-200 truncate">
+                    <p className="text-sm text-ink-strong truncate">
                       {m.descripcion || ETIQUETA_MOVIMIENTO[m.tipo_movimiento] || m.tipo_movimiento}
                     </p>
-                    <p className="text-xs text-neutral-500">
+                    <p className="text-xs text-ink-muted">
                       {cliente?.nombre_completo ?? "—"} · {formatoFechaHora(m.created_at)}
                     </p>
                   </div>

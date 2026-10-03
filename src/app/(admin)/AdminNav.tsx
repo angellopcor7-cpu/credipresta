@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Menu, X } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const ENLACES = [
   { href: "/dashboard", label: "Panel" },
@@ -31,13 +32,13 @@ export function AdminNav({
 
   return (
     <>
-      <nav className="hidden md:flex items-center gap-5 text-sm text-neutral-300">
+      <nav className="hidden md:flex items-center gap-5 text-sm text-ink-secondary">
         {ENLACES.map((e) => (
-          <Link key={e.href} href={e.href} className="hover:text-white">
+          <Link key={e.href} href={e.href} className="hover:text-ink">
             {e.label}
           </Link>
         ))}
-        <Link href="/solicitudes" className="hover:text-white relative inline-flex items-center gap-1">
+        <Link href="/solicitudes" className="hover:text-ink relative inline-flex items-center gap-1">
           Solicitudes
           {solicitudesPendientes > 0 && (
             <span className="inline-flex items-center justify-center bg-amber-500 text-neutral-950 text-xs font-bold rounded-full h-5 min-w-5 px-1">
@@ -47,20 +48,21 @@ export function AdminNav({
         </Link>
         <Link
           href="/panel"
-          className="text-xs border border-neutral-700 rounded-full px-3 py-1 hover:border-neutral-500"
+          className="text-xs border border-border-strong rounded-full px-3 py-1 hover:border-border-soft"
         >
           Vista Cobrador
         </Link>
-        <span className="text-neutral-500">{nombreUsuario}</span>
+        <ThemeToggle />
+        <span className="text-ink-muted">{nombreUsuario}</span>
         <form action={signOutAction}>
-          <button className="text-neutral-400 hover:text-white">Cerrar sesión</button>
+          <button className="text-ink-muted hover:text-ink">Cerrar sesión</button>
         </form>
       </nav>
 
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="md:hidden relative inline-flex items-center justify-center text-neutral-300 hover:text-white p-1.5 -mr-1.5"
+        className="md:hidden relative inline-flex items-center justify-center text-ink-secondary hover:text-ink p-1.5 -mr-1.5"
         aria-label="Abrir menú"
       >
         <Menu className="h-6 w-6" />
@@ -74,24 +76,27 @@ export function AdminNav({
       {abierto && (
         <div className="md:hidden fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/60" onClick={() => setAbierto(false)} />
-          <div className="absolute top-0 right-0 bottom-0 w-64 max-w-[80vw] bg-neutral-900 border-l border-neutral-800 p-5 flex flex-col gap-1">
+          <div className="absolute top-0 right-0 bottom-0 w-64 max-w-[80vw] bg-surface border-l border-border p-5 flex flex-col gap-1">
             <div className="flex items-center justify-between mb-4">
-              <span className="text-sm text-neutral-400">{nombreUsuario}</span>
+              <span className="text-sm text-ink-muted">{nombreUsuario}</span>
               <button
                 type="button"
                 onClick={() => setAbierto(false)}
-                className="text-neutral-400 hover:text-white p-1"
+                className="text-ink-muted hover:text-ink p-1"
                 aria-label="Cerrar menú"
               >
                 <X className="h-5 w-5" />
               </button>
+            </div>
+            <div className="mb-2">
+              <ThemeToggle />
             </div>
             {ENLACES.map((e) => (
               <Link
                 key={e.href}
                 href={e.href}
                 onClick={() => setAbierto(false)}
-                className="text-sm text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md px-3 py-2.5"
+                className="text-sm text-ink-secondary hover:text-ink hover:bg-surface-2 rounded-md px-3 py-2.5"
               >
                 {e.label}
               </Link>
@@ -99,7 +104,7 @@ export function AdminNav({
             <Link
               href="/solicitudes"
               onClick={() => setAbierto(false)}
-              className="text-sm text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md px-3 py-2.5 flex items-center justify-between"
+              className="text-sm text-ink-secondary hover:text-ink hover:bg-surface-2 rounded-md px-3 py-2.5 flex items-center justify-between"
             >
               Solicitudes
               {solicitudesPendientes > 0 && (
@@ -111,12 +116,12 @@ export function AdminNav({
             <Link
               href="/panel"
               onClick={() => setAbierto(false)}
-              className="text-sm text-neutral-300 hover:text-white hover:bg-neutral-800 rounded-md px-3 py-2.5 mt-2 border border-neutral-700"
+              className="text-sm text-ink-secondary hover:text-ink hover:bg-surface-2 rounded-md px-3 py-2.5 mt-2 border border-border-strong"
             >
               Vista Cobrador
             </Link>
-            <form action={signOutAction} className="mt-auto pt-4 border-t border-neutral-800">
-              <button className="w-full text-left text-sm text-neutral-400 hover:text-white px-3 py-2.5">
+            <form action={signOutAction} className="mt-auto pt-4 border-t border-border">
+              <button className="w-full text-left text-sm text-ink-muted hover:text-ink px-3 py-2.5">
                 Cerrar sesión
               </button>
             </form>

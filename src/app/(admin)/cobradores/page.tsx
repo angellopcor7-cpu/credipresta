@@ -35,11 +35,11 @@ export default async function CobradoresPage() {
       </div>
 
       {cobradores.length === 0 ? (
-        <p className="text-neutral-400 text-sm">Aún no hay cobradores registrados.</p>
+        <p className="text-ink-muted text-sm">Aún no hay cobradores registrados.</p>
       ) : (
-        <div className="border border-neutral-800 rounded-xl overflow-hidden">
+        <div className="border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-900 text-neutral-400 text-left">
+            <thead className="bg-surface text-ink-muted text-left">
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Teléfono</th>
@@ -51,21 +51,21 @@ export default async function CobradoresPage() {
             </thead>
             <tbody>
               {cobradores.map((c) => (
-                <tr key={c.id} className="border-t border-neutral-800 hover:bg-neutral-900/50">
+                <tr key={c.id} className="border-t border-border hover:bg-surface-2">
                   <td className="px-4 py-3">
-                    <Link href={`/cobradores/${c.id}`} className="font-medium hover:text-amber-400 hover:underline">
+                    <Link href={`/cobradores/${c.id}`} className="font-medium hover:text-accent-text hover:underline">
                       {c.usuarios?.nombre_completo ?? "—"}
                     </Link>
                   </td>
-                  <td className="px-4 py-3 text-neutral-300">{c.usuarios?.telefono ?? "—"}</td>
-                  <td className="px-4 py-3 text-neutral-300">{c.zona ?? "—"}</td>
-                  <td className="px-4 py-3 text-neutral-300">{conteoClientes.get(c.id) ?? 0}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{c.usuarios?.telefono ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{c.zona ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{conteoClientes.get(c.id) ?? 0}</td>
                   <td className="px-4 py-3">
                     <span
                       className={`text-xs border rounded-full px-2 py-1 ${
                         c.activo
-                          ? "bg-neutral-800 text-neutral-200 border-neutral-600"
-                          : "bg-neutral-800 text-neutral-500 border-neutral-700"
+                          ? "bg-surface-2 text-ink-strong border-border-soft"
+                          : "bg-surface-2 text-ink-muted border-border-strong"
                       }`}
                     >
                       {c.activo ? "Activo" : "Inactivo"}
@@ -74,7 +74,7 @@ export default async function CobradoresPage() {
                   <td className="px-4 py-3">
                     <Link
                       href={`/cobradores/${c.id}`}
-                      className="inline-flex items-center text-neutral-500 hover:text-white"
+                      className="inline-flex items-center text-ink-muted hover:text-ink"
                     >
                       <ChevronRight className="h-4 w-4" />
                     </Link>

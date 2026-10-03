@@ -21,7 +21,7 @@ export function EliminarClienteButton({ clienteId, nombreCliente }: { clienteId:
       <input type="hidden" name="cliente_id" value={clienteId} />
       <button
         type="submit"
-        className="inline-flex items-center gap-1.5 text-xs bg-red-950/60 hover:bg-red-900 border border-red-900 text-red-300 font-medium px-3 py-1.5 rounded-md"
+        className="inline-flex items-center gap-1.5 text-xs bg-danger-chip-bg/60 hover:bg-danger-chip-bg-hover border border-danger-chip-border text-danger-text font-medium px-3 py-1.5 rounded-md"
       >
         <Trash2 className="h-3.5 w-3.5" />
         Eliminar

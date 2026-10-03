@@ -116,16 +116,16 @@ export default async function PanelCobradorPage({
 
   return (
     <div className="space-y-8">
-      <div className="relative overflow-hidden rounded-2xl border border-amber-900/40 bg-gradient-to-br from-neutral-900 via-neutral-900 to-amber-950/30 p-6">
+      <div className="relative overflow-hidden rounded-2xl border border-accent-chip-border/40 bg-gradient-to-br from-surface via-surface to-accent-chip-bg/30 p-6">
         <div className="absolute -right-16 -top-16 h-56 w-56 rounded-full bg-amber-500/10 blur-3xl" />
         <div className="relative flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="text-amber-400/80 text-xs font-medium uppercase tracking-wider">Panel del cobrador</p>
+            <p className="text-accent-text/80 text-xs font-medium uppercase tracking-wider">Panel del cobrador</p>
             <h1 className="text-2xl font-bold mt-1">Hola, {sesion.nombreCompleto.split(" ")[0]}</h1>
-            <p className="text-neutral-400 text-sm mt-1">
+            <p className="text-ink-muted text-sm mt-1">
               {clientes.length} cliente{clientes.length === 1 ? "" : "s"}
               {clientesEnMora > 0 && (
-                <span className="text-red-400"> · {clientesEnMora} en mora</span>
+                <span className="text-danger-text"> · {clientesEnMora} en mora</span>
               )}
             </p>
           </div>
@@ -140,10 +140,10 @@ export default async function PanelCobradorPage({
       </div>
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
+        <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">{error}</p>
       )}
       {exito && (
-        <p className="text-sm text-amber-400 bg-amber-950/50 border border-amber-900 rounded-md px-3 py-2">
+        <p className="text-sm text-accent-text bg-accent-chip-bg/50 border border-accent-chip-border rounded-md px-3 py-2">
           {exito}
         </p>
       )}
@@ -155,12 +155,12 @@ export default async function PanelCobradorPage({
       </div>
 
       {clientes.length === 0 ? (
-        <div className="flex flex-col items-center justify-center gap-3 text-center bg-neutral-900 border border-dashed border-neutral-800 rounded-2xl py-16 px-6">
+        <div className="flex flex-col items-center justify-center gap-3 text-center bg-surface border border-dashed border-border rounded-2xl py-16 px-6">
           <div className="rounded-full bg-amber-500/10 p-3">
-            <UserPlus className="h-6 w-6 text-amber-400" />
+            <UserPlus className="h-6 w-6 text-accent-text" />
           </div>
-          <p className="text-neutral-300 font-medium">Todavía no tienes clientes</p>
-          <p className="text-neutral-500 text-sm max-w-xs">
+          <p className="text-ink-secondary font-medium">Todavía no tienes clientes</p>
+          <p className="text-ink-muted text-sm max-w-xs">
             Da de alta al primero con el botón &quot;Nuevo cliente&quot; de arriba.
           </p>
         </div>
@@ -172,14 +172,14 @@ export default async function PanelCobradorPage({
           {filas.map(({ cliente, total, abonado, saldo, progreso, prestamoActivo, estadoTexto, enMora }) => (
             <div
               key={cliente.id}
-              className={`group bg-neutral-900 border rounded-xl p-4 flex flex-wrap items-center gap-4 border-l-4 transition-colors hover:bg-neutral-900/70 ${
+              className={`group bg-surface border rounded-xl p-4 flex flex-wrap items-center gap-4 border-l-4 transition-colors hover:bg-surface-2 ${
                 enMora
-                  ? "border-neutral-800 border-l-red-500"
+                  ? "border-border border-l-red-500"
                   : cliente.estado === "pendiente_aprobacion"
-                    ? "border-neutral-800 border-l-amber-500"
+                    ? "border-border border-l-amber-500"
                     : cliente.estado === "inactivo"
-                      ? "border-neutral-800 border-l-neutral-600"
-                      : "border-neutral-800 border-l-neutral-300"
+                      ? "border-border border-l-border-soft"
+                      : "border-border border-l-ink-secondary"
               }`}
             >
               <div className="flex items-center gap-3 min-w-[13rem]">
@@ -188,19 +188,19 @@ export default async function PanelCobradorPage({
                 </div>
                 <div className="min-w-0">
                   <p className="font-medium truncate">{cliente.nombre_completo}</p>
-                  <p className="text-neutral-500 text-xs flex items-center gap-1">
+                  <p className="text-ink-muted text-xs flex items-center gap-1">
                     <Phone className="h-3 w-3" />
                     {cliente.telefono ?? "Sin teléfono"}
                   </p>
                   <span
                     className={`inline-flex items-center gap-1 mt-1 text-xs border rounded-full px-2 py-0.5 ${
                       cliente.estado === "pendiente_aprobacion"
-                        ? "bg-amber-950 text-amber-400 border-amber-900"
+                        ? "bg-accent-chip-bg text-accent-text border-accent-chip-border"
                         : enMora
-                          ? "bg-red-950 text-red-400 border-red-900"
+                          ? "bg-danger-chip-bg text-danger-text border-danger-chip-border"
                           : cliente.estado === "inactivo"
-                            ? "bg-neutral-800 text-neutral-400 border-neutral-700"
-                            : "bg-neutral-800 text-neutral-200 border-neutral-600"
+                            ? "bg-surface-2 text-ink-muted border-border-strong"
+                            : "bg-surface-2 text-ink-strong border-border-soft"
                     }`}
                   >
                     {cliente.estado === "pendiente_aprobacion" ? (
@@ -218,7 +218,7 @@ export default async function PanelCobradorPage({
                 <Link
                   href={`/panel/clientes/${cliente.id}`}
                   title="Ver ficha del cliente"
-                  className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full bg-neutral-800 hover:bg-amber-500 border border-neutral-700 text-neutral-300 hover:text-neutral-950 transition-colors"
+                  className="shrink-0 inline-flex items-center justify-center h-8 w-8 rounded-full bg-surface-2 hover:bg-amber-500 border border-border-strong text-ink-secondary hover:text-neutral-950 transition-colors"
                 >
                   <ChevronRight className="h-4 w-4" />
                 </Link>
@@ -227,11 +227,11 @@ export default async function PanelCobradorPage({
               {prestamoActivo ? (
                 <>
                   <div className="flex-1 min-w-[10rem] max-w-[16rem] space-y-1">
-                    <div className="flex justify-between text-xs text-neutral-500">
+                    <div className="flex justify-between text-xs text-ink-muted">
                       <span>Progreso</span>
                       <span>{progreso}%</span>
                     </div>
-                    <div className="h-1.5 rounded-full bg-neutral-800 overflow-hidden">
+                    <div className="h-1.5 rounded-full bg-surface-2 overflow-hidden">
                       <div
                         className={`h-full rounded-full ${enMora ? "bg-red-500" : "bg-amber-500"}`}
                         style={{ width: `${progreso}%` }}
@@ -241,26 +241,26 @@ export default async function PanelCobradorPage({
 
                   <div className="flex gap-6 text-sm">
                     <div>
-                      <p className="text-neutral-500 text-xs">Total</p>
+                      <p className="text-ink-muted text-xs">Total</p>
                       <p className="font-semibold">{currency(total)}</p>
                     </div>
                     <div>
-                      <p className="text-neutral-500 text-xs">Abonado</p>
+                      <p className="text-ink-muted text-xs">Abonado</p>
                       <p className="font-semibold">{currency(abonado)}</p>
                     </div>
                     <div>
-                      <p className="text-neutral-500 text-xs">Saldo</p>
+                      <p className="text-ink-muted text-xs">Saldo</p>
                       <p className="font-semibold">{currency(saldo)}</p>
                     </div>
                   </div>
                   <details className="cliente-details group ml-auto w-full sm:w-auto">
-                    <summary className="inline-flex items-center gap-1 text-xs text-amber-400 cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
+                    <summary className="inline-flex items-center gap-1 text-xs text-accent-text cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
                       <ChevronDown className="h-3.5 w-3.5 transition-transform group-open:rotate-180" />
                       Acciones de hoy
                     </summary>
                     <div className="flex flex-wrap gap-2 mt-2">
                       {prestamosPagadosHoy.has(prestamoActivo.id) ? (
-                        <span className="inline-flex items-center gap-1.5 text-sm bg-neutral-800 text-neutral-400 px-3 py-1.5 rounded-md">
+                        <span className="inline-flex items-center gap-1.5 text-sm bg-surface-2 text-ink-muted px-3 py-1.5 rounded-md">
                           <CircleCheck className="h-4 w-4" />
                           Ya cobrado hoy
                         </span>
@@ -278,11 +278,11 @@ export default async function PanelCobradorPage({
                 </>
               ) : cliente.estado === "inactivo" ? (
                 <div className="flex items-center gap-3 ml-auto">
-                  <p className="text-xs text-neutral-500">Solicitud rechazada por Empresa.</p>
+                  <p className="text-xs text-ink-muted">Solicitud rechazada por Empresa.</p>
                   <EliminarClienteButton clienteId={cliente.id} nombreCliente={cliente.nombre_completo} />
                 </div>
               ) : (
-                <p className="text-xs text-neutral-500 ml-auto">
+                <p className="text-xs text-ink-muted ml-auto">
                   {cliente.estado === "pendiente_aprobacion"
                     ? "Esperando que Empresa apruebe la solicitud."
                     : "Sin préstamo activo."}
@@ -309,19 +309,19 @@ function ResumenCartera({
   tone: "amber" | "neutral";
   destacado?: boolean;
 }) {
-  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-amber-400" : "bg-neutral-800 text-neutral-300";
+  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-accent-text" : "bg-surface-2 text-ink-secondary";
   return (
     <div
-      className={`bg-neutral-900 border rounded-xl p-4 flex items-center gap-3 ${
-        destacado ? "border-amber-800" : "border-neutral-800"
+      className={`bg-surface border rounded-xl p-4 flex items-center gap-3 ${
+        destacado ? "border-accent-chip-border" : "border-border"
       }`}
     >
       <div className={`shrink-0 rounded-lg p-2.5 ${toneClasses}`}>
         <Icon className="h-5 w-5" />
       </div>
       <div>
-        <p className="text-neutral-500 text-xs">{label}</p>
-        <p className={`text-xl font-bold ${destacado ? "text-amber-400" : ""}`}>{value}</p>
+        <p className="text-ink-muted text-xs">{label}</p>
+        <p className={`text-xl font-bold ${destacado ? "text-accent-text" : ""}`}>{value}</p>
       </div>
     </div>
   );

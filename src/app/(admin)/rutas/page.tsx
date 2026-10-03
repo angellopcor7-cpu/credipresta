@@ -29,11 +29,11 @@ export default async function RutasPage() {
       </div>
 
       {rutas.length === 0 ? (
-        <p className="text-neutral-400 text-sm">Aún no hay rutas.</p>
+        <p className="text-ink-muted text-sm">Aún no hay rutas.</p>
       ) : (
-        <div className="border border-neutral-800 rounded-xl overflow-hidden">
+        <div className="border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-900 text-neutral-400 text-left">
+            <thead className="bg-surface text-ink-muted text-left">
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Zona</th>
@@ -43,13 +43,13 @@ export default async function RutasPage() {
             </thead>
             <tbody>
               {rutas.map((r) => (
-                <tr key={r.id} className="border-t border-neutral-800">
+                <tr key={r.id} className="border-t border-border">
                   <td className="px-4 py-3">{r.nombre}</td>
-                  <td className="px-4 py-3 text-neutral-300">{r.zona ?? "—"}</td>
-                  <td className="px-4 py-3 text-neutral-300">
+                  <td className="px-4 py-3 text-ink-secondary">{r.zona ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">
                     {r.cobradores?.usuarios?.nombre_completo ?? "Sin asignar"}
                   </td>
-                  <td className="px-4 py-3 text-neutral-300">{r.activa ? "Activa" : "Inactiva"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{r.activa ? "Activa" : "Inactiva"}</td>
                 </tr>
               ))}
             </tbody>

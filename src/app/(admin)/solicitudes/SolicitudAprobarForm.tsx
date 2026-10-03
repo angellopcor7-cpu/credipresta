@@ -42,11 +42,11 @@ export function SolicitudAprobarForm({
 
   return (
     <div className="space-y-3">
-      <div className="flex flex-wrap items-end gap-4 bg-black border border-neutral-800 rounded-lg p-3 text-sm max-w-xl">
+      <div className="flex flex-wrap items-end gap-4 bg-page border border-border rounded-lg p-3 text-sm max-w-xl">
         <div className="space-y-1">
-          <label className="text-neutral-500 text-xs" htmlFor={`porcentaje-${solicitudId}`}>
+          <label className="text-ink-muted text-xs" htmlFor={`porcentaje-${solicitudId}`}>
             % de interés total ({plazoDias} días)
-            {porcentajePersonalizado != null && <span className="text-amber-400"> · propuesto por el cobrador</span>}
+            {porcentajePersonalizado != null && <span className="text-accent-text"> · propuesto por el cobrador</span>}
           </label>
           <input
             id={`porcentaje-${solicitudId}`}
@@ -55,25 +55,25 @@ export function SolicitudAprobarForm({
             step="0.01"
             value={porcentajeTexto}
             onChange={(e) => setPorcentajeTexto(e.target.value)}
-            className="w-24 rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            className="w-24 rounded-md bg-surface-2 border border-border-strong px-2 py-1.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
         <div>
-          <p className="text-neutral-500 text-xs">Interés</p>
+          <p className="text-ink-muted text-xs">Interés</p>
           <p className="font-semibold">{currency(interes)}</p>
         </div>
         <div>
-          <p className="text-neutral-500 text-xs">Total a pagar</p>
-          <p className="font-semibold text-amber-400">{currency(total)}</p>
+          <p className="text-ink-muted text-xs">Total a pagar</p>
+          <p className="font-semibold text-accent-text">{currency(total)}</p>
         </div>
         <div>
-          <p className="text-neutral-500 text-xs">Pago diario</p>
+          <p className="text-ink-muted text-xs">Pago diario</p>
           <p className="font-semibold">{currency(pagoDiario)}</p>
         </div>
       </div>
 
       {diasPersonalizados && (
-        <p className="text-xs text-amber-400">
+        <p className="text-xs text-accent-text">
           Días de cobro personalizados:{" "}
           {diasPersonalizados.length === 0 ? "ninguno fijo" : diasPersonalizados.map((d) => DIAS_SEMANA_LABEL[d]).join(", ")}
         </p>
@@ -86,7 +86,7 @@ export function SolicitudAprobarForm({
           name="revisado_por"
           required
           defaultValue=""
-          className="rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          className="rounded-md bg-surface-2 border border-border-strong px-2 py-1.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
         >
           <option value="" disabled>
             ¿Quién aprueba?

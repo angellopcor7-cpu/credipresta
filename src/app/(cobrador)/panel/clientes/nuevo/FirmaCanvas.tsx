@@ -70,7 +70,7 @@ export function FirmaCanvas({
 
   return (
     <div className="space-y-1.5">
-      <p className="text-sm text-neutral-300">{etiqueta}</p>
+      <p className="text-sm text-ink-secondary">{etiqueta}</p>
       <canvas
         ref={canvasRef}
         width={500}
@@ -79,13 +79,13 @@ export function FirmaCanvas({
         onPointerMove={mover}
         onPointerUp={terminar}
         onPointerLeave={terminar}
-        className="w-full touch-none rounded-md bg-white border border-neutral-700 cursor-crosshair"
+        className="w-full touch-none rounded-md bg-white border border-border-strong cursor-crosshair"
       />
       <div className="flex items-center justify-between">
-        <span className={`text-xs ${vacio ? "text-neutral-500" : "text-amber-400"}`}>
+        <span className={`text-xs ${vacio ? "text-ink-muted" : "text-accent-text"}`}>
           {vacio ? "Sin firmar" : "Firmado"}
         </span>
-        <button type="button" onClick={limpiar} className="text-xs text-neutral-400 hover:text-white underline">
+        <button type="button" onClick={limpiar} className="text-xs text-ink-muted hover:text-ink underline">
           Borrar y firmar de nuevo
         </button>
       </div>

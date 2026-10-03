@@ -24,11 +24,11 @@ export default async function AdminLayout({
     .eq("estado", "pendiente");
 
   return (
-    <div className="min-h-screen bg-black text-white">
-      <header className="border-b border-neutral-800">
+    <div className="min-h-screen bg-page text-ink">
+      <header className="border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/dashboard" className="font-bold text-lg">
-            Credi<span className="text-amber-400">Presta</span>
+            Credi<span className="text-accent-text">Presta</span>
           </Link>
           <AdminNav
             solicitudesPendientes={solicitudesPendientes ?? 0}

@@ -125,27 +125,27 @@ export default async function SolicitudesPage({
       <h1 className="text-2xl font-bold">Solicitudes de préstamo</h1>
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
+        <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">{error}</p>
       )}
 
       <div>
         <h2 className="font-semibold mb-2">Pendientes de revisión ({listaPendientes.length})</h2>
         {listaPendientes.length === 0 ? (
-          <p className="text-neutral-500 text-sm">No hay solicitudes pendientes.</p>
+          <p className="text-ink-muted text-sm">No hay solicitudes pendientes.</p>
         ) : (
           <div className="space-y-3">
             {listaPendientes.map((s) => (
-              <div key={s.id} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4 space-y-3">
+              <div key={s.id} className="bg-surface border border-border rounded-xl p-4 space-y-3">
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="font-medium">{s.clientes?.nombre_completo ?? "—"}</p>
-                    <p className="text-neutral-500 text-xs">{s.clientes?.telefono ?? "Sin teléfono"}</p>
-                    <p className="text-neutral-500 text-xs">
+                    <p className="text-ink-muted text-xs">{s.clientes?.telefono ?? "Sin teléfono"}</p>
+                    <p className="text-ink-muted text-xs">
                       Dado de alta por: {cobradorPorCliente.get(s.cliente_id) ?? "—"}
                     </p>
                   </div>
                   <div className="text-right">
-                    <p className="text-amber-400 font-semibold">
+                    <p className="text-accent-text font-semibold">
                       {currency(Number(s.monto_solicitado))} a {s.plazo_dias} días
                     </p>
                   </div>
@@ -158,13 +158,13 @@ export default async function SolicitudesPage({
                       href={doc.url}
                       target="_blank"
                       rel="noreferrer"
-                      className="text-xs bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 rounded-full px-3 py-1"
+                      className="text-xs bg-surface-2 hover:bg-surface-3 text-ink-strong border border-border-strong rounded-full px-3 py-1"
                     >
                       {ETIQUETAS_DOCUMENTO[doc.tipo]}
                     </a>
                   ))}
                   {(documentosPorCliente.get(s.cliente_id) ?? []).length === 0 && (
-                    <span className="text-xs text-amber-400">Sin documentos subidos</span>
+                    <span className="text-xs text-accent-text">Sin documentos subidos</span>
                   )}
                 </div>
 
@@ -186,7 +186,7 @@ export default async function SolicitudesPage({
                       name="revisado_por"
                       required
                       defaultValue=""
-                      className="rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     >
                       <option value="" disabled>
                         ¿Quién rechaza?
@@ -200,9 +200,9 @@ export default async function SolicitudesPage({
                     <input
                       name="notas"
                       placeholder="Motivo (opcional)"
-                      className="w-40 rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1 text-white text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                      className="w-40 rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
                     />
-                    <button className="bg-red-500/90 hover:bg-red-500 text-white font-semibold text-sm px-3 py-1.5 rounded-md">
+                    <button className="bg-red-500/90 hover:bg-red-500 text-ink font-semibold text-sm px-3 py-1.5 rounded-md">
                       Rechazar
                     </button>
                   </form>
@@ -216,11 +216,11 @@ export default async function SolicitudesPage({
       <div>
         <h2 className="font-semibold mb-2">Revisadas recientemente</h2>
         {listaRevisadas.length === 0 ? (
-          <p className="text-neutral-500 text-sm">Todavía no has revisado ninguna.</p>
+          <p className="text-ink-muted text-sm">Todavía no has revisado ninguna.</p>
         ) : (
-          <div className="border border-neutral-800 rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-900 text-neutral-400 text-left">
+              <thead className="bg-surface text-ink-muted text-left">
                 <tr>
                   <th className="px-3 py-2">Cliente</th>
                   <th className="px-3 py-2">Monto</th>
@@ -231,22 +231,22 @@ export default async function SolicitudesPage({
               </thead>
               <tbody>
                 {listaRevisadas.map((s) => (
-                  <tr key={s.id} className="border-t border-neutral-800">
+                  <tr key={s.id} className="border-t border-border">
                     <td className="px-3 py-2">{s.clientes?.nombre_completo ?? "—"}</td>
                     <td className="px-3 py-2">{currency(Number(s.monto_solicitado))}</td>
-                    <td className="px-3 py-2 text-neutral-400">{s.plazo_dias} días</td>
+                    <td className="px-3 py-2 text-ink-muted">{s.plazo_dias} días</td>
                     <td className="px-3 py-2">
                       <span
                         className={`text-xs border rounded-full px-2 py-1 ${
                           s.estado === "aprobada"
-                            ? "bg-amber-950 text-amber-400 border-amber-900"
-                            : "bg-red-950 text-red-400 border-red-900"
+                            ? "bg-accent-chip-bg text-accent-text border-accent-chip-border"
+                            : "bg-danger-chip-bg text-danger-text border-danger-chip-border"
                         }`}
                       >
                         {s.estado === "aprobada" ? "Aprobada" : "Rechazada"}
                       </span>
                     </td>
-                    <td className="px-3 py-2 text-neutral-400">{s.usuarios?.nombre_completo ?? "—"}</td>
+                    <td className="px-3 py-2 text-ink-muted">{s.usuarios?.nombre_completo ?? "—"}</td>
                   </tr>
                 ))}
               </tbody>

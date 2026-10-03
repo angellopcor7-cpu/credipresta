@@ -42,11 +42,11 @@ export function InfoDiasCobro({
   });
 
   return (
-    <details className="text-sm bg-neutral-900 border border-neutral-800 rounded-xl px-4 py-3 max-w-2xl">
-      <summary className="cursor-pointer text-neutral-300 font-medium">
+    <details className="text-sm bg-surface border border-border rounded-xl px-4 py-3 max-w-2xl">
+      <summary className="cursor-pointer text-ink-secondary font-medium">
         ¿Por qué algunos días no se cobra?
       </summary>
-      <div className="mt-3 space-y-2 text-neutral-400">
+      <div className="mt-3 space-y-2 text-ink-muted">
         <p>
           El calendario de cobro de cada préstamo salta los días que no le tocan según su monto — por eso el
           plazo en días (ej. 20 días de cobro) casi siempre termina abarcando más días de calendario.

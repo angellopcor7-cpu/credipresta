@@ -16,15 +16,15 @@ export default async function ClientesPage() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold">Clientes</h1>
-        <p className="text-neutral-500 text-sm">Los da de alta el cobrador desde su panel.</p>
+        <p className="text-ink-muted text-sm">Los da de alta el cobrador desde su panel.</p>
       </div>
 
       {clientes.length === 0 ? (
-        <p className="text-neutral-400 text-sm">Aún no hay clientes.</p>
+        <p className="text-ink-muted text-sm">Aún no hay clientes.</p>
       ) : (
-        <div className="border border-neutral-800 rounded-xl overflow-hidden">
+        <div className="border border-border rounded-xl overflow-hidden">
           <table className="w-full text-sm">
-            <thead className="bg-neutral-900 text-neutral-400 text-left">
+            <thead className="bg-surface text-ink-muted text-left">
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Teléfono</th>
@@ -34,11 +34,11 @@ export default async function ClientesPage() {
             </thead>
             <tbody>
               {clientes.map((c) => (
-                <tr key={c.id} className="border-t border-neutral-800">
+                <tr key={c.id} className="border-t border-border">
                   <td className="px-4 py-3">{c.nombre_completo}</td>
-                  <td className="px-4 py-3 text-neutral-300">{c.telefono ?? "—"}</td>
-                  <td className="px-4 py-3 text-neutral-300">{c.identificacion ?? "—"}</td>
-                  <td className="px-4 py-3 text-neutral-300">{estadoLabel[c.estado]}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{c.telefono ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{c.identificacion ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">{estadoLabel[c.estado]}</td>
                 </tr>
               ))}
             </tbody>

@@ -116,7 +116,7 @@ export default async function DetalleCobradorPage({
 
   return (
     <div className="space-y-6">
-      <Link href="/cobradores" className="inline-flex items-center gap-1 text-sm text-neutral-400 hover:text-white">
+      <Link href="/cobradores" className="inline-flex items-center gap-1 text-sm text-ink-muted hover:text-ink">
         <ChevronLeft className="h-4 w-4" />
         Cobradores
       </Link>
@@ -128,14 +128,14 @@ export default async function DetalleCobradorPage({
             <span
               className={`text-xs border rounded-full px-2 py-1 ${
                 cobradorTyped.activo
-                  ? "bg-neutral-800 text-neutral-200 border-neutral-600"
-                  : "bg-neutral-800 text-neutral-500 border-neutral-700"
+                  ? "bg-surface-2 text-ink-strong border-border-soft"
+                  : "bg-surface-2 text-ink-muted border-border-strong"
               }`}
             >
               {cobradorTyped.activo ? "Activo" : "Inactivo"}
             </span>
           </div>
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-neutral-400">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 mt-2 text-sm text-ink-muted">
             {cobradorTyped.usuarios?.telefono && (
               <span className="inline-flex items-center gap-1">
                 <Phone className="h-3.5 w-3.5" />
@@ -171,18 +171,18 @@ export default async function DetalleCobradorPage({
       </div>
 
       {error && (
-        <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">{error}</p>
+        <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">{error}</p>
       )}
       {exito && (
-        <p className="text-sm text-amber-400 bg-amber-950/50 border border-amber-900 rounded-md px-3 py-2">
+        <p className="text-sm text-accent-text bg-accent-chip-bg/50 border border-accent-chip-border rounded-md px-3 py-2">
           {exito}
         </p>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         {stats.map((s) => (
-          <div key={s.label} className="bg-neutral-900 border border-neutral-800 rounded-xl p-4">
-            <div className="flex items-center gap-1.5 text-neutral-400">
+          <div key={s.label} className="bg-surface border border-border rounded-xl p-4">
+            <div className="flex items-center gap-1.5 text-ink-muted">
               <s.icon className="h-3.5 w-3.5" />
               <p className="text-xs">{s.label}</p>
             </div>
@@ -203,11 +203,11 @@ export default async function DetalleCobradorPage({
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-neutral-300 mb-3">Rutas asignadas</h2>
+        <h2 className="text-sm font-semibold text-ink-secondary mb-3">Rutas asignadas</h2>
         {rutas && rutas.length > 0 ? (
-          <div className="border border-neutral-800 rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-900 text-neutral-400 text-left">
+              <thead className="bg-surface text-ink-muted text-left">
                 <tr>
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Zona</th>
@@ -216,19 +216,19 @@ export default async function DetalleCobradorPage({
               </thead>
               <tbody>
                 {rutas.map((r) => (
-                  <tr key={r.id} className="border-t border-neutral-800">
+                  <tr key={r.id} className="border-t border-border">
                     <td className="px-4 py-3">{r.nombre}</td>
-                    <td className="px-4 py-3 text-neutral-300">{r.zona ?? "—"}</td>
-                    <td className="px-4 py-3 text-neutral-300">{r.activa ? "Activa" : "Inactiva"}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{r.zona ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{r.activa ? "Activa" : "Inactiva"}</td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
         ) : (
-          <p className="text-neutral-500 text-sm">
+          <p className="text-ink-muted text-sm">
             Sin rutas asignadas todavía.{" "}
-            <Link href="/rutas/nueva" className="text-amber-400 hover:underline">
+            <Link href="/rutas/nueva" className="text-accent-text hover:underline">
               Crear una
             </Link>
           </p>
@@ -237,7 +237,7 @@ export default async function DetalleCobradorPage({
 
       <div className="space-y-3">
         <div className="flex items-center justify-between flex-wrap gap-2">
-          <h2 className="text-sm font-semibold text-neutral-300">Clientes asignados ({listaClientes.length})</h2>
+          <h2 className="text-sm font-semibold text-ink-secondary">Clientes asignados ({listaClientes.length})</h2>
           <ReasignarTodosForm
             cobradorOrigenId={cobradorTyped.id}
             nombreCobrador={nombreCobrador}
@@ -246,9 +246,9 @@ export default async function DetalleCobradorPage({
           />
         </div>
         {listaClientes.length > 0 ? (
-          <div className="border border-neutral-800 rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
-              <thead className="bg-neutral-900 text-neutral-400 text-left">
+              <thead className="bg-surface text-ink-muted text-left">
                 <tr>
                   <th className="px-4 py-3">Nombre</th>
                   <th className="px-4 py-3">Estado</th>
@@ -257,9 +257,9 @@ export default async function DetalleCobradorPage({
               </thead>
               <tbody>
                 {listaClientes.map((c) => (
-                  <tr key={c.id} className="border-t border-neutral-800">
+                  <tr key={c.id} className="border-t border-border">
                     <td className="px-4 py-3">{c.nombre_completo}</td>
-                    <td className="px-4 py-3 text-neutral-300">{ESTADO_CLIENTE_LABEL[c.estado] ?? c.estado}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{ESTADO_CLIENTE_LABEL[c.estado] ?? c.estado}</td>
                     {otrosCobradores.length > 0 && (
                       <td className="px-4 py-3">
                         <form action={reasignarCliente} className="flex items-center gap-2">
@@ -269,7 +269,7 @@ export default async function DetalleCobradorPage({
                             name="nuevo_cobrador_id"
                             required
                             defaultValue=""
-                            className="rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1 text-xs text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+                            className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-xs text-ink focus:outline-none focus:ring-2 focus:ring-amber-500"
                           >
                             <option value="" disabled>
                               Mover a…
@@ -280,7 +280,7 @@ export default async function DetalleCobradorPage({
                               </option>
                             ))}
                           </select>
-                          <button type="submit" className="text-xs text-amber-400 hover:underline">
+                          <button type="submit" className="text-xs text-accent-text hover:underline">
                             Mover
                           </button>
                         </form>
@@ -292,7 +292,7 @@ export default async function DetalleCobradorPage({
             </table>
           </div>
         ) : (
-          <p className="text-neutral-500 text-sm">Este cobrador aún no tiene clientes asignados.</p>
+          <p className="text-ink-muted text-sm">Este cobrador aún no tiene clientes asignados.</p>
         )}
       </div>
     </div>

@@ -1,26 +1,104 @@
 @import "tailwindcss";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
+/*
+ * Sistema de tema (oscuro / claro / sistema).
+ *
+ * Esta app se construyó originalmente solo en oscuro, usando directamente
+ * los colores de Tailwind (bg-black, text-white, bg-neutral-900, etc). En
+ * vez de reescribir cada clase en cada componente para soportar modo claro,
+ * definimos nuestra propia escala semántica aquí (page/ink/surface/accent/
+ * danger...) y la mapeamos a variables CSS. Tailwind v4 compila cada color
+ * como `var(--color-x)`, así que con SOLO cambiar estas variables según
+ * `data-theme`, toda la app cambia de tema sin tocar los componentes.
+ *
+ * `data-theme="dark"` u oscuro es el default (como ya estaba). Las clases
+ * normales de Tailwind que NO están en esta lista (bg-amber-500 de los
+ * botones dorados, los colores de las gráficas, el lienzo de firma en
+ * blanco, el overlay negro del menú móvil) se dejan igual a propósito:
+ * ya se ven bien en ambos fondos.
+ */
+
+:root,
+[data-theme="dark"] {
+  --page: #000000; /* antes: bg-black (fondo de pantalla) */
+  --ink: #ffffff; /* antes: text-white (texto principal) */
+  --ink-secondary: #d4d4d4; /* antes: text-neutral-300 */
+  --ink-strong: #e5e5e5; /* antes: text-neutral-200 (texto en badge "Activo") */
+  --ink-muted: #a3a3a3; /* antes: text-neutral-400 y text-neutral-500 */
+
+  --surface: #171717; /* antes: bg-neutral-900 (tarjetas) */
+  --surface-2: #262626; /* antes: bg-neutral-800 (inputs, badges, pozos internos) */
+  --surface-3: #404040; /* antes: bg-neutral-700 (hover de surface-2) */
+
+  --border: #262626; /* antes: border-neutral-800 */
+  --border-strong: #404040; /* antes: border-neutral-700 */
+  --border-soft: #525252; /* antes: border-neutral-600 y border-neutral-500 */
+
+  --accent-text: #fbbf24; /* antes: text-amber-400 y text-amber-300 */
+  --accent-chip-bg: #451a03; /* antes: bg-amber-950 */
+  --accent-chip-border: #78350f; /* antes: border-amber-900 y border-amber-800 */
+
+  --danger-text: #f87171; /* antes: text-red-400 y text-red-300 */
+  --danger-chip-bg: #450a0a; /* antes: bg-red-950 */
+  --danger-chip-bg-hover: #7f1d1d; /* antes: bg-red-900 (hover de botones de peligro) */
+  --danger-chip-border: #7f1d1d; /* antes: border-red-900 */
+}
+
+[data-theme="light"] {
+  --page: #fafafa;
+  --ink: #171717;
+  --ink-secondary: #404040;
+  --ink-strong: #262626;
+  --ink-muted: #525252;
+
+  --surface: #ffffff;
+  --surface-2: #f0f0f0;
+  --surface-3: #d4d4d4;
+
+  --border: #e5e5e5;
+  --border-strong: #d4d4d4;
+  --border-soft: #a3a3a3;
+
+  --accent-text: #92400e;
+  --accent-chip-bg: #fef3c7;
+  --accent-chip-border: #fde68a;
+
+  --danger-text: #b91c1c;
+  --danger-chip-bg: #fee2e2;
+  --danger-chip-bg-hover: #fecaca;
+  --danger-chip-border: #fca5a5;
 }
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
+  --color-page: var(--page);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-strong: var(--ink-strong);
+  --color-ink-muted: var(--ink-muted);
+
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+
+  --color-border: var(--border);
+  --color-border-strong: var(--border-strong);
+  --color-border-soft: var(--border-soft);
+
+  --color-accent-text: var(--accent-text);
+  --color-accent-chip-bg: var(--accent-chip-bg);
+  --color-accent-chip-border: var(--accent-chip-border);
+
+  --color-danger-text: var(--danger-text);
+  --color-danger-chip-bg: var(--danger-chip-bg);
+  --color-danger-chip-bg-hover: var(--danger-chip-bg-hover);
+  --color-danger-chip-border: var(--danger-chip-border);
+
   --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: var(--page);
+  color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
 }

@@ -12,7 +12,7 @@ export default async function NuevoCobradorPage({
       <h1 className="text-2xl font-bold">Nuevo cobrador</h1>
       <form
         action={crearCobrador}
-        className="space-y-4 bg-neutral-900 p-6 rounded-xl border border-neutral-800"
+        className="space-y-4 bg-surface p-6 rounded-xl border border-border"
       >
         <Field label="Nombre completo" name="nombre_completo" required />
         <Field label="Correo (para iniciar sesión)" name="email" type="email" required />
@@ -21,7 +21,7 @@ export default async function NuevoCobradorPage({
         <Field label="Zona" name="zona" />
 
         {error && (
-          <p className="text-sm text-red-400 bg-red-950/50 border border-red-900 rounded-md px-3 py-2">
+          <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">
             {error}
           </p>
         )}
@@ -49,7 +49,7 @@ function Field({
 }) {
   return (
     <div className="space-y-1">
-      <label className="text-sm text-neutral-300" htmlFor={name}>
+      <label className="text-sm text-ink-secondary" htmlFor={name}>
         {label}
       </label>
       <input
@@ -57,9 +57,9 @@ function Field({
         name={name}
         type={type}
         required={required}
-        className="w-full rounded-md bg-neutral-800 border border-neutral-700 px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+        className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
       />
-      {hint && <p className="text-xs text-neutral-500">{hint}</p>}
+      {hint && <p className="text-xs text-ink-muted">{hint}</p>}
     </div>
   );
 }

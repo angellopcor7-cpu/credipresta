@@ -28,7 +28,7 @@ export function ReasignarTodosForm({
       <button
         type="button"
         onClick={() => setAbierto(true)}
-        className="text-xs text-amber-400 hover:underline"
+        className="text-xs text-accent-text hover:underline"
       >
         Reasignar todos sus clientes a otro cobrador
       </button>
@@ -49,14 +49,14 @@ export function ReasignarTodosForm({
           e.preventDefault();
         }
       }}
-      className="flex flex-wrap items-center gap-2 bg-neutral-900 border border-neutral-800 rounded-lg p-3"
+      className="flex flex-wrap items-center gap-2 bg-surface border border-border rounded-lg p-3"
     >
       <input type="hidden" name="cobrador_origen_id" value={cobradorOrigenId} />
       <select
         name="nuevo_cobrador_id"
         required
         defaultValue=""
-        className="rounded-md bg-neutral-800 border border-neutral-700 px-2 py-1.5 text-sm text-white focus:outline-none focus:ring-2 focus:ring-amber-500"
+        className="rounded-md bg-surface-2 border border-border-strong px-2 py-1.5 text-sm text-ink focus:outline-none focus:ring-2 focus:ring-amber-500"
       >
         <option value="" disabled>
           Elige el cobrador destino…
@@ -70,7 +70,7 @@ export function ReasignarTodosForm({
       <button className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-xs px-3 py-1.5 rounded-md">
         Mover {cantidadClientes} {cantidadClientes === 1 ? "cliente" : "clientes"}
       </button>
-      <button type="button" onClick={() => setAbierto(false)} className="text-neutral-500 hover:text-white text-xs">
+      <button type="button" onClick={() => setAbierto(false)} className="text-ink-muted hover:text-ink text-xs">
         Cancelar
       </button>
     </form>
