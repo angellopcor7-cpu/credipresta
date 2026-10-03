@@ -8,6 +8,7 @@ import {
   esPlanValido,
   calcularMontoMora,
   calcularSaldoConMora,
+  calcularAsignacionPago,
   tieneCuotaVencidaSinPagar,
   calcularPorcentajeInteresPorPlan,
   calcularMontoTotal,
@@ -220,7 +221,7 @@ export async function aplicarPagoDelDia(formData: FormData) {
 
   const { data: prestamo } = await supabase
     .from("prestamos")
-    .select("id, cliente_id, cobrador_id, saldo_actual, monto_cuota_sugerida, estado")
+    .select("id, cliente_id, cobrador_id, saldo_actual, mora_acumulada, monto_cuota_sugerida, estado")
     .eq("id", prestamoId)
     .single();
 
@@ -243,14 +244,15 @@ export async function aplicarPagoDelDia(formData: FormData) {
   }
 
   const saldoActual = Number(prestamo.saldo_actual);
+  const moraActual = Number(prestamo.mora_acumulada);
   const monto = montoTexto ? Number(montoTexto) : Number(prestamo.monto_cuota_sugerida);
-  const montoAplicado = Math.min(monto, saldoActual);
+  const montoAplicado = Math.min(monto, saldoActual + moraActual);
 
   if (!montoAplicado || montoAplicado <= 0) {
     redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Monto inválido")}`);
   }
 
-  const saldoNuevo = Math.max(0, Math.round((saldoActual - montoAplicado) * 100) / 100);
+  const { saldoNuevo, moraNueva } = calcularAsignacionPago(saldoActual, moraActual, montoAplicado);
 
   const { error: errorPago } = await supabase.from("pagos").insert({
     prestamo_id: prestamoId,
@@ -267,12 +269,14 @@ export async function aplicarPagoDelDia(formData: FormData) {
     redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(errorPago.message)}`);
   }
 
+  const liquidado = saldoNuevo === 0 && moraNueva === 0;
   await supabase
     .from("prestamos")
     .update({
       saldo_actual: saldoNuevo,
-      estado: saldoNuevo === 0 ? "liquidado" : "activo",
-      fecha_liquidacion: saldoNuevo === 0 ? new Date().toISOString() : null,
+      mora_acumulada: moraNueva,
+      estado: liquidado ? "liquidado" : prestamo.estado,
+      fecha_liquidacion: liquidado ? new Date().toISOString() : null,
     })
     .eq("id", prestamoId);
 
@@ -298,7 +302,7 @@ export async function marcarIncumplidoDelDia(formData: FormData) {
 
   const { data: prestamo } = await supabase
     .from("prestamos")
-    .select("id, cliente_id, saldo_actual, estado")
+    .select("id, cliente_id, saldo_actual, mora_acumulada, estado")
     .eq("id", prestamoId)
     .single();
 
@@ -340,16 +344,17 @@ export async function marcarIncumplidoDelDia(formData: FormData) {
     .eq("prestamo_id", prestamoId);
 
   const saldoActual = Number(prestamo.saldo_actual);
+  const moraActual = Number(prestamo.mora_acumulada);
   const diaAtraso = (morasPrevias ?? 0) + 1;
   const montoMora = calcularMontoMora(saldoActual, config.reglaMora);
-  const saldoNuevo = calcularSaldoConMora(saldoActual, montoMora);
+  const moraNueva = calcularSaldoConMora(moraActual, montoMora);
 
   const { error: errorMora } = await supabase.from("moras").insert({
     prestamo_id: prestamoId,
     monto_mora: montoMora,
     dia_atraso: diaAtraso,
     saldo_anterior: saldoActual,
-    saldo_posterior: saldoNuevo,
+    saldo_posterior: saldoActual,
     fecha_generada: hoy,
     generada_por: sesion.id,
   });
@@ -357,7 +362,7 @@ export async function marcarIncumplidoDelDia(formData: FormData) {
     redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(errorMora.message)}`);
   }
 
-  await supabase.from("prestamos").update({ saldo_actual: saldoNuevo, estado: "en_mora" }).eq("id", prestamoId);
+  await supabase.from("prestamos").update({ mora_acumulada: moraNueva, estado: "en_mora" }).eq("id", prestamoId);
 
   await supabase.from("historial_movimientos").insert({
     prestamo_id: prestamoId,
@@ -365,7 +370,7 @@ export async function marcarIncumplidoDelDia(formData: FormData) {
     usuario_id: sesion.id,
     tipo_movimiento: "mora",
     monto: montoMora,
-    descripcion: `Mora día ${diaAtraso} aplicada por el cobrador: $${montoMora} (saldo $${saldoActual} → $${saldoNuevo})`,
+    descripcion: `Mora día ${diaAtraso} aplicada por el cobrador: $${montoMora} (mora acumulada $${moraActual} → $${moraNueva})`,
   });
 
   revalidatePath("/panel");

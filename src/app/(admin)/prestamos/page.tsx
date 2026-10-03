@@ -53,6 +53,7 @@ export default async function PrestamosPage() {
                 <th className="px-4 py-3">Prestado</th>
                 <th className="px-4 py-3">Total</th>
                 <th className="px-4 py-3">Saldo</th>
+                <th className="px-4 py-3">Mora</th>
                 <th className="px-4 py-3">Inicio</th>
                 <th className="px-4 py-3">Vence</th>
                 <th className="px-4 py-3">Estado</th>
@@ -69,6 +70,13 @@ export default async function PrestamosPage() {
                   <td className="px-4 py-3 text-ink-secondary">{currency(Number(p.monto_prestado))}</td>
                   <td className="px-4 py-3 text-ink-secondary">{currency(Number(p.monto_total))}</td>
                   <td className="px-4 py-3 font-medium">{currency(Number(p.saldo_actual))}</td>
+                  <td
+                    className={`px-4 py-3 ${
+                      Number(p.mora_acumulada) > 0 ? "text-danger-text font-medium" : "text-ink-muted"
+                    }`}
+                  >
+                    {currency(Number(p.mora_acumulada))}
+                  </td>
                   <td className="px-4 py-3 text-ink-muted">{formatoFechaCorta(p.fecha_inicio)}</td>
                   <td className="px-4 py-3 text-ink-muted">
                     {formatoFechaCorta(fechaLimitePorPrestamo.get(p.id))}

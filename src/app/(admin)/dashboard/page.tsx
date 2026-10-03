@@ -153,6 +153,7 @@ function ultimasSemanas(cantidad: number) {
 const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
   pago: CircleCheck,
   mora: CircleAlert,
+  ajuste_mora: CircleCheck,
   aprobacion_solicitud: CircleCheck,
   rechazo_solicitud: CircleX,
   creacion_cobrador: UserPlus,
@@ -162,6 +163,7 @@ const ICONO_MOVIMIENTO: Record<string, LucideIcon> = {
 const COLOR_MOVIMIENTO: Record<string, string> = {
   pago: "text-ink-secondary bg-surface-2",
   mora: "text-danger-text bg-danger-chip-bg",
+  ajuste_mora: "text-accent-text bg-accent-chip-bg",
   aprobacion_solicitud: "text-accent-text bg-accent-chip-bg",
   rechazo_solicitud: "text-danger-text bg-danger-chip-bg",
   creacion_cobrador: "text-ink-secondary bg-surface-2",
@@ -171,6 +173,7 @@ const COLOR_MOVIMIENTO: Record<string, string> = {
 const ETIQUETA_MOVIMIENTO: Record<string, string> = {
   pago: "Pago registrado",
   mora: "Mora aplicada",
+  ajuste_mora: "Ajuste de mora",
   aprobacion_solicitud: "Solicitud aprobada",
   rechazo_solicitud: "Solicitud rechazada",
   creacion_cobrador: "Cobrador dado de alta",
@@ -184,7 +187,6 @@ export default async function DashboardPage() {
     { count: clientesCount },
     { count: cobradoresCount },
     { data: prestamos },
-    { data: morasPendientes },
     { count: solicitudesPendientesCount },
     { data: actividadReciente },
     { data: todasLasMoras },
@@ -194,8 +196,9 @@ export default async function DashboardPage() {
   ] = await Promise.all([
     supabase.from("clientes").select("*", { count: "exact", head: true }).eq("estado", "activo"),
     supabase.from("cobradores").select("*", { count: "exact", head: true }).eq("activo", true),
-    supabase.from("prestamos").select("estado, saldo_actual, monto_prestado, created_at, cobrador_id"),
-    supabase.from("moras").select("monto_mora, prestamos(cobrador_id)").eq("estado", "pendiente"),
+    supabase
+      .from("prestamos")
+      .select("estado, saldo_actual, mora_acumulada, monto_prestado, created_at, cobrador_id"),
     supabase.from("solicitudes_prestamo").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     supabase
       .from("historial_movimientos")
@@ -213,7 +216,7 @@ export default async function DashboardPage() {
   const enMora = listaPrestamos.filter((p) => p.estado === "en_mora");
   const carteraActiva = activos.reduce((s, p) => s + Number(p.saldo_actual), 0);
   const totalPrestado = listaPrestamos.reduce((s, p) => s + Number(p.monto_prestado), 0);
-  const moraTotal = (morasPendientes ?? []).reduce((s, m) => s + Number(m.monto_mora), 0);
+  const moraTotal = activos.reduce((s, p) => s + Number(p.mora_acumulada), 0);
   const solicitudesPendientes = solicitudesPendientesCount ?? 0;
 
   const stats: { label: string; value: string; icon: LucideIcon; tono: "neutral" | "amber" | "red" }[] = [
@@ -295,15 +298,11 @@ export default async function DashboardPage() {
       const clientesActivos = (clientesActivosPorCobrador ?? []).filter(
         (cl) => cl.cobrador_id === cobrador.id
       ).length;
-      const carteraCobrador = listaPrestamos
-        .filter((p) => p.cobrador_id === cobrador.id && (p.estado === "activo" || p.estado === "en_mora"))
-        .reduce((s, p) => s + Number(p.saldo_actual), 0);
-      const moraCobrador = (morasPendientes ?? [])
-        .filter(
-          (m) =>
-            (m as unknown as { prestamos: { cobrador_id: string } | null }).prestamos?.cobrador_id === cobrador.id
-        )
-        .reduce((s, m) => s + Number(m.monto_mora), 0);
+      const prestamosActivosCobrador = listaPrestamos.filter(
+        (p) => p.cobrador_id === cobrador.id && (p.estado === "activo" || p.estado === "en_mora")
+      );
+      const carteraCobrador = prestamosActivosCobrador.reduce((s, p) => s + Number(p.saldo_actual), 0);
+      const moraCobrador = prestamosActivosCobrador.reduce((s, p) => s + Number(p.mora_acumulada), 0);
       return {
         id: cobrador.id,
         nombre: cobrador.usuarios?.nombre_completo ?? "—",

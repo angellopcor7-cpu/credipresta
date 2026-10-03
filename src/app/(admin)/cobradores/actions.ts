@@ -5,6 +5,22 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exigirAdministrador } from "@/lib/auth/roles";
+import type { TipoComision } from "@/lib/types";
+
+/** Lee y valida el tipo/porcentaje de comisión de un FormData; redirige si vienen mal. */
+function leerComision(formData: FormData, redirectPath: string) {
+  const tipoComisionTexto = String(formData.get("tipo_comision") || "recolectado");
+  const porcentajeComision = Number(formData.get("porcentaje_comision") || 0);
+
+  if (tipoComisionTexto !== "prestado" && tipoComisionTexto !== "recolectado") {
+    redirect(`${redirectPath}?error=${encodeURIComponent("Tipo de comisión inválido")}`);
+  }
+  if (!Number.isFinite(porcentajeComision) || porcentajeComision < 0 || porcentajeComision > 100) {
+    redirect(`${redirectPath}?error=${encodeURIComponent("El porcentaje de comisión debe estar entre 0 y 100")}`);
+  }
+
+  return { tipoComision: tipoComisionTexto as TipoComision, porcentajeComision };
+}
 
 /**
  * Crea la cuenta de un cobrador nuevo: usuario en Supabase Auth (con la
@@ -29,6 +45,8 @@ export async function crearCobrador(formData: FormData) {
       )}`
     );
   }
+
+  const { tipoComision, porcentajeComision } = leerComision(formData, "/cobradores/nuevo");
 
   const admin = createAdminClient();
 
@@ -62,6 +80,8 @@ export async function crearCobrador(formData: FormData) {
     usuario_id: nuevoUsuario.user.id,
     zona,
     activo: true,
+    tipo_comision: tipoComision,
+    porcentaje_comision: porcentajeComision,
   });
 
   if (errorCobrador) {
@@ -94,6 +114,8 @@ export async function actualizarCobrador(formData: FormData) {
     redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent("El nombre es obligatorio")}`);
   }
 
+  const { tipoComision, porcentajeComision } = leerComision(formData, `/cobradores/${cobradorId}`);
+
   const { error: errorUsuario } = await supabase
     .from("usuarios")
     .update({ nombre_completo: nombreCompleto, telefono })
@@ -103,7 +125,10 @@ export async function actualizarCobrador(formData: FormData) {
     redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(errorUsuario.message)}`);
   }
 
-  const { error: errorCobrador } = await supabase.from("cobradores").update({ zona }).eq("id", cobradorId);
+  const { error: errorCobrador } = await supabase
+    .from("cobradores")
+    .update({ zona, tipo_comision: tipoComision, porcentaje_comision: porcentajeComision })
+    .eq("id", cobradorId);
 
   if (errorCobrador) {
     redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(errorCobrador.message)}`);

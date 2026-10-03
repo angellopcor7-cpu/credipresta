@@ -40,7 +40,7 @@ async function aplicarMoraAUnPrestamo(
 
   const { data: prestamo } = await supabase
     .from("prestamos")
-    .select("id, saldo_actual, estado")
+    .select("id, saldo_actual, mora_acumulada, estado")
     .eq("id", prestamoId)
     .single();
 
@@ -76,29 +76,30 @@ async function aplicarMoraAUnPrestamo(
     .eq("prestamo_id", prestamoId);
 
   const saldoActual = Number(prestamo.saldo_actual);
+  const moraActual = Number(prestamo.mora_acumulada);
   const diaAtraso = (morasPrevias ?? 0) + 1;
   const montoMora = calcularMontoMora(saldoActual, reglaMora);
-  const saldoNuevo = calcularSaldoConMora(saldoActual, montoMora);
+  const moraNueva = calcularSaldoConMora(moraActual, montoMora);
 
   const { error: errorMora } = await supabase.from("moras").insert({
     prestamo_id: prestamoId,
     monto_mora: montoMora,
     dia_atraso: diaAtraso,
     saldo_anterior: saldoActual,
-    saldo_posterior: saldoNuevo,
+    saldo_posterior: saldoActual,
     fecha_generada: hoy,
     generada_por: usuarioId,
   });
   if (errorMora) return { prestamoId, aplicada: false, motivo: errorMora.message };
 
-  await supabase.from("prestamos").update({ saldo_actual: saldoNuevo, estado: "en_mora" }).eq("id", prestamoId);
+  await supabase.from("prestamos").update({ mora_acumulada: moraNueva, estado: "en_mora" }).eq("id", prestamoId);
 
   await supabase.from("historial_movimientos").insert({
     prestamo_id: prestamoId,
     usuario_id: usuarioId,
     tipo_movimiento: "mora",
     monto: montoMora,
-    descripcion: `Mora día ${diaAtraso} aplicada: $${montoMora} (saldo $${saldoActual} → $${saldoNuevo})`,
+    descripcion: `Mora día ${diaAtraso} aplicada: $${montoMora} (mora acumulada $${moraActual} → $${moraNueva})`,
   });
 
   return { prestamoId, aplicada: true, montoMora };

@@ -214,11 +214,20 @@ export default async function DetalleClientePage({
 
       {prestamoActivo && (
         <>
-          <div className="grid sm:grid-cols-4 gap-4">
+          <div className="grid sm:grid-cols-5 gap-4">
             <Resumen icon={Landmark} label="Prestado" value={currency(Number(prestamoActivo.monto_prestado))} tone="neutral" />
             <Resumen icon={Wallet} label="Total con interés" value={currency(Number(prestamoActivo.monto_total))} tone="amber" />
             <Resumen icon={TrendingUp} label="Abonado" value={currency(abonado)} tone="neutral" />
             <Resumen icon={PiggyBank} label="Saldo" value={currency(Number(prestamoActivo.saldo_actual))} tone="amber" destacado />
+            {Number(prestamoActivo.mora_acumulada) > 0 && (
+              <Resumen
+                icon={CircleAlert}
+                label="Mora acumulada"
+                value={currency(Number(prestamoActivo.mora_acumulada))}
+                tone="red"
+                destacado
+              />
+            )}
           </div>
 
           <div className="space-y-1.5">
@@ -289,7 +298,7 @@ export default async function DetalleClientePage({
                     type="number"
                     min="0.01"
                     step="0.01"
-                    max={prestamoActivo.saldo_actual}
+                    max={Number(prestamoActivo.saldo_actual) + Number(prestamoActivo.mora_acumulada)}
                     defaultValue={prestamoActivo.monto_cuota_sugerida}
                     className="w-28 rounded-md bg-surface-2 border border-border-strong px-2 py-1.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                   />
@@ -426,18 +435,28 @@ function Resumen({
   icon: typeof Wallet;
   label: string;
   value: string;
-  tone: "amber" | "neutral";
+  tone: "amber" | "neutral" | "red";
   destacado?: boolean;
 }) {
-  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-accent-text" : "bg-surface-2 text-ink-secondary";
+  const toneClasses =
+    tone === "amber"
+      ? "bg-amber-500/10 text-accent-text"
+      : tone === "red"
+        ? "bg-danger-chip-bg text-danger-text"
+        : "bg-surface-2 text-ink-secondary";
+  const colorValor = tone === "red" ? "text-danger-text" : "text-accent-text";
   return (
-    <div className={`bg-surface border rounded-xl p-4 flex items-center gap-3 ${destacado ? "border-accent-chip-border" : "border-border"}`}>
+    <div
+      className={`bg-surface border rounded-xl p-4 flex items-center gap-3 ${
+        destacado ? (tone === "red" ? "border-danger-chip-border" : "border-accent-chip-border") : "border-border"
+      }`}
+    >
       <div className={`shrink-0 rounded-lg p-2 ${toneClasses}`}>
         <Icon className="h-4 w-4" />
       </div>
       <div>
         <p className="text-ink-muted text-xs">{label}</p>
-        <p className={`text-lg font-bold ${destacado ? "text-accent-text" : ""}`}>{value}</p>
+        <p className={`text-lg font-bold ${destacado ? colorValor : ""}`}>{value}</p>
       </div>
     </div>
   );

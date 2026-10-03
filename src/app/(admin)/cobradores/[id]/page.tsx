@@ -18,6 +18,7 @@ import { RestablecerPasswordForm } from "./RestablecerPasswordForm";
 import { EstadoCobradorButton } from "./EstadoCobradorButton";
 import { ReasignarTodosForm } from "./ReasignarTodosForm";
 import { reasignarCliente } from "../actions";
+import { TIPOS_COMISION, type TipoComision } from "@/lib/types";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -52,7 +53,9 @@ export default async function DetalleCobradorPage({
 
   const { data: cobrador } = await supabase
     .from("cobradores")
-    .select("id, usuario_id, zona, fecha_ingreso, activo, usuarios(nombre_completo, telefono)")
+    .select(
+      "id, usuario_id, zona, fecha_ingreso, activo, tipo_comision, porcentaje_comision, usuarios(nombre_completo, telefono)"
+    )
     .eq("id", id)
     .maybeSingle();
 
@@ -64,6 +67,8 @@ export default async function DetalleCobradorPage({
     zona: string | null;
     fecha_ingreso: string | null;
     activo: boolean;
+    tipo_comision: TipoComision;
+    porcentaje_comision: number;
     usuarios: { nombre_completo: string; telefono: string | null } | null;
   };
 
@@ -76,22 +81,16 @@ export default async function DetalleCobradorPage({
     email = null;
   }
 
-  const [{ data: clientes }, { data: rutas }, { data: prestamos }, { data: moras }, { data: otrosCobradoresData }] =
-    await Promise.all([
-      supabase.from("clientes").select("id, nombre_completo, estado").eq("cobrador_id", id).order("nombre_completo"),
-      supabase.from("rutas").select("id, nombre, zona, activa").eq("cobrador_id", id).order("nombre"),
-      supabase.from("prestamos").select("estado, saldo_actual").eq("cobrador_id", id),
-      supabase
-        .from("moras")
-        .select("monto_mora, prestamos!inner(cobrador_id)")
-        .eq("estado", "pendiente")
-        .eq("prestamos.cobrador_id", id),
-      supabase
-        .from("cobradores")
-        .select("id, usuarios(nombre_completo)")
-        .eq("activo", true)
-        .neq("id", id),
-    ]);
+  const [{ data: clientes }, { data: rutas }, { data: prestamos }, { data: otrosCobradoresData }] = await Promise.all([
+    supabase.from("clientes").select("id, nombre_completo, estado").eq("cobrador_id", id).order("nombre_completo"),
+    supabase.from("rutas").select("id, nombre, zona, activa").eq("cobrador_id", id).order("nombre"),
+    supabase.from("prestamos").select("estado, saldo_actual, mora_acumulada, monto_prestado").eq("cobrador_id", id),
+    supabase
+      .from("cobradores")
+      .select("id, usuarios(nombre_completo)")
+      .eq("activo", true)
+      .neq("id", id),
+  ]);
 
   const otrosCobradores = (otrosCobradoresData ?? []).map((c) => {
     const co = c as unknown as { id: string; usuarios: { nombre_completo: string } | null };
@@ -103,7 +102,12 @@ export default async function DetalleCobradorPage({
   const clientesActivos = listaClientes.filter((c) => c.estado === "activo").length;
   const prestamosActivos = listaPrestamos.filter((p) => p.estado === "activo" || p.estado === "en_mora");
   const carteraActiva = prestamosActivos.reduce((s, p) => s + Number(p.saldo_actual), 0);
-  const moraPendiente = (moras ?? []).reduce((s, m) => s + Number(m.monto_mora), 0);
+  const moraPendiente = prestamosActivos.reduce((s, p) => s + Number(p.mora_acumulada), 0);
+  const totalPrestadoHistorico = listaPrestamos.reduce((s, p) => s + Number(p.monto_prestado), 0);
+  const comisionEstimada =
+    cobradorTyped.tipo_comision === "prestado"
+      ? totalPrestadoHistorico * (Number(cobradorTyped.porcentaje_comision) / 100)
+      : null; // "recolectado" se calcula en el corte semanal (depende de lo cobrado en el periodo, no de un total acumulado).
 
   const stats: { label: string; value: string; icon: typeof UserRound }[] = [
     { label: "Clientes activos", value: String(clientesActivos), icon: UserRound },
@@ -113,6 +117,8 @@ export default async function DetalleCobradorPage({
   ];
 
   const nombreCobrador = cobradorTyped.usuarios?.nombre_completo ?? "—";
+  const etiquetaComision =
+    TIPOS_COMISION.find((t) => t.value === cobradorTyped.tipo_comision)?.label ?? cobradorTyped.tipo_comision;
 
   return (
     <div className="space-y-6">
@@ -160,6 +166,12 @@ export default async function DetalleCobradorPage({
                 Desde {formatoFecha(cobradorTyped.fecha_ingreso)}
               </span>
             )}
+            <span className="inline-flex items-center gap-1 text-accent-text">
+              Comisión: {cobradorTyped.porcentaje_comision}% {etiquetaComision.toLowerCase()}
+              {comisionEstimada !== null && (
+                <span className="text-ink-muted">({currency(comisionEstimada)} acumulado)</span>
+              )}
+            </span>
           </div>
         </div>
         <EstadoCobradorButton
@@ -198,6 +210,8 @@ export default async function DetalleCobradorPage({
           nombreCompleto={nombreCobrador}
           telefono={cobradorTyped.usuarios?.telefono ?? null}
           zona={cobradorTyped.zona}
+          tipoComision={cobradorTyped.tipo_comision}
+          porcentajeComision={cobradorTyped.porcentaje_comision}
         />
         <RestablecerPasswordForm cobradorId={cobradorTyped.id} usuarioId={cobradorTyped.usuario_id} />
       </div>

@@ -178,7 +178,12 @@ export async function generarPagarePDF(datos: DatosPagare): Promise<Uint8Array> 
     pagina.drawText(valor, { x: x + 10, y: yTope - 31, size: 10.5, font: fontRegular, color: NEGRO });
   }
 
-  /** Dibuja una firma (imagen PNG) centrada dentro de una caja, sin deformarla. */
+  /**
+   * Dibuja una firma (imagen PNG) centrada dentro de una caja, sin
+   * deformarla. Si todavía no hay firma digital, deja un aviso "NO HAY
+   * FIRMA" centrado en la caja — así, al imprimir el pagaré en papel, queda
+   * claro que ahí debe firmar el cliente a mano.
+   */
   async function dibujarFirmaEnCaja(
     dataUrl: string | null | undefined,
     x: number,
@@ -186,7 +191,18 @@ export async function generarPagarePDF(datos: DatosPagare): Promise<Uint8Array> 
     ancho: number,
     alto: number
   ) {
-    if (!dataUrl?.startsWith("data:image/png;base64,")) return;
+    if (!dataUrl?.startsWith("data:image/png;base64,")) {
+      const aviso = "NO HAY FIRMA";
+      const tamano = 9;
+      pagina.drawText(aviso, {
+        x: x + (ancho - anchoDeTexto(aviso, tamano, fontCursiva)) / 2,
+        y: yTope - alto / 2 - tamano / 2,
+        size: tamano,
+        font: fontCursiva,
+        color: GRIS,
+      });
+      return;
+    }
     try {
       const base64 = dataUrl.split(",")[1] ?? "";
       const imagenFirma = await pdf.embedPng(Buffer.from(base64, "base64"));

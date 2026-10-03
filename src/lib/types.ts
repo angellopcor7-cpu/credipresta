@@ -34,12 +34,22 @@ export type DocumentoCliente = {
   created_at: string;
 };
 
+/** "prestado": gana % de lo que presta. "recolectado": gana % de lo que cobra/recolecta. */
+export type TipoComision = "prestado" | "recolectado";
+
+export const TIPOS_COMISION: { value: TipoComision; label: string }[] = [
+  { value: "recolectado", label: "% de lo recolectado" },
+  { value: "prestado", label: "% de lo prestado" },
+];
+
 export type Cobrador = {
   id: string;
   usuario_id: string;
   zona: string | null;
   fecha_ingreso: string | null;
   activo: boolean;
+  tipo_comision: TipoComision;
+  porcentaje_comision: number;
 };
 
 export type CobradorConUsuario = Cobrador & {
@@ -73,7 +83,10 @@ export type Prestamo = {
   porcentaje_interes: number;
   monto_interes: number;
   monto_total: number;
+  /** Saldo de PRINCIPAL + INTERÉS nada más. La mora se trackea aparte, ver mora_acumulada. */
   saldo_actual: number;
+  /** Mora generada y todavía sin pagar/condonar — ya NO está mezclada con saldo_actual. */
+  mora_acumulada: number;
   plazo_dias: number;
   monto_cuota_sugerida: number;
   fecha_inicio: string;

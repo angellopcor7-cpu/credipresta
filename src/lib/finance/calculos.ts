@@ -101,6 +101,26 @@ export function calcularSaldoConMora(saldoActual: number, montoMora: number): nu
   return redondear(saldoActual + montoMora);
 }
 
+/**
+ * Reparte un pago entre la mora acumulada y el saldo de principal+interés:
+ * primero abona a la mora (hasta dejarla en cero), y lo que sobra va al
+ * saldo. Así un cliente siempre "limpia" su mora antes que el préstamo en
+ * sí — es la misma regla que se usó para separar los dos montos en los
+ * préstamos que ya existían (ver migración de mora_acumulada).
+ */
+export function calcularAsignacionPago(
+  saldoActual: number,
+  moraAcumulada: number,
+  montoPago: number
+): { saldoNuevo: number; moraNueva: number } {
+  const aMora = Math.min(montoPago, moraAcumulada);
+  const aSaldo = Math.min(redondear(montoPago - aMora), saldoActual);
+  return {
+    saldoNuevo: Math.max(0, redondear(saldoActual - aSaldo)),
+    moraNueva: Math.max(0, redondear(moraAcumulada - aMora)),
+  };
+}
+
 export type EstadoCuota = "pendiente" | "pagado" | "parcial" | "no_aplica";
 
 export type CuotaCalendario = {

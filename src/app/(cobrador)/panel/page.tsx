@@ -89,6 +89,7 @@ export default async function PanelCobradorPage({
     const prestamosDelCliente = prestamos.filter((p) => p.cliente_id === cliente.id);
     const total = prestamosDelCliente.reduce((suma, p) => suma + Number(p.monto_total), 0);
     const saldo = prestamosDelCliente.reduce((suma, p) => suma + Number(p.saldo_actual), 0);
+    const mora = prestamosDelCliente.reduce((suma, p) => suma + Number(p.mora_acumulada), 0);
     const abonado = total - saldo;
     const progreso = total > 0 ? Math.min(100, Math.round((abonado / total) * 100)) : 0;
 
@@ -104,7 +105,7 @@ export default async function PanelCobradorPage({
     // Prioridad para ordenar: mora primero (urge cobrarles), luego pendientes de aprobación, luego el resto.
     const prioridad = enMora ? 0 : cliente.estado === "pendiente_aprobacion" ? 1 : 2;
 
-    return { cliente, total, abonado, saldo, progreso, prestamoActivo, estadoTexto, enMora, prioridad };
+    return { cliente, total, abonado, saldo, mora, progreso, prestamoActivo, estadoTexto, enMora, prioridad };
   });
 
   filas.sort((a, b) => a.prioridad - b.prioridad);
@@ -112,6 +113,7 @@ export default async function PanelCobradorPage({
   const totalCartera = filas.reduce((suma, f) => suma + f.total, 0);
   const abonadoCartera = filas.reduce((suma, f) => suma + f.abonado, 0);
   const saldoCartera = filas.reduce((suma, f) => suma + f.saldo, 0);
+  const moraCartera = filas.reduce((suma, f) => suma + f.mora, 0);
   const clientesEnMora = filas.filter((f) => f.enMora).length;
 
   return (
@@ -148,10 +150,17 @@ export default async function PanelCobradorPage({
         </p>
       )}
 
-      <div className="grid sm:grid-cols-3 gap-4">
+      <div className="grid sm:grid-cols-4 gap-4">
         <ResumenCartera icon={Wallet} label="Total con interés" value={currency(totalCartera)} tone="amber" />
         <ResumenCartera icon={TrendingUp} label="Abonado" value={currency(abonadoCartera)} tone="neutral" />
         <ResumenCartera icon={PiggyBank} label="Saldo pendiente" value={currency(saldoCartera)} tone="amber" destacado />
+        <ResumenCartera
+          icon={CircleAlert}
+          label="Mora acumulada"
+          value={currency(moraCartera)}
+          tone={moraCartera > 0 ? "red" : "neutral"}
+          destacado={moraCartera > 0}
+        />
       </div>
 
       {clientes.length === 0 ? (
@@ -169,7 +178,7 @@ export default async function PanelCobradorPage({
           <div className="flex justify-end">
             <AbrirTodoButton />
           </div>
-          {filas.map(({ cliente, total, abonado, saldo, progreso, prestamoActivo, estadoTexto, enMora }) => (
+          {filas.map(({ cliente, total, abonado, saldo, mora, progreso, prestamoActivo, estadoTexto, enMora }) => (
             <div
               key={cliente.id}
               className={`group bg-surface border rounded-xl p-4 flex flex-wrap items-center gap-4 border-l-4 transition-colors hover:bg-surface-2 ${
@@ -252,6 +261,12 @@ export default async function PanelCobradorPage({
                       <p className="text-ink-muted text-xs">Saldo</p>
                       <p className="font-semibold">{currency(saldo)}</p>
                     </div>
+                    {mora > 0 && (
+                      <div>
+                        <p className="text-ink-muted text-xs">Mora</p>
+                        <p className="font-semibold text-danger-text">{currency(mora)}</p>
+                      </div>
+                    )}
                   </div>
                   <details className="cliente-details group ml-auto w-full sm:w-auto">
                     <summary className="inline-flex items-center gap-1 text-xs text-accent-text cursor-pointer select-none list-none [&::-webkit-details-marker]:hidden">
@@ -306,14 +321,20 @@ function ResumenCartera({
   icon: typeof Wallet;
   label: string;
   value: string;
-  tone: "amber" | "neutral";
+  tone: "amber" | "neutral" | "red";
   destacado?: boolean;
 }) {
-  const toneClasses = tone === "amber" ? "bg-amber-500/10 text-accent-text" : "bg-surface-2 text-ink-secondary";
+  const toneClasses =
+    tone === "amber"
+      ? "bg-amber-500/10 text-accent-text"
+      : tone === "red"
+        ? "bg-danger-chip-bg text-danger-text"
+        : "bg-surface-2 text-ink-secondary";
+  const colorValor = tone === "red" ? "text-danger-text" : "text-accent-text";
   return (
     <div
       className={`bg-surface border rounded-xl p-4 flex items-center gap-3 ${
-        destacado ? "border-accent-chip-border" : "border-border"
+        destacado ? (tone === "red" ? "border-danger-chip-border" : "border-accent-chip-border") : "border-border"
       }`}
     >
       <div className={`shrink-0 rounded-lg p-2.5 ${toneClasses}`}>
@@ -321,7 +342,7 @@ function ResumenCartera({
       </div>
       <div>
         <p className="text-ink-muted text-xs">{label}</p>
-        <p className={`text-xl font-bold ${destacado ? "text-accent-text" : ""}`}>{value}</p>
+        <p className={`text-xl font-bold ${destacado ? colorValor : ""}`}>{value}</p>
       </div>
     </div>
   );

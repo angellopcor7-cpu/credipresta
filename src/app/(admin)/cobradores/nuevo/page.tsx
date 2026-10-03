@@ -1,4 +1,5 @@
 import { crearCobrador } from "../actions";
+import { TIPOS_COMISION } from "@/lib/types";
 
 export default async function NuevoCobradorPage({
   searchParams,
@@ -19,6 +20,27 @@ export default async function NuevoCobradorPage({
         <Field label="Contraseña temporal" name="password" type="password" required hint="Mínimo 6 caracteres — el cobrador la puede cambiar después." />
         <Field label="Teléfono" name="telefono" />
         <Field label="Zona" name="zona" />
+
+        <div className="grid grid-cols-2 gap-3">
+          <div className="space-y-1">
+            <label className="text-sm text-ink-secondary" htmlFor="tipo_comision">
+              Comisión sobre
+            </label>
+            <select
+              id="tipo_comision"
+              name="tipo_comision"
+              defaultValue="recolectado"
+              className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+            >
+              {TIPOS_COMISION.map((t) => (
+                <option key={t.value} value={t.value}>
+                  {t.label}
+                </option>
+              ))}
+            </select>
+          </div>
+          <Field label="Porcentaje de comisión" name="porcentaje_comision" type="number" hint="Ej. 5 = 5%" />
+        </div>
 
         {error && (
           <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">

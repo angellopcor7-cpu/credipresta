@@ -7,6 +7,7 @@ import { InfoDiasCobro } from "@/components/InfoDiasCobro";
 import type { CalendarioPago, Mora, Pago, Prestamo } from "@/lib/types";
 import { registrarPago } from "../actions";
 import { aplicarMoraDesdeFormulario } from "../moras-actions";
+import { AjusteMoraForm } from "./AjusteMoraForm";
 
 type PrestamoConClienteDetalle = Prestamo & {
   clientes: { nombre_completo: string; telefono: string | null } | null;
@@ -77,12 +78,24 @@ export default async function DetallePrestamoPage({
         </div>
       </div>
 
-      <div className="grid sm:grid-cols-4 gap-4">
+      <div className="grid sm:grid-cols-5 gap-4">
         <Resumen label="Prestado" value={currency(Number(p.monto_prestado))} />
         <Resumen label="Interés" value={`${p.porcentaje_interes}%`} />
         <Resumen label="Total a pagar" value={currency(Number(p.monto_total))} />
         <Resumen label="Saldo actual" value={currency(Number(p.saldo_actual))} destacado />
+        <Resumen
+          label="Mora acumulada"
+          value={currency(Number(p.mora_acumulada))}
+          destacado={Number(p.mora_acumulada) > 0}
+          peligro={Number(p.mora_acumulada) > 0}
+        />
       </div>
+      <p className="text-sm text-ink-muted -mt-2">
+        Falta por cobrar en total (saldo + mora):{" "}
+        <span className="font-semibold text-ink">
+          {currency(Number(p.saldo_actual) + Number(p.mora_acumulada))}
+        </span>
+      </p>
 
       <div className="flex flex-wrap items-center gap-3 text-sm text-ink-muted">
         <span className="border border-border-strong rounded-full px-2 py-1">{estadoLabel[p.estado]}</span>
@@ -111,12 +124,16 @@ export default async function DetallePrestamoPage({
 
       {puedeRecibirPagos && (
         <div className="space-y-2">
-          <form action={aplicarMoraDesdeFormulario}>
-            <input type="hidden" name="prestamo_id" value={p.id} />
-            <button className="text-sm bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold rounded-md px-4 py-2">
-              Aplicar mora de hoy
-            </button>
-          </form>
+          <div className="flex flex-wrap gap-2">
+            <form action={aplicarMoraDesdeFormulario}>
+              <input type="hidden" name="prestamo_id" value={p.id} />
+              <button className="text-sm bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold rounded-md px-4 py-2">
+                Aplicar mora de hoy
+              </button>
+            </form>
+
+            <AjusteMoraForm prestamoId={p.id} moraActual={Number(p.mora_acumulada)} />
+          </div>
 
           <details className="text-sm bg-surface border border-border rounded-xl px-4 py-3 max-w-2xl">
             <summary className="cursor-pointer text-ink-secondary font-medium">
@@ -159,6 +176,11 @@ export default async function DetallePrestamoPage({
         >
           <input type="hidden" name="prestamo_id" value={p.id} />
           <h2 className="font-semibold">Registrar pago / abono</h2>
+          {Number(p.mora_acumulada) > 0 && (
+            <p className="text-xs text-ink-muted -mt-1">
+              El pago abona primero a la mora ({currency(Number(p.mora_acumulada))}) y lo que sobra al saldo.
+            </p>
+          )}
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1">
               <label className="text-sm text-ink-secondary" htmlFor="monto">
@@ -170,7 +192,7 @@ export default async function DetallePrestamoPage({
                 type="number"
                 min="0.01"
                 step="0.01"
-                max={p.saldo_actual}
+                max={Number(p.saldo_actual) + Number(p.mora_acumulada)}
                 required
                 className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
               />
@@ -314,11 +336,27 @@ export default async function DetallePrestamoPage({
   );
 }
 
-function Resumen({ label, value, destacado = false }: { label: string; value: string; destacado?: boolean }) {
+function Resumen({
+  label,
+  value,
+  destacado = false,
+  peligro = false,
+}: {
+  label: string;
+  value: string;
+  destacado?: boolean;
+  peligro?: boolean;
+}) {
   return (
     <div className="bg-surface border border-border rounded-xl p-4">
       <p className="text-ink-muted text-xs">{label}</p>
-      <p className={`text-xl font-semibold mt-1 ${destacado ? "text-accent-text" : ""}`}>{value}</p>
+      <p
+        className={`text-xl font-semibold mt-1 ${
+          peligro ? "text-danger-text" : destacado ? "text-accent-text" : ""
+        }`}
+      >
+        {value}
+      </p>
     </div>
   );
 }

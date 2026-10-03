@@ -9,6 +9,7 @@ import {
   esPlanValido,
   calcularMontoMora,
   calcularSaldoConMora,
+  calcularAsignacionPago,
   tieneCuotaVencidaSinPagar,
   esDiaDeCobro,
   generarCalendarioPagos,
@@ -63,6 +64,33 @@ describe("validación de pagos", () => {
   it("rechaza montos en cero o negativos", () => {
     expect(validarMontoPago(0, 300).valido).toBe(false);
     expect(validarMontoPago(-10, 300).valido).toBe(false);
+  });
+});
+
+describe("asignación de pago (mora primero, luego saldo)", () => {
+  it("un pago menor a la mora acumulada solo abona a la mora", () => {
+    const r = calcularAsignacionPago(1000, 300, 150);
+    expect(r).toEqual({ saldoNuevo: 1000, moraNueva: 150 });
+  });
+
+  it("un pago que cubre exacto la mora la deja en cero sin tocar el saldo", () => {
+    const r = calcularAsignacionPago(1000, 300, 300);
+    expect(r).toEqual({ saldoNuevo: 1000, moraNueva: 0 });
+  });
+
+  it("un pago mayor a la mora limpia la mora y el resto abona al saldo", () => {
+    const r = calcularAsignacionPago(1000, 300, 450);
+    expect(r).toEqual({ saldoNuevo: 850, moraNueva: 0 });
+  });
+
+  it("sin mora acumulada, todo el pago va al saldo (comportamiento de siempre)", () => {
+    const r = calcularAsignacionPago(1000, 0, 400);
+    expect(r).toEqual({ saldoNuevo: 600, moraNueva: 0 });
+  });
+
+  it("nunca deja el saldo ni la mora negativos, aunque se sobrepague", () => {
+    const r = calcularAsignacionPago(100, 50, 1000);
+    expect(r).toEqual({ saldoNuevo: 0, moraNueva: 0 });
   });
 });
 
