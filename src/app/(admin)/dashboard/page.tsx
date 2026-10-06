@@ -15,7 +15,6 @@ import {
   FileText,
   UserRoundCog,
   Scissors,
-  Repeat,
   type LucideIcon,
 } from "lucide-react";
 import type { PuntoOtorgadoCobrado, PuntoMora } from "./AnalisisCharts";
@@ -134,7 +133,6 @@ export default async function DashboardPage() {
     { label: "Cobradores", href: "/cobradores", icon: Users },
     { label: "Préstamos", href: "/prestamos", icon: Landmark },
     { label: "Hacer corte", href: "/corte", icon: Scissors },
-    { label: "Vista Cobrador", href: "/panel", icon: Repeat },
   ];
 
   // --- Análisis: tendencias por periodo (semana = días, mes = semanas, 6 meses = meses) ---
