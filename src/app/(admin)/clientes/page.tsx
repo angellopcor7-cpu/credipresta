@@ -22,9 +22,17 @@ export default async function ClientesPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Clientes</h1>
-        <p className="text-ink-muted text-sm">Los da de alta el cobrador desde su panel.</p>
+      <div className="flex items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Clientes</h1>
+          <p className="text-ink-muted text-sm">Los da de alta el cobrador desde su panel.</p>
+        </div>
+        <Link
+          href="/clientes/existente"
+          className="shrink-0 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-4 py-2 rounded-md"
+        >
+          + Cliente existente
+        </Link>
       </div>
 
       {clientes.length === 0 ? (
