@@ -17,11 +17,6 @@ export default async function AdminLayout({
   children: React.ReactNode;
 }) {
   const sesion = await exigirAdministrador();
-  const supabase = await createClient();
-  const { count: solicitudesPendientes } = await supabase
-    .from("solicitudes_prestamo")
-    .select("id", { count: "exact", head: true })
-    .eq("estado", "pendiente");
 
   return (
     <div className="min-h-screen bg-page text-ink">
@@ -30,11 +25,7 @@ export default async function AdminLayout({
           <Link href="/dashboard" className="font-bold text-lg">
             Credi<span className="text-accent-text">Presta</span>
           </Link>
-          <AdminNav
-            solicitudesPendientes={solicitudesPendientes ?? 0}
-            nombreUsuario={sesion.nombreCompleto}
-            signOutAction={signOut}
-          />
+          <AdminNav nombreUsuario={sesion.nombreCompleto} signOutAction={signOut} />
         </div>
       </header>
       <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>

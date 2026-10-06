@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { formatoFechaCorta } from "@/lib/format";
-import { aplicarPagoDelDia } from "../../../actions";
+import { aplicarPagoDelDia, marcarIncumplidoDelDia } from "../../../actions";
 import { EliminarClienteButton } from "../../EliminarClienteButton";
 import { EditarClienteForm } from "./EditarClienteForm";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
@@ -308,6 +308,14 @@ export default async function DetalleClientePage({
                   </button>
                 </form>
               )}
+
+              <form action={marcarIncumplidoDelDia}>
+                <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
+                <button className="inline-flex items-center gap-1.5 text-sm bg-surface-2 hover:bg-surface-3 border border-border-strong text-ink font-medium rounded-md px-4 py-2.5">
+                  <CircleAlert className="h-4 w-4" />
+                  No pagó hoy (aplicar mora)
+                </button>
+              </form>
             </div>
           )}
         </>

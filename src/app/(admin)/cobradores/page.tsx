@@ -6,12 +6,13 @@ import { ChevronRight } from "lucide-react";
 export default async function CobradoresPage() {
   const supabase = await createClient();
 
-  const [{ data }, { data: clientesActivos }] = await Promise.all([
+  const [{ data }, { data: clientesActivos }, { data: rutasData }] = await Promise.all([
     supabase
       .from("cobradores")
       .select("*, usuarios(nombre_completo, telefono)")
       .order("fecha_ingreso", { ascending: false }),
     supabase.from("clientes").select("cobrador_id").eq("estado", "activo"),
+    supabase.from("rutas").select("nombre, cobrador_id").eq("activa", true),
   ]);
 
   const cobradores = (data ?? []) as unknown as CobradorConUsuario[];
@@ -20,6 +21,14 @@ export default async function CobradoresPage() {
   for (const c of clientesActivos ?? []) {
     if (!c.cobrador_id) continue;
     conteoClientes.set(c.cobrador_id, (conteoClientes.get(c.cobrador_id) ?? 0) + 1);
+  }
+
+  const rutasPorCobrador = new Map<string, string[]>();
+  for (const r of rutasData ?? []) {
+    if (!r.cobrador_id) continue;
+    const lista = rutasPorCobrador.get(r.cobrador_id) ?? [];
+    lista.push(r.nombre);
+    rutasPorCobrador.set(r.cobrador_id, lista);
   }
 
   return (
@@ -43,7 +52,7 @@ export default async function CobradoresPage() {
               <tr>
                 <th className="px-4 py-3">Nombre</th>
                 <th className="px-4 py-3">Teléfono</th>
-                <th className="px-4 py-3">Zona</th>
+                <th className="px-4 py-3">Ruta</th>
                 <th className="px-4 py-3">Clientes activos</th>
                 <th className="px-4 py-3">Estado</th>
                 <th className="px-4 py-3" />
@@ -58,7 +67,9 @@ export default async function CobradoresPage() {
                     </Link>
                   </td>
                   <td className="px-4 py-3 text-ink-secondary">{c.usuarios?.telefono ?? "—"}</td>
-                  <td className="px-4 py-3 text-ink-secondary">{c.zona ?? "—"}</td>
+                  <td className="px-4 py-3 text-ink-secondary">
+                    {(rutasPorCobrador.get(c.id) ?? []).join(", ") || "Sin ruta asignada"}
+                  </td>
                   <td className="px-4 py-3 text-ink-secondary">{conteoClientes.get(c.id) ?? 0}</td>
                   <td className="px-4 py-3">
                     <span

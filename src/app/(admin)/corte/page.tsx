@@ -75,7 +75,7 @@ export default async function CortePage({
     usuarios: { nombre_completo: string } | null;
   } | null;
 
-  const stats: { label: string; value: string; icon: LucideIcon; tono: "neutral" | "amber" | "red" }[] = [
+  const stats: { label: string; value: string; icon: LucideIcon; tono: "neutral" | "amber" | "red"; href?: string }[] = [
     { label: "Clientes activos", value: String(totales.clientesActivos), icon: Users, tono: "neutral" },
     { label: "Prestado esta semana", value: currency(totales.prestadoSemana), icon: Landmark, tono: "neutral" },
     { label: "Recolectado esta semana", value: currency(totales.cobradoSemana), icon: TrendingUp, tono: "neutral" },
@@ -84,14 +84,9 @@ export default async function CortePage({
       value: currency(totales.moraGeneradaSemana),
       icon: CircleAlert,
       tono: totales.moraGeneradaSemana > 0 ? "red" : "neutral",
+      href: `/corte/mora?semana=${claveLunes}`,
     },
     { label: "Falta por cobrar (saldo + mora)", value: currency(totales.faltaPorCobrar), icon: Wallet, tono: "amber" },
-    {
-      label: "Mora acumulada total",
-      value: currency(totales.moraAcumulada),
-      icon: CircleAlert,
-      tono: totales.moraAcumulada > 0 ? "red" : "neutral",
-    },
     { label: "Comisiones de la semana", value: currency(totales.comision), icon: Banknote, tono: "amber" },
   ];
 
@@ -176,15 +171,30 @@ export default async function CortePage({
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
-        {stats.map((s) => (
-          <div key={s.label} className={`bg-surface border rounded-xl p-4 ${bordeTono[s.tono]}`}>
-            <div className="flex items-center gap-1.5 text-ink-muted">
-              <s.icon className={`h-3.5 w-3.5 ${colorIcono[s.tono]}`} />
-              <p className="text-xs">{s.label}</p>
+        {stats.map((s) => {
+          const contenido = (
+            <>
+              <div className="flex items-center gap-1.5 text-ink-muted">
+                <s.icon className={`h-3.5 w-3.5 ${colorIcono[s.tono]}`} />
+                <p className="text-xs">{s.label}</p>
+              </div>
+              <p className={`text-xl font-semibold mt-2 ${colorValor[s.tono]}`}>{s.value}</p>
+              {s.href && <p className="text-[11px] text-accent-text mt-1">Ver clientes →</p>}
+            </>
+          );
+          const className = `bg-surface border rounded-xl p-4 ${bordeTono[s.tono]} ${
+            s.href ? "hover:border-amber-500/50 hover:bg-surface-2 transition-colors" : ""
+          }`;
+          return s.href ? (
+            <Link key={s.label} href={s.href} className={className}>
+              {contenido}
+            </Link>
+          ) : (
+            <div key={s.label} className={className}>
+              {contenido}
             </div>
-            <p className={`text-xl font-semibold mt-2 ${colorValor[s.tono]}`}>{s.value}</p>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {filas.length === 0 ? (

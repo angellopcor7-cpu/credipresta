@@ -10,11 +10,12 @@ import {
   CircleAlert,
   Phone,
   Mail,
-  MapPin,
+  Route,
   CalendarDays,
 } from "lucide-react";
 import { EditarCobradorForm } from "./EditarCobradorForm";
 import { RestablecerPasswordForm } from "./RestablecerPasswordForm";
+import { AgregarRutaForm } from "./AgregarRutaForm";
 import { EstadoCobradorButton } from "./EstadoCobradorButton";
 import { ReasignarTodosForm } from "./ReasignarTodosForm";
 import { reasignarCliente } from "../actions";
@@ -83,7 +84,7 @@ export default async function DetalleCobradorPage({
 
   const [{ data: clientes }, { data: rutas }, { data: prestamos }, { data: otrosCobradoresData }] = await Promise.all([
     supabase.from("clientes").select("id, nombre_completo, estado").eq("cobrador_id", id).order("nombre_completo"),
-    supabase.from("rutas").select("id, nombre, zona, activa").eq("cobrador_id", id).order("nombre"),
+    supabase.from("rutas").select("id, nombre, activa").eq("cobrador_id", id).order("nombre"),
     supabase.from("prestamos").select("estado, saldo_actual, mora_acumulada, monto_prestado").eq("cobrador_id", id),
     supabase
       .from("cobradores")
@@ -154,10 +155,10 @@ export default async function DetalleCobradorPage({
                 {email}
               </span>
             )}
-            {cobradorTyped.zona && (
+            {rutas && rutas.length > 0 && (
               <span className="inline-flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                {cobradorTyped.zona}
+                <Route className="h-3.5 w-3.5" />
+                {rutas.map((r) => r.nombre).join(", ")}
               </span>
             )}
             {cobradorTyped.fecha_ingreso && (
@@ -209,22 +210,23 @@ export default async function DetalleCobradorPage({
           usuarioId={cobradorTyped.usuario_id}
           nombreCompleto={nombreCobrador}
           telefono={cobradorTyped.usuarios?.telefono ?? null}
-          zona={cobradorTyped.zona}
           tipoComision={cobradorTyped.tipo_comision}
           porcentajeComision={cobradorTyped.porcentaje_comision}
         />
         <RestablecerPasswordForm cobradorId={cobradorTyped.id} usuarioId={cobradorTyped.usuario_id} />
       </div>
 
-      <div>
-        <h2 className="text-sm font-semibold text-ink-secondary mb-3">Rutas asignadas</h2>
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-ink-secondary">Rutas asignadas</h2>
+          <AgregarRutaForm cobradorId={cobradorTyped.id} />
+        </div>
         {rutas && rutas.length > 0 ? (
           <div className="border border-border rounded-xl overflow-hidden">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
                   <th className="px-4 py-3">Nombre</th>
-                  <th className="px-4 py-3">Zona</th>
                   <th className="px-4 py-3">Estado</th>
                 </tr>
               </thead>
@@ -232,7 +234,6 @@ export default async function DetalleCobradorPage({
                 {rutas.map((r) => (
                   <tr key={r.id} className="border-t border-border">
                     <td className="px-4 py-3">{r.nombre}</td>
-                    <td className="px-4 py-3 text-ink-secondary">{r.zona ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-secondary">{r.activa ? "Activa" : "Inactiva"}</td>
                   </tr>
                 ))}
@@ -240,12 +241,7 @@ export default async function DetalleCobradorPage({
             </table>
           </div>
         ) : (
-          <p className="text-ink-muted text-sm">
-            Sin rutas asignadas todavía.{" "}
-            <Link href="/rutas/nueva" className="text-accent-text hover:underline">
-              Crear una
-            </Link>
-          </p>
+          <p className="text-ink-muted text-sm">Sin rutas asignadas todavía.</p>
         )}
       </div>
 

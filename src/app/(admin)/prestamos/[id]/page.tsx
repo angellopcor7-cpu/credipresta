@@ -1,13 +1,21 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import { FileText } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { formatoFechaCorta } from "@/lib/format";
 import { obtenerConfiguraciones } from "@/lib/config";
 import { InfoDiasCobro } from "@/components/InfoDiasCobro";
-import type { CalendarioPago, Mora, Pago, Prestamo } from "@/lib/types";
-import { registrarPago } from "../actions";
-import { aplicarMoraDesdeFormulario } from "../moras-actions";
+import type { CalendarioPago, Mora, Pago, Prestamo, TipoDocumento } from "@/lib/types";
 import { AjusteMoraForm } from "./AjusteMoraForm";
+
+const ETIQUETAS_DOCUMENTO: Partial<Record<TipoDocumento, string>> = {
+  ine_frente: "INE frente",
+  ine_reverso: "INE reverso",
+  foto_cliente: "Foto del cliente",
+  comprobante_domicilio: "Comprobante de domicilio",
+};
+
+const ORDEN_DOCUMENTOS: TipoDocumento[] = ["ine_frente", "ine_reverso", "foto_cliente", "comprobante_domicilio"];
 
 type PrestamoConClienteDetalle = Prestamo & {
   clientes: { nombre_completo: string; telefono: string | null } | null;
@@ -55,6 +63,28 @@ export default async function DetallePrestamoPage({
   const listaCalendario = (calendario ?? []) as CalendarioPago[];
   const listaMoras = (moras ?? []) as Mora[];
   const puedeRecibirPagos = p.estado === "activo" || p.estado === "en_mora";
+
+  // Documentos del cliente (INE, foto, domicilio) — de solo lectura aquí; se
+  // suben desde el alta que hace el cobrador en su panel.
+  const { data: documentosData } = await supabase
+    .from("documentos_clientes")
+    .select("tipo_documento, storage_path")
+    .eq("cliente_id", p.cliente_id);
+
+  const documentosPorTipo = (documentosData ?? []) as { tipo_documento: TipoDocumento; storage_path: string }[];
+  let documentosConUrl: { tipo: TipoDocumento; url: string }[] = [];
+  if (documentosPorTipo.length > 0) {
+    const { data: firmados } = await supabase.storage
+      .from("documentos-clientes")
+      .createSignedUrls(
+        documentosPorTipo.map((d) => d.storage_path),
+        3600
+      );
+    documentosConUrl = documentosPorTipo
+      .map((d, i) => ({ tipo: d.tipo_documento, url: firmados?.[i]?.signedUrl ?? "" }))
+      .filter((d) => d.url && ORDEN_DOCUMENTOS.includes(d.tipo))
+      .sort((a, b) => ORDEN_DOCUMENTOS.indexOf(a.tipo) - ORDEN_DOCUMENTOS.indexOf(b.tipo));
+  }
 
   return (
     <div className="space-y-6">
@@ -116,129 +146,55 @@ export default async function DetallePrestamoPage({
         </div>
       )}
 
+      {error && (
+        <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">
+          {error}
+        </p>
+      )}
       {exito && (
         <p className="text-sm text-accent-text bg-accent-chip-bg/50 border border-accent-chip-border rounded-md px-3 py-2">
           {exito}
         </p>
       )}
 
-      {puedeRecibirPagos && (
-        <div className="space-y-2">
-          <div className="flex flex-wrap gap-2">
-            <form action={aplicarMoraDesdeFormulario}>
-              <input type="hidden" name="prestamo_id" value={p.id} />
-              <button className="text-sm bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold rounded-md px-4 py-2">
-                Aplicar mora de hoy
-              </button>
-            </form>
+      <p className="text-xs text-ink-muted bg-surface border border-border rounded-md px-3 py-2 max-w-2xl">
+        El cobro de pagos y la mora diaria se manejan desde el panel del cobrador. Aquí solo se ven los datos del
+        préstamo{Number(p.mora_acumulada) > 0 ? " y se puede perdonar o reducir la mora si Empresa lo negoció con el cliente." : "."}
+      </p>
 
-            <AjusteMoraForm prestamoId={p.id} moraActual={Number(p.mora_acumulada)} />
-          </div>
-
-          <details className="text-sm bg-surface border border-border rounded-xl px-4 py-3 max-w-2xl">
-            <summary className="cursor-pointer text-ink-secondary font-medium">
-              ¿Cómo funciona la mora diaria?
-            </summary>
-            <div className="mt-3 space-y-2 text-ink-muted">
-              <p>Se aplica una vez por cada día de atraso:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>Préstamos con saldo menor a $5,000: mora de $50 diarios.</li>
-                <li>Préstamos con saldo de $5,000 o más: mora de $100 diarios.</li>
-              </ul>
-              <p>
-                Si el cliente tiene un día de atraso, al día siguiente debe pagar su abono correspondiente más la
-                mora acumulada.
-              </p>
-              <div className="grid sm:grid-cols-2 gap-3 pt-1">
-                <div className="bg-page border border-border rounded-lg p-3">
-                  <p className="text-ink-secondary font-medium mb-1">Ejemplo con mora de $50</p>
-                  <p>Saldo pendiente: $4,000</p>
-                  <p>Día 1 de atraso → mora $50 → nuevo saldo $4,050</p>
-                  <p>Día 2 de atraso → mora acumulada $100 → nuevo saldo $4,100</p>
-                </div>
-                <div className="bg-page border border-border rounded-lg p-3">
-                  <p className="text-ink-secondary font-medium mb-1">Ejemplo con mora de $100</p>
-                  <p>Saldo pendiente: $6,000</p>
-                  <p>Día 1 de atraso → mora $100 → nuevo saldo $6,100</p>
-                  <p>3 días de atraso → mora acumulada $300 → nuevo saldo $6,300</p>
-                </div>
-              </div>
-              <p className="pt-1">No se aplica más de una mora por préstamo el mismo día.</p>
-            </div>
-          </details>
-        </div>
+      {puedeRecibirPagos && Number(p.mora_acumulada) > 0 && (
+        <AjusteMoraForm prestamoId={p.id} moraActual={Number(p.mora_acumulada)} />
       )}
 
-      {puedeRecibirPagos ? (
-        <form
-          action={registrarPago}
-          className="space-y-3 bg-surface p-6 rounded-xl border border-border max-w-md"
-        >
-          <input type="hidden" name="prestamo_id" value={p.id} />
-          <h2 className="font-semibold">Registrar pago / abono</h2>
-          {Number(p.mora_acumulada) > 0 && (
-            <p className="text-xs text-ink-muted -mt-1">
-              El pago abona primero a la mora ({currency(Number(p.mora_acumulada))}) y lo que sobra al saldo.
-            </p>
-          )}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="space-y-1">
-              <label className="text-sm text-ink-secondary" htmlFor="monto">
-                Monto
-              </label>
-              <input
-                id="monto"
-                name="monto"
-                type="number"
-                min="0.01"
-                step="0.01"
-                max={Number(p.saldo_actual) + Number(p.mora_acumulada)}
-                required
-                className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-              />
-            </div>
-            <div className="space-y-1">
-              <label className="text-sm text-ink-secondary" htmlFor="tipo">
-                Tipo
-              </label>
-              <select
-                id="tipo"
-                name="tipo"
-                defaultValue="cuota_diaria"
-                className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+      <div>
+        <h2 className="font-semibold mb-2 flex items-center gap-1.5">
+          <FileText className="h-4 w-4 text-ink-muted" />
+          Documentos del cliente
+        </h2>
+        {documentosConUrl.length === 0 ? (
+          <p className="text-sm text-ink-muted">Sin documentos subidos.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 max-w-2xl">
+            {documentosConUrl.map((doc, i) => (
+              <a
+                key={i}
+                href={doc.url}
+                target="_blank"
+                rel="noreferrer"
+                className="block group"
               >
-                <option value="cuota_diaria">Cuota diaria</option>
-                <option value="abono_libre">Abono libre</option>
-              </select>
-            </div>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={doc.url}
+                  alt={ETIQUETAS_DOCUMENTO[doc.tipo] ?? doc.tipo}
+                  className="w-full h-28 object-cover rounded-lg border border-border group-hover:border-amber-500/60"
+                />
+                <p className="text-xs text-ink-muted mt-1 text-center">{ETIQUETAS_DOCUMENTO[doc.tipo] ?? doc.tipo}</p>
+              </a>
+            ))}
           </div>
-          <div className="space-y-1">
-            <label className="text-sm text-ink-secondary" htmlFor="metodo">
-              Método (opcional)
-            </label>
-            <input
-              id="metodo"
-              name="metodo"
-              placeholder="Efectivo, transferencia..."
-              className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-            />
-          </div>
-
-          {error && (
-            <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">
-              {error}
-            </p>
-          )}
-
-          <button className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold rounded-md py-2 text-sm">
-            Registrar
-          </button>
-        </form>
-      ) : (
-        <p className="text-sm text-ink-muted">
-          Este préstamo está {estadoLabel[p.estado].toLowerCase()} — no admite más pagos.
-        </p>
-      )}
+        )}
+      </div>
 
       <div className="grid sm:grid-cols-2 gap-6">
         <div>

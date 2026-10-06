@@ -13,9 +13,9 @@ import {
   Clock,
   ChevronRight,
   FileText,
-  Route,
   UserRoundCog,
   Scissors,
+  Repeat,
   type LucideIcon,
 } from "lucide-react";
 import type { PuntoOtorgadoCobrado, PuntoMora } from "./AnalisisCharts";
@@ -78,8 +78,6 @@ export default async function DashboardPage() {
     { data: actividadReciente },
     { data: todasLasMoras },
     { data: todosLosPagos },
-    { data: clientesActivosPorCobrador },
-    { data: cobradoresActivos },
   ] = await Promise.all([
     supabase.from("clientes").select("*", { count: "exact", head: true }).eq("estado", "activo"),
     supabase.from("cobradores").select("*", { count: "exact", head: true }).eq("activo", true),
@@ -94,8 +92,6 @@ export default async function DashboardPage() {
       .limit(8),
     supabase.from("moras").select("monto_mora, fecha_generada"),
     supabase.from("pagos").select("monto, fecha_pago"),
-    supabase.from("clientes").select("cobrador_id").eq("estado", "activo"),
-    supabase.from("cobradores").select("id, zona, usuarios(nombre_completo)").eq("activo", true),
   ]);
 
   const listaPrestamos = prestamos ?? [];
@@ -137,8 +133,8 @@ export default async function DashboardPage() {
     { label: "Clientes", href: "/clientes", icon: UserRound },
     { label: "Cobradores", href: "/cobradores", icon: Users },
     { label: "Préstamos", href: "/prestamos", icon: Landmark },
-    { label: "Rutas", href: "/rutas", icon: Route },
     { label: "Hacer corte", href: "/corte", icon: Scissors },
+    { label: "Vista Cobrador", href: "/panel", icon: Repeat },
   ];
 
   // --- Análisis: tendencias por periodo (semana = días, mes = semanas, 6 meses = meses) ---
@@ -178,29 +174,6 @@ export default async function DashboardPage() {
   const analisisSemana = construirAnalisis(ultimosDias(7), claveDia);
   const analisisMes = construirAnalisis(ultimasSemanas(5), claveSemana);
   const analisisSeisMeses = construirAnalisis(ultimosMeses(6), claveMes);
-
-  // --- Análisis: desempeño por cobrador ---
-  const filasCobrador = (cobradoresActivos ?? [])
-    .map((c) => {
-      const cobrador = c as unknown as { id: string; zona: string | null; usuarios: { nombre_completo: string } | null };
-      const clientesActivos = (clientesActivosPorCobrador ?? []).filter(
-        (cl) => cl.cobrador_id === cobrador.id
-      ).length;
-      const prestamosActivosCobrador = listaPrestamos.filter(
-        (p) => p.cobrador_id === cobrador.id && (p.estado === "activo" || p.estado === "en_mora")
-      );
-      const carteraCobrador = prestamosActivosCobrador.reduce((s, p) => s + Number(p.saldo_actual), 0);
-      const moraCobrador = prestamosActivosCobrador.reduce((s, p) => s + Number(p.mora_acumulada), 0);
-      return {
-        id: cobrador.id,
-        nombre: cobrador.usuarios?.nombre_completo ?? "—",
-        zona: cobrador.zona,
-        clientesActivos,
-        carteraActiva: carteraCobrador,
-        moraPendiente: moraCobrador,
-      };
-    })
-    .sort((a, b) => b.carteraActiva - a.carteraActiva);
 
   return (
     <div className="space-y-8">
@@ -264,38 +237,6 @@ export default async function DashboardPage() {
         mes={analisisMes}
         seisMeses={analisisSeisMeses}
       />
-
-      {filasCobrador.length > 0 && (
-        <div>
-          <h2 className="text-sm font-semibold text-ink-secondary mb-3">Desempeño por cobrador</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
-            <table className="w-full text-sm">
-              <thead className="bg-surface text-ink-muted text-left">
-                <tr>
-                  <th className="px-4 py-3">Cobrador</th>
-                  <th className="px-4 py-3">Zona</th>
-                  <th className="px-4 py-3">Clientes activos</th>
-                  <th className="px-4 py-3">Cartera activa</th>
-                  <th className="px-4 py-3">Mora pendiente</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filasCobrador.map((c) => (
-                  <tr key={c.id} className="border-t border-border">
-                    <td className="px-4 py-3 font-medium">{c.nombre}</td>
-                    <td className="px-4 py-3 text-ink-secondary">{c.zona ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-secondary">{c.clientesActivos}</td>
-                    <td className="px-4 py-3 text-ink-secondary">{currency(c.carteraActiva)}</td>
-                    <td className={`px-4 py-3 ${c.moraPendiente > 0 ? "text-danger-text" : "text-ink-secondary"}`}>
-                      {currency(c.moraPendiente)}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
 
       {actividadReciente && actividadReciente.length > 0 && (
         <div>

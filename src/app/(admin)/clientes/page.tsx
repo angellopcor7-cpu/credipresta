@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { Cliente } from "@/lib/types";
 
@@ -7,10 +8,17 @@ const estadoLabel: Record<string, string> = {
   inactivo: "Inactivo",
 };
 
+type ClienteConCobrador = Cliente & {
+  cobradores: { usuarios: { nombre_completo: string } | null } | null;
+};
+
 export default async function ClientesPage() {
   const supabase = await createClient();
-  const { data } = await supabase.from("clientes").select("*").order("created_at", { ascending: false });
-  const clientes = (data ?? []) as Cliente[];
+  const { data } = await supabase
+    .from("clientes")
+    .select("*, cobradores(usuarios(nombre_completo))")
+    .order("created_at", { ascending: false });
+  const clientes = (data ?? []) as unknown as ClienteConCobrador[];
 
   return (
     <div className="space-y-6">
@@ -30,17 +38,33 @@ export default async function ClientesPage() {
                 <th className="px-4 py-3">Teléfono</th>
                 <th className="px-4 py-3">Identificación</th>
                 <th className="px-4 py-3">Estado</th>
+                <th className="px-4 py-3">Cobrador</th>
               </tr>
             </thead>
             <tbody>
-              {clientes.map((c) => (
-                <tr key={c.id} className="border-t border-border">
-                  <td className="px-4 py-3">{c.nombre_completo}</td>
-                  <td className="px-4 py-3 text-ink-secondary">{c.telefono ?? "—"}</td>
-                  <td className="px-4 py-3 text-ink-secondary">{c.identificacion ?? "—"}</td>
-                  <td className="px-4 py-3 text-ink-secondary">{estadoLabel[c.estado]}</td>
-                </tr>
-              ))}
+              {clientes.map((c) => {
+                const nombreCobrador = c.cobradores?.usuarios?.nombre_completo;
+                return (
+                  <tr key={c.id} className="border-t border-border">
+                    <td className="px-4 py-3">{c.nombre_completo}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{c.telefono ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{c.identificacion ?? "—"}</td>
+                    <td className="px-4 py-3 text-ink-secondary">{estadoLabel[c.estado]}</td>
+                    <td className="px-4 py-3">
+                      {c.cobrador_id ? (
+                        <Link
+                          href={`/cobradores/${c.cobrador_id}`}
+                          className="inline-flex items-center text-xs bg-surface-2 hover:bg-surface-3 border border-border-strong text-ink-strong rounded-full px-3 py-1"
+                        >
+                          Cliente de {nombreCobrador ?? "—"}
+                        </Link>
+                      ) : (
+                        <span className="text-xs text-ink-muted">Sin cobrador asignado</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>

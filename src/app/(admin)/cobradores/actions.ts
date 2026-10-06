@@ -35,8 +35,9 @@ export async function crearCobrador(formData: FormData) {
   const nombreCompleto = String(formData.get("nombre_completo") || "").trim();
   const email = String(formData.get("email") || "").trim();
   const telefono = String(formData.get("telefono") || "").trim() || null;
-  const zona = String(formData.get("zona") || "").trim() || null;
   const password = String(formData.get("password") || "");
+  const rutaId = String(formData.get("ruta_id") || "").trim();
+  const rutaNueva = String(formData.get("ruta_nueva") || "").trim();
 
   if (!nombreCompleto || !email || password.length < 6) {
     redirect(
@@ -76,17 +77,27 @@ export async function crearCobrador(formData: FormData) {
     redirect(`/cobradores/nuevo?error=${encodeURIComponent(errorUsuario.message)}`);
   }
 
-  const { error: errorCobrador } = await admin.from("cobradores").insert({
-    usuario_id: nuevoUsuario.user.id,
-    zona,
-    activo: true,
-    tipo_comision: tipoComision,
-    porcentaje_comision: porcentajeComision,
-  });
+  const { data: nuevoCobrador, error: errorCobrador } = await admin
+    .from("cobradores")
+    .insert({
+      usuario_id: nuevoUsuario.user.id,
+      activo: true,
+      tipo_comision: tipoComision,
+      porcentaje_comision: porcentajeComision,
+    })
+    .select("id")
+    .single();
 
-  if (errorCobrador) {
+  if (errorCobrador || !nuevoCobrador) {
     await admin.auth.admin.deleteUser(nuevoUsuario.user.id);
-    redirect(`/cobradores/nuevo?error=${encodeURIComponent(errorCobrador.message)}`);
+    redirect(`/cobradores/nuevo?error=${encodeURIComponent(errorCobrador?.message || "No se pudo crear el cobrador")}`);
+  }
+
+  // Ruta: o se le asigna una ya existente (sin dueño), o se crea una nueva y se le asigna de una vez.
+  if (rutaId) {
+    await admin.from("rutas").update({ cobrador_id: nuevoCobrador.id }).eq("id", rutaId).is("cobrador_id", null);
+  } else if (rutaNueva) {
+    await admin.from("rutas").insert({ nombre: rutaNueva, cobrador_id: nuevoCobrador.id, activa: true });
   }
 
   await admin.from("historial_movimientos").insert({
@@ -99,7 +110,7 @@ export async function crearCobrador(formData: FormData) {
   redirect("/cobradores");
 }
 
-/** Corrige nombre/teléfono (tabla `usuarios`) y zona (tabla `cobradores`) de un cobrador ya existente. */
+/** Corrige nombre/teléfono (tabla `usuarios`) y comisión (tabla `cobradores`) de un cobrador ya existente. La ruta se reasigna aparte (ver "Rutas asignadas"). */
 export async function actualizarCobrador(formData: FormData) {
   await exigirAdministrador();
   const supabase = await createClient();
@@ -108,7 +119,6 @@ export async function actualizarCobrador(formData: FormData) {
   const usuarioId = String(formData.get("usuario_id") || "");
   const nombreCompleto = String(formData.get("nombre_completo") || "").trim();
   const telefono = String(formData.get("telefono") || "").trim() || null;
-  const zona = String(formData.get("zona") || "").trim() || null;
 
   if (!nombreCompleto) {
     redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent("El nombre es obligatorio")}`);
@@ -127,7 +137,7 @@ export async function actualizarCobrador(formData: FormData) {
 
   const { error: errorCobrador } = await supabase
     .from("cobradores")
-    .update({ zona, tipo_comision: tipoComision, porcentaje_comision: porcentajeComision })
+    .update({ tipo_comision: tipoComision, porcentaje_comision: porcentajeComision })
     .eq("id", cobradorId);
 
   if (errorCobrador) {
@@ -137,6 +147,32 @@ export async function actualizarCobrador(formData: FormData) {
   revalidatePath("/cobradores");
   revalidatePath(`/cobradores/${cobradorId}`);
   redirect(`/cobradores/${cobradorId}?exito=${encodeURIComponent("Datos actualizados")}`);
+}
+
+/**
+ * Crea una ruta y se la asigna de una vez a este cobrador — reemplaza a la
+ * antigua pantalla independiente /rutas/nueva. Se usa tanto desde "Nuevo
+ * cobrador" como desde la ficha de un cobrador que todavía no tiene ruta.
+ */
+export async function agregarRutaACobrador(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const cobradorId = String(formData.get("cobrador_id") || "");
+  const nombre = String(formData.get("nombre") || "").trim();
+
+  if (!nombre) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent("Escribe el nombre de la ruta")}`);
+  }
+
+  const { error } = await supabase.from("rutas").insert({ nombre, cobrador_id: cobradorId, activa: true });
+
+  if (error) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/cobradores/${cobradorId}`);
+  redirect(`/cobradores/${cobradorId}?exito=${encodeURIComponent(`Ruta "${nombre}" agregada`)}`);
 }
 
 /**

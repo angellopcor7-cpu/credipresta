@@ -1,5 +1,7 @@
+import { createClient } from "@/lib/supabase/server";
 import { crearCobrador } from "../actions";
 import { TIPOS_COMISION } from "@/lib/types";
+import { SelectorRutaCobrador } from "./SelectorRutaCobrador";
 
 export default async function NuevoCobradorPage({
   searchParams,
@@ -7,6 +9,15 @@ export default async function NuevoCobradorPage({
   searchParams: Promise<{ error?: string }>;
 }) {
   const { error } = await searchParams;
+
+  const supabase = await createClient();
+  const { data: rutasData } = await supabase
+    .from("rutas")
+    .select("id, nombre")
+    .eq("activa", true)
+    .is("cobrador_id", null)
+    .order("nombre");
+  const rutasDisponibles = rutasData ?? [];
 
   return (
     <div className="max-w-lg space-y-6">
@@ -19,7 +30,7 @@ export default async function NuevoCobradorPage({
         <Field label="Correo (para iniciar sesión)" name="email" type="email" required />
         <Field label="Contraseña temporal" name="password" type="password" required hint="Mínimo 6 caracteres — el cobrador la puede cambiar después." />
         <Field label="Teléfono" name="telefono" />
-        <Field label="Zona" name="zona" />
+        <SelectorRutaCobrador rutasDisponibles={rutasDisponibles} />
 
         <div className="grid grid-cols-2 gap-3">
           <div className="space-y-1">

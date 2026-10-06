@@ -7,16 +7,16 @@ import { TIPOS_COMISION, type TipoComision } from "@/lib/types";
 
 /**
  * Botón de lápiz que despliega un formulario chiquito para corregir
- * nombre/teléfono/zona/comisión de un cobrador ya dado de alta (errores de
- * captura, cambio de zona, renegociar su comisión). No toca su cuenta de
- * acceso ni su contraseña.
+ * nombre/teléfono/comisión de un cobrador ya dado de alta (errores de
+ * captura, renegociar su comisión). La ruta se asigna por separado (ver
+ * "Rutas asignadas" más abajo); esto no toca su cuenta de acceso ni su
+ * contraseña.
  */
 export function EditarCobradorForm({
   cobradorId,
   usuarioId,
   nombreCompleto,
   telefono,
-  zona,
   tipoComision,
   porcentajeComision,
 }: {
@@ -24,7 +24,6 @@ export function EditarCobradorForm({
   usuarioId: string;
   nombreCompleto: string;
   telefono: string | null;
-  zona: string | null;
   tipoComision: TipoComision;
   porcentajeComision: number;
 }) {
@@ -38,7 +37,7 @@ export function EditarCobradorForm({
         className="inline-flex items-center gap-1 text-xs text-ink-muted hover:text-ink underline"
       >
         <Pencil className="h-3 w-3" />
-        Editar nombre / teléfono / zona
+        Editar nombre / teléfono / comisión
       </button>
     );
   }
@@ -56,7 +55,7 @@ export function EditarCobradorForm({
       </div>
       <input type="hidden" name="cobrador_id" value={cobradorId} />
       <input type="hidden" name="usuario_id" value={usuarioId} />
-      <div className="grid sm:grid-cols-3 gap-3">
+      <div className="grid sm:grid-cols-2 gap-3">
         <div className="space-y-1">
           <label className="text-xs text-ink-muted" htmlFor="editar_nombre_completo">
             Nombre completo
@@ -78,17 +77,6 @@ export function EditarCobradorForm({
             name="telefono"
             type="tel"
             defaultValue={telefono ?? ""}
-            className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-          />
-        </div>
-        <div className="space-y-1">
-          <label className="text-xs text-ink-muted" htmlFor="editar_zona">
-            Zona
-          </label>
-          <input
-            id="editar_zona"
-            name="zona"
-            defaultValue={zona ?? ""}
             className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>
