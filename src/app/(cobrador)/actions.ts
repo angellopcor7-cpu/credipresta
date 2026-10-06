@@ -381,6 +381,78 @@ export async function marcarIncumplidoDelDia(formData: FormData) {
 }
 
 /**
+ * El cobrador le pide a Empresa que le perdone la mora a un cliente — el
+ * cobrador NO decide cuánto, solo manda la solicitud; Empresa la revisa en
+ * /solicitudes y decide cuánto perdonar (o la rechaza). Solo se puede pedir
+ * a partir del 2º día de atraso (antes de eso el botón ni sale en la
+ * pantalla), y no se puede mandar una segunda mientras la anterior siga
+ * pendiente.
+ */
+export async function solicitarPerdonMora(formData: FormData) {
+  const sesion = await exigirVistaCobrador();
+  const supabase = await createClient();
+
+  const prestamoId = String(formData.get("prestamo_id") || "");
+  const notas = String(formData.get("notas") || "").trim() || null;
+
+  const { data: prestamo } = await supabase
+    .from("prestamos")
+    .select("id, cliente_id, cobrador_id, mora_acumulada, estado")
+    .eq("id", prestamoId)
+    .single();
+
+  if (!prestamo) {
+    redirect(`/panel?error=${encodeURIComponent("Préstamo no encontrado")}`);
+  }
+  if (Number(prestamo.mora_acumulada) <= 0) {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Este préstamo no tiene mora pendiente")}`);
+  }
+
+  const { count: moraHoy } = await supabase
+    .from("moras")
+    .select("id", { count: "exact", head: true })
+    .eq("prestamo_id", prestamoId);
+  const diasAtraso = moraHoy ?? 0;
+
+  if (diasAtraso < 2) {
+    redirect(
+      `/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(
+        "Solo se puede pedir perdón de mora desde el 2º día de atraso"
+      )}`
+    );
+  }
+
+  const { count: solicitudPendiente } = await supabase
+    .from("solicitudes_perdon_mora")
+    .select("id", { count: "exact", head: true })
+    .eq("prestamo_id", prestamoId)
+    .eq("estado", "pendiente");
+
+  if (solicitudPendiente) {
+    redirect(
+      `/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Ya hay una solicitud de perdón de mora esperando respuesta")}`
+    );
+  }
+
+  const { error } = await supabase.from("solicitudes_perdon_mora").insert({
+    prestamo_id: prestamoId,
+    cliente_id: prestamo.cliente_id,
+    cobrador_id: prestamo.cobrador_id,
+    mora_al_momento: Number(prestamo.mora_acumulada),
+    dias_atraso_al_momento: diasAtraso,
+    notas_cobrador: notas,
+    solicitado_por: sesion.id,
+  });
+
+  if (error) {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
+  redirect(`/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent("Se mandó la solicitud a Empresa")}`);
+}
+
+/**
  * El cobrador borra por completo la "tarjeta" de un cliente que él mismo dio
  * de alta pero cuya solicitud Empresa ya rechazó (estado "inactivo") — nada
  * más para quitarla de su lista, ya que nunca llegó a tener un préstamo real.

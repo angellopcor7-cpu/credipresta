@@ -6,6 +6,7 @@ import { formatoFechaCorta } from "@/lib/format";
 import { aplicarPagoDelDia, marcarIncumplidoDelDia } from "../../../actions";
 import { EliminarClienteButton } from "../../EliminarClienteButton";
 import { EditarClienteForm } from "./EditarClienteForm";
+import { PedirPerdonMoraForm } from "./PedirPerdonMoraForm";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
 import {
   ArrowLeft,
@@ -87,21 +88,32 @@ export default async function DetalleClientePage({
   const solicitudes = (solicitudesData ?? []) as SolicitudPrestamo[];
   const prestamoActivo = prestamos.find((p) => p.estado === "activo" || p.estado === "en_mora") ?? prestamos[0];
 
-  const [{ data: pagosData }, { data: calendarioData }, { data: morasData }] = await Promise.all([
-    prestamoActivo
-      ? supabase.from("pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("created_at", { ascending: false })
-      : Promise.resolve({ data: [] as Pago[] }),
-    prestamoActivo
-      ? supabase.from("calendario_pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("numero_dia")
-      : Promise.resolve({ data: [] as CalendarioPago[] }),
-    prestamoActivo
-      ? supabase.from("moras").select("*").eq("prestamo_id", prestamoActivo.id).order("fecha_generada", { ascending: false })
-      : Promise.resolve({ data: [] as Mora[] }),
-  ]);
+  const [{ data: pagosData }, { data: calendarioData }, { data: morasData }, { data: solicitudMoraData }] =
+    await Promise.all([
+      prestamoActivo
+        ? supabase.from("pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("created_at", { ascending: false })
+        : Promise.resolve({ data: [] as Pago[] }),
+      prestamoActivo
+        ? supabase.from("calendario_pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("numero_dia")
+        : Promise.resolve({ data: [] as CalendarioPago[] }),
+      prestamoActivo
+        ? supabase.from("moras").select("*").eq("prestamo_id", prestamoActivo.id).order("fecha_generada", { ascending: false })
+        : Promise.resolve({ data: [] as Mora[] }),
+      prestamoActivo
+        ? supabase
+            .from("solicitudes_perdon_mora")
+            .select("id, estado")
+            .eq("prestamo_id", prestamoActivo.id)
+            .eq("estado", "pendiente")
+            .maybeSingle()
+        : Promise.resolve({ data: null }),
+    ]);
 
   const pagos = (pagosData ?? []) as Pago[];
   const calendario = (calendarioData ?? []) as CalendarioPago[];
   const moras = (morasData ?? []) as Mora[];
+  const solicitudMoraPendiente = solicitudMoraData as { id: string; estado: string } | null;
+  const diasAtraso = moras[0]?.dia_atraso ?? 0;
 
   const documentosPorTipo = (documentosData ?? []) as { tipo_documento: TipoDocumento; storage_path: string }[];
   let documentosConUrl: { tipo: TipoDocumento; url: string }[] = [];
@@ -218,16 +230,20 @@ export default async function DetalleClientePage({
             <Resumen icon={Landmark} label="Prestado" value={currency(Number(prestamoActivo.monto_prestado))} tone="neutral" />
             <Resumen icon={Wallet} label="Total con interés" value={currency(Number(prestamoActivo.monto_total))} tone="amber" />
             <Resumen icon={TrendingUp} label="Abonado" value={currency(abonado)} tone="neutral" />
-            <Resumen icon={PiggyBank} label="Saldo" value={currency(Number(prestamoActivo.saldo_actual))} tone="amber" destacado />
-            {Number(prestamoActivo.mora_acumulada) > 0 && (
-              <Resumen
-                icon={CircleAlert}
-                label="Mora acumulada"
-                value={currency(Number(prestamoActivo.mora_acumulada))}
-                tone="red"
-                destacado
-              />
-            )}
+            <Resumen
+              icon={CircleAlert}
+              label="Mora"
+              value={currency(Number(prestamoActivo.mora_acumulada))}
+              tone={Number(prestamoActivo.mora_acumulada) > 0 ? "red" : "neutral"}
+              destacado={Number(prestamoActivo.mora_acumulada) > 0}
+            />
+            <Resumen
+              icon={PiggyBank}
+              label="Saldo (con mora)"
+              value={currency(Number(prestamoActivo.saldo_actual) + Number(prestamoActivo.mora_acumulada))}
+              tone="amber"
+              destacado
+            />
           </div>
 
           <div className="space-y-1.5">
@@ -316,6 +332,17 @@ export default async function DetalleClientePage({
                   No pagó hoy (aplicar mora)
                 </button>
               </form>
+
+              {Number(prestamoActivo.mora_acumulada) > 0 && diasAtraso >= 2 && (
+                solicitudMoraPendiente ? (
+                  <span className="inline-flex items-center gap-1.5 text-sm bg-surface border border-border text-ink-muted rounded-xl px-4 py-3">
+                    <Clock className="h-4 w-4" />
+                    Esperando que Empresa responda tu solicitud de perdón de mora
+                  </span>
+                ) : (
+                  <PedirPerdonMoraForm prestamoId={prestamoActivo.id} />
+                )
+              )}
             </div>
           )}
         </>

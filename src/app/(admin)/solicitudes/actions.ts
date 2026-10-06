@@ -213,3 +213,142 @@ export async function rechazarSolicitud(formData: FormData) {
   revalidatePath("/panel");
   redirect("/solicitudes");
 }
+
+/**
+ * Aprueba una solicitud de perdón de mora que mandó un cobrador: Empresa
+ * decide aquí cuánto se perdona (no tiene que ser toda la mora). Usa la
+ * misma regla que `ajustarMora` (admin/prestamos/actions.ts) — solo puede
+ * bajar la mora, nunca subirla, y si saldo y mora quedan en $0 se liquida el
+ * préstamo de una vez.
+ */
+export async function aprobarPerdonMora(formData: FormData) {
+  const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+
+  const solicitudId = String(formData.get("solicitud_id") || "");
+  const montoPerdonado = Number(formData.get("monto_perdonado"));
+  const notas = String(formData.get("notas") || "").trim() || null;
+  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
+    supabase,
+    String(formData.get("resuelto_por") || "")
+  );
+
+  if (!resueltoPorSeleccionado) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién perdona esta mora")}`);
+  }
+
+  const { data: solicitud } = await supabase
+    .from("solicitudes_perdon_mora")
+    .select("id, prestamo_id, cliente_id, estado")
+    .eq("id", solicitudId)
+    .single();
+
+  if (!solicitud) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Solicitud no encontrada")}`);
+  }
+  if (solicitud.estado !== "pendiente") {
+    redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue resuelta")}`);
+  }
+
+  const { data: prestamo } = await supabase
+    .from("prestamos")
+    .select("id, saldo_actual, mora_acumulada, estado")
+    .eq("id", solicitud.prestamo_id)
+    .single();
+
+  if (!prestamo) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Préstamo no encontrado")}`);
+  }
+
+  const moraActual = Number(prestamo.mora_acumulada);
+  if (!Number.isFinite(montoPerdonado) || montoPerdonado <= 0) {
+    redirect(`/solicitudes?error=${encodeURIComponent("El monto a perdonar debe ser mayor a 0")}`);
+  }
+  if (montoPerdonado > moraActual) {
+    redirect(`/solicitudes?error=${encodeURIComponent("No puedes perdonar más de la mora acumulada actual")}`);
+  }
+
+  const moraNueva = Math.round((moraActual - montoPerdonado) * 100) / 100;
+  const saldoActual = Number(prestamo.saldo_actual);
+  const liquidado = saldoActual === 0 && moraNueva === 0;
+
+  await supabase
+    .from("prestamos")
+    .update({
+      mora_acumulada: moraNueva,
+      estado: liquidado ? "liquidado" : prestamo.estado,
+      fecha_liquidacion: liquidado ? new Date().toISOString() : null,
+    })
+    .eq("id", solicitud.prestamo_id);
+
+  await supabase
+    .from("solicitudes_perdon_mora")
+    .update({
+      estado: "aprobada",
+      monto_perdonado: montoPerdonado,
+      notas_resolucion: notas,
+      resuelto_por: resueltoPorSeleccionado,
+      fecha_resolucion: new Date().toISOString(),
+    })
+    .eq("id", solicitudId)
+    .eq("estado", "pendiente");
+
+  await supabase.from("historial_movimientos").insert({
+    prestamo_id: solicitud.prestamo_id,
+    cliente_id: solicitud.cliente_id,
+    usuario_id: sesion.id,
+    tipo_movimiento: "ajuste_mora",
+    monto: montoPerdonado,
+    descripcion: `Perdón de mora aprobado (pedido por el cobrador): $${moraActual} → $${moraNueva} (se perdonaron $${montoPerdonado})`,
+  });
+
+  revalidatePath("/solicitudes");
+  revalidatePath(`/prestamos/${solicitud.prestamo_id}`);
+  revalidatePath(`/panel/clientes/${solicitud.cliente_id}`);
+  revalidatePath("/dashboard");
+  redirect(`/solicitudes?exito=${encodeURIComponent(`Se perdonaron $${montoPerdonado} de mora`)}`);
+}
+
+/** Rechaza una solicitud de perdón de mora pendiente, con una nota opcional de por qué. */
+export async function rechazarPerdonMora(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const solicitudId = String(formData.get("solicitud_id") || "");
+  const notas = String(formData.get("notas") || "").trim() || null;
+  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
+    supabase,
+    String(formData.get("resuelto_por") || "")
+  );
+
+  if (!resueltoPorSeleccionado) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién rechaza esta solicitud")}`);
+  }
+
+  const { data: solicitud } = await supabase
+    .from("solicitudes_perdon_mora")
+    .select("id, estado")
+    .eq("id", solicitudId)
+    .single();
+
+  if (!solicitud) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Solicitud no encontrada")}`);
+  }
+  if (solicitud.estado !== "pendiente") {
+    redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue resuelta")}`);
+  }
+
+  await supabase
+    .from("solicitudes_perdon_mora")
+    .update({
+      estado: "rechazada",
+      notas_resolucion: notas,
+      resuelto_por: resueltoPorSeleccionado,
+      fecha_resolucion: new Date().toISOString(),
+    })
+    .eq("id", solicitudId)
+    .eq("estado", "pendiente");
+
+  revalidatePath("/solicitudes");
+  redirect(`/solicitudes?exito=${encodeURIComponent("Solicitud de perdón de mora rechazada")}`);
+}

@@ -220,6 +220,37 @@ export type TotalesCorte = {
 };
 
 /**
+ * Solicitud que manda el cobrador pidiendo que Empresa le perdone (total o
+ * parcialmente) la mora acumulada de un cliente. El cobrador NO decide
+ * cuánto se perdona — solo pide, y Empresa resuelve cuánto (o rechaza). Solo
+ * se puede pedir desde el 2º día de atraso en adelante (ver
+ * `panel/clientes/[id]/page.tsx`).
+ */
+export type EstadoSolicitudMora = "pendiente" | "aprobada" | "rechazada";
+
+export type SolicitudPerdonMora = {
+  id: string;
+  prestamo_id: string;
+  cliente_id: string;
+  cobrador_id: string | null;
+  mora_al_momento: number;
+  dias_atraso_al_momento: number | null;
+  notas_cobrador: string | null;
+  estado: EstadoSolicitudMora;
+  monto_perdonado: number | null;
+  notas_resolucion: string | null;
+  solicitado_por: string | null;
+  resuelto_por: string | null;
+  created_at: string;
+  fecha_resolucion: string | null;
+};
+
+export type SolicitudPerdonMoraConDetalle = SolicitudPerdonMora & {
+  clientes: { nombre_completo: string; telefono: string | null } | null;
+  cobradores: { usuarios: { nombre_completo: string } | null } | null;
+};
+
+/**
  * Registro permanente de un corte semanal ya confirmado (botón "Confirmar
  * corte" en /corte). `detalle` guarda el arreglo de FilaCorteCobrador tal
  * como estaba al momento de cerrar la semana — es la foto fija que no

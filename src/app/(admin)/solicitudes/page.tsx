@@ -1,9 +1,13 @@
 import { createClient } from "@/lib/supabase/server";
-import type { SolicitudConCliente, TipoDocumento } from "@/lib/types";
-import { rechazarSolicitud } from "./actions";
+import type { SolicitudConCliente, SolicitudPerdonMoraConDetalle, TipoDocumento } from "@/lib/types";
+import { rechazarSolicitud, aprobarPerdonMora, rechazarPerdonMora } from "./actions";
 import { SolicitudAprobarForm } from "./SolicitudAprobarForm";
 
 type SolicitudRevisada = SolicitudConCliente & {
+  usuarios: { nombre_completo: string } | null;
+};
+
+type SolicitudMoraRevisada = SolicitudPerdonMoraConDetalle & {
   usuarios: { nombre_completo: string } | null;
 };
 
@@ -86,7 +90,13 @@ export default async function SolicitudesPage({
   const { error } = await searchParams;
   const supabase = await createClient();
 
-  const [{ data: pendientes }, { data: revisadas }, { data: administradores }] = await Promise.all([
+  const [
+    { data: pendientes },
+    { data: revisadas },
+    { data: administradores },
+    { data: pendientesMora },
+    { data: revisadasMora },
+  ] = await Promise.all([
     supabase
       .from("solicitudes_prestamo")
       .select("*, clientes(nombre_completo, telefono, direccion)")
@@ -104,10 +114,23 @@ export default async function SolicitudesPage({
       .eq("roles.nombre", "administrador")
       .eq("activo", true)
       .order("nombre_completo"),
+    supabase
+      .from("solicitudes_perdon_mora")
+      .select("*, clientes(nombre_completo, telefono), cobradores(usuarios(nombre_completo))")
+      .eq("estado", "pendiente")
+      .order("created_at", { ascending: true }),
+    supabase
+      .from("solicitudes_perdon_mora")
+      .select("*, clientes(nombre_completo, telefono), cobradores(usuarios(nombre_completo)), usuarios!solicitudes_perdon_mora_resuelto_por_fkey(nombre_completo)")
+      .in("estado", ["aprobada", "rechazada"])
+      .order("fecha_resolucion", { ascending: false })
+      .limit(20),
   ]);
 
   const listaPendientes = (pendientes ?? []) as unknown as SolicitudConCliente[];
   const listaRevisadas = (revisadas ?? []) as unknown as SolicitudRevisada[];
+  const listaPendientesMora = (pendientesMora ?? []) as unknown as SolicitudPerdonMoraConDetalle[];
+  const listaRevisadasMora = (revisadasMora ?? []) as unknown as SolicitudMoraRevisada[];
   const listaAdministradores = ((administradores ?? []) as unknown as { id: string; nombre_completo: string }[]).map(
     (u) => ({ id: u.id, nombre: u.nombre_completo })
   );
@@ -212,6 +235,139 @@ export default async function SolicitudesPage({
           </div>
         )}
       </div>
+
+      <div>
+        <h2 className="font-semibold mb-2">Solicitudes de perdón de mora ({listaPendientesMora.length})</h2>
+        {listaPendientesMora.length === 0 ? (
+          <p className="text-ink-muted text-sm">No hay solicitudes de perdón de mora pendientes.</p>
+        ) : (
+          <div className="space-y-3">
+            {listaPendientesMora.map((s) => (
+              <div key={s.id} className="bg-surface border border-border rounded-xl p-4 space-y-3">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div>
+                    <p className="font-medium">{s.clientes?.nombre_completo ?? "—"}</p>
+                    <p className="text-ink-muted text-xs">{s.clientes?.telefono ?? "Sin teléfono"}</p>
+                    <p className="text-ink-muted text-xs">
+                      Pedido por: {s.cobradores?.usuarios?.nombre_completo ?? "—"} · día {s.dias_atraso_al_momento ?? "—"} de atraso
+                    </p>
+                    {s.notas_cobrador && (
+                      <p className="text-ink-secondary text-xs mt-1 italic">&ldquo;{s.notas_cobrador}&rdquo;</p>
+                    )}
+                  </div>
+                  <p className="text-danger-text font-semibold">Mora actual al pedir: {currency(Number(s.mora_al_momento))}</p>
+                </div>
+
+                <div className="flex flex-wrap items-start gap-4">
+                  <form action={aprobarPerdonMora} className="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="solicitud_id" value={s.id} />
+                    <input
+                      name="monto_perdonado"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      defaultValue={Number(s.mora_al_momento)}
+                      className="w-28 rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <select
+                      name="resuelto_por"
+                      required
+                      defaultValue=""
+                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    >
+                      <option value="" disabled>
+                        ¿Quién perdona?
+                      </option>
+                      {listaAdministradores.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="notas"
+                      placeholder="Nota (opcional)"
+                      className="w-36 rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+                    />
+                    <button className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-3 py-1.5 rounded-md">
+                      Perdonar
+                    </button>
+                  </form>
+
+                  <form action={rechazarPerdonMora} className="flex flex-wrap items-center gap-2">
+                    <input type="hidden" name="solicitud_id" value={s.id} />
+                    <select
+                      name="resuelto_por"
+                      required
+                      defaultValue=""
+                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    >
+                      <option value="" disabled>
+                        ¿Quién rechaza?
+                      </option>
+                      {listaAdministradores.map((a) => (
+                        <option key={a.id} value={a.id}>
+                          {a.nombre}
+                        </option>
+                      ))}
+                    </select>
+                    <input
+                      name="notas"
+                      placeholder="Motivo (opcional)"
+                      className="w-36 rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
+                    />
+                    <button className="bg-red-500/90 hover:bg-red-500 text-ink font-semibold text-sm px-3 py-1.5 rounded-md">
+                      Rechazar
+                    </button>
+                  </form>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {listaRevisadasMora.length > 0 && (
+        <div>
+          <h2 className="font-semibold mb-2">Perdones de mora revisados recientemente</h2>
+          <div className="border border-border rounded-xl overflow-hidden">
+            <table className="w-full text-sm">
+              <thead className="bg-surface text-ink-muted text-left">
+                <tr>
+                  <th className="px-3 py-2">Cliente</th>
+                  <th className="px-3 py-2">Mora al pedir</th>
+                  <th className="px-3 py-2">Estado</th>
+                  <th className="px-3 py-2">Perdonado</th>
+                  <th className="px-3 py-2">Resolvió</th>
+                </tr>
+              </thead>
+              <tbody>
+                {listaRevisadasMora.map((s) => (
+                  <tr key={s.id} className="border-t border-border">
+                    <td className="px-3 py-2">{s.clientes?.nombre_completo ?? "—"}</td>
+                    <td className="px-3 py-2">{currency(Number(s.mora_al_momento))}</td>
+                    <td className="px-3 py-2">
+                      <span
+                        className={`text-xs border rounded-full px-2 py-1 ${
+                          s.estado === "aprobada"
+                            ? "bg-accent-chip-bg text-accent-text border-accent-chip-border"
+                            : "bg-danger-chip-bg text-danger-text border-danger-chip-border"
+                        }`}
+                      >
+                        {s.estado === "aprobada" ? "Perdonada" : "Rechazada"}
+                      </span>
+                    </td>
+                    <td className="px-3 py-2 text-ink-secondary">
+                      {s.monto_perdonado != null ? currency(Number(s.monto_perdonado)) : "—"}
+                    </td>
+                    <td className="px-3 py-2 text-ink-muted">{s.usuarios?.nombre_completo ?? "—"}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div>
         <h2 className="font-semibold mb-2">Revisadas recientemente</h2>
