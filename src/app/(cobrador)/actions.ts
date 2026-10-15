@@ -207,6 +207,133 @@ export async function crearClienteYSolicitud(formData: FormData) {
 }
 
 /**
+ * Igual que `crearClienteYSolicitud`, pero para un cliente que YA existe en
+ * la app y ya tiene historial — típicamente, liquidó su préstamo anterior y
+ * Empresa le quiere volver a prestar. A diferencia del alta de cliente
+ * nuevo, esto NO crea un cliente nuevo (evita duplicar su registro) ni
+ * vuelve a pedir INE/foto/comprobante (ya están en su expediente). Sí
+ * genera y firma un pagaré nuevo, porque legalmente es un préstamo distinto
+ * con su propio monto y plazo.
+ */
+export async function solicitarNuevoPrestamoClienteExistente(formData: FormData) {
+  const sesion = await exigirVistaCobrador();
+  const supabase = await createClient();
+
+  const clienteId = String(formData.get("cliente_id") || "").trim();
+  const montoSolicitado = Number(formData.get("monto_solicitado"));
+  const plazoDias = Number(formData.get("plazo_dias"));
+  const porcentajePersonalizadoTexto = formData.get("porcentaje_interes_personalizado");
+  const porcentajePersonalizado = porcentajePersonalizadoTexto ? Number(porcentajePersonalizadoTexto) : null;
+  const firmaClienteDataUrl = formData.get("firma_cliente_data_url");
+  const firmaCobradorDataUrl = formData.get("firma_cobrador_data_url");
+  const folioTexto = String(formData.get("folio") || "").trim();
+  const lugarTexto = String(formData.get("lugar") || "").trim();
+
+  const volver = (mensaje: string) => redirect(`/panel/clientes/${clienteId}?error=${encodeURIComponent(mensaje)}`);
+
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("id, nombre_completo, cobrador_id, estado")
+    .eq("id", clienteId)
+    .single();
+
+  if (!cliente || cliente.cobrador_id !== sesion.cobradorId) {
+    redirect(`/panel?error=${encodeURIComponent("Cliente no encontrado")}`);
+  }
+  if (cliente.estado === "pendiente_aprobacion") {
+    volver("Ya hay una solicitud de este cliente esperando respuesta de Empresa");
+  }
+
+  const { count: prestamoActivoCount } = await supabase
+    .from("prestamos")
+    .select("id", { count: "exact", head: true })
+    .eq("cliente_id", clienteId)
+    .in("estado", ["activo", "en_mora"]);
+  if (prestamoActivoCount) {
+    volver("Este cliente ya tiene un préstamo activo");
+  }
+
+  if (!montoSolicitado || montoSolicitado <= 0) {
+    volver("El monto debe ser mayor a 0");
+  }
+  if (porcentajePersonalizado != null) {
+    if (porcentajePersonalizado <= 0) {
+      volver("El % de interés personalizado debe ser mayor a 0");
+    }
+    if (!plazoDias || plazoDias <= 0) {
+      volver("Los días del plazo deben ser mayor a 0");
+    }
+  } else if (!esPlanValido(plazoDias)) {
+    volver("Elige un plan de 20 o 30 días, o pon un % personalizado");
+  }
+  if (!esFirmaValida(firmaClienteDataUrl) || !esFirmaValida(firmaCobradorDataUrl)) {
+    volver("Falta la firma del cliente y/o del cobrador en el pagaré");
+  }
+
+  const diasPersonalizados = leerDiasPersonalizados(formData);
+
+  const config = await obtenerConfiguraciones();
+  const porcentajeEfectivo = porcentajePersonalizado ?? calcularPorcentajeInteresPorPlan(plazoDias as 20 | 30);
+  const montoTotalPagare = calcularMontoTotal(montoSolicitado, porcentajeEfectivo);
+  const montoCuotaPagare = calcularCuotaSugerida(montoTotalPagare, plazoDias);
+  const fechaFirma = new Date();
+  const fechaFinEstimada = new Date(fechaFirma);
+  fechaFinEstimada.setUTCDate(fechaFinEstimada.getUTCDate() + plazoDias);
+
+  const bytesPagare = await generarPagarePDF({
+    folio: folioTexto || clienteId.slice(0, 8).toUpperCase(),
+    nombreCliente: cliente.nombre_completo,
+    montoPrestado: montoSolicitado,
+    porcentajeInteres: porcentajeEfectivo,
+    montoTotal: montoTotalPagare,
+    montoCuotaDiaria: montoCuotaPagare,
+    plazoDias,
+    fechaInicio: fechaFirma,
+    fechaFin: fechaFinEstimada,
+    fechaFirma,
+    nombreCobrador: sesion.nombreCompleto,
+    lugar: lugarTexto || config.lugarPagare,
+    interesMoratorioDiarioPorcentaje: config.interesMoratorioDiarioPagare,
+    firmaClienteDataUrl: String(firmaClienteDataUrl),
+    firmaCobradorDataUrl: String(firmaCobradorDataUrl),
+  });
+
+  const rutaPagare = `${clienteId}/pagare_firmado/${Date.now()}-pagare-firmado.pdf`;
+  const { error: errorSubidaPagare } = await supabase.storage
+    .from("documentos-clientes")
+    .upload(rutaPagare, Buffer.from(bytesPagare), { contentType: "application/pdf" });
+
+  if (!errorSubidaPagare) {
+    await supabase.from("documentos_clientes").insert({
+      cliente_id: clienteId,
+      tipo_documento: "pagare_firmado",
+      storage_path: rutaPagare,
+      subido_por: sesion.id,
+    });
+  }
+
+  const { error: errorSolicitud } = await supabase.from("solicitudes_prestamo").insert({
+    cliente_id: clienteId,
+    monto_solicitado: montoSolicitado,
+    plazo_dias: plazoDias,
+    porcentaje_interes_personalizado: porcentajePersonalizado,
+    dias_cobro_personalizados: diasPersonalizados,
+  });
+
+  if (errorSolicitud) {
+    volver(errorSolicitud.message);
+  }
+
+  await supabase.from("clientes").update({ estado: "pendiente_aprobacion" }).eq("id", clienteId);
+
+  revalidatePath(`/panel/clientes/${clienteId}`);
+  revalidatePath("/panel");
+  redirect(
+    `/panel/clientes/${clienteId}?exito=${encodeURIComponent("Se mandó la solicitud de nuevo préstamo a Empresa")}`
+  );
+}
+
+/**
  * "Aplicar pago del día": registra la cuota de hoy como pagada (por el monto
  * sugerido del calendario) para ese préstamo. Usa la misma tabla `pagos` y
  * política RLS que ya deja al cobrador registrar pagos de sus propios
@@ -478,6 +605,18 @@ export async function eliminarClienteRechazado(formData: FormData) {
   }
   if (cliente.cobrador_id !== sesion.cobradorId || cliente.estado !== "inactivo") {
     redirect(`/panel?error=${encodeURIComponent("Solo se puede eliminar un cliente tuyo cuya solicitud haya sido rechazada")}`);
+  }
+
+  // Nunca se borra un cliente que ya tuvo un préstamo de verdad (aunque por
+  // algún motivo su estado diga "inactivo") — eso destruiría su historial
+  // de pagos real. "Eliminar" es solo para el caso de un cliente nuevo cuya
+  // PRIMERA solicitud fue rechazada, que nunca llegó a tener préstamo.
+  const { count: tienePrestamos } = await supabase
+    .from("prestamos")
+    .select("id", { count: "exact", head: true })
+    .eq("cliente_id", clienteId);
+  if (tienePrestamos) {
+    redirect(`/panel?error=${encodeURIComponent("Este cliente ya tiene historial de préstamos, no se puede eliminar")}`);
   }
 
   // Antes de borrar, se recogen las rutas de sus documentos para también

@@ -146,6 +146,12 @@ export default async function DetalleClientePage({
   const solicitudRechazada = solicitudes.find((s) => s.estado === "rechazada");
   const enMora = !!prestamoActivo && prestamoActivo.estado === "en_mora";
 
+  // Puede pedir un préstamo nuevo si ya es cliente conocido (tiene al menos
+  // un préstamo en su historial, aunque ya esté liquidado) pero no tiene uno
+  // abierto ahorita, y no hay ya otra solicitud esperando respuesta.
+  const puedeSolicitarNuevo =
+    prestamos.length > 0 && !puedeCobrar && !solicitudPendiente && cliente.estado !== "pendiente_aprobacion";
+
   return (
     <div className="space-y-6">
       <div>
@@ -210,7 +216,7 @@ export default async function DetalleClientePage({
         </div>
       )}
 
-      {cliente.estado !== "pendiente_aprobacion" && solicitudRechazada && !prestamoActivo && (
+      {cliente.estado !== "pendiente_aprobacion" && solicitudRechazada && !puedeCobrar && (
         <div className="flex items-start justify-between gap-3 bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-4 py-3 text-sm text-danger-text">
           <div className="flex items-start gap-2">
             <CircleX className="h-4 w-4 shrink-0 mt-0.5" />
@@ -222,6 +228,22 @@ export default async function DetalleClientePage({
           {cliente.estado === "inactivo" && (
             <EliminarClienteButton clienteId={cliente.id} nombreCliente={cliente.nombre_completo} />
           )}
+        </div>
+      )}
+
+      {puedeSolicitarNuevo && (
+        <div className="flex items-center justify-between gap-3 bg-surface border border-border rounded-xl px-4 py-3">
+          <p className="text-sm text-ink-secondary">
+            Este cliente ya no tiene un préstamo abierto. Si Empresa le va a volver a prestar, aquí se pide sin
+            tener que repetir sus datos ni documentos.
+          </p>
+          <Link
+            href={`/panel/clientes/${cliente.id}/renovar`}
+            className="shrink-0 inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-3 py-2 rounded-md"
+          >
+            <Landmark className="h-4 w-4" />
+            Solicitar nuevo préstamo
+          </Link>
         </div>
       )}
 

@@ -199,7 +199,21 @@ export async function rechazarSolicitud(formData: FormData) {
     .eq("id", solicitudId)
     .eq("estado", "pendiente");
 
-  await supabase.from("clientes").update({ estado: "inactivo" }).eq("id", solicitud.cliente_id);
+  // Solo se pasa el cliente a "inactivo" si esta era su PRIMERA solicitud
+  // (nunca tuvo un préstamo real) — así es como "Nuevo cliente" lo deja
+  // listo para poder borrarse. Si el cliente ya tiene préstamos de antes
+  // (le rechazaron pedir uno NUEVO, ver "Solicitar nuevo préstamo"), se
+  // regresa a "activo": sigue siendo un cliente real con historial, nomás
+  // no le dieron este préstamo — y si se dejara en "pendiente_aprobacion"
+  // se quedaría pegado ahí para siempre, sin poder volver a solicitar.
+  const { count: tienePrestamos } = await supabase
+    .from("prestamos")
+    .select("id", { count: "exact", head: true })
+    .eq("cliente_id", solicitud.cliente_id);
+  await supabase
+    .from("clientes")
+    .update({ estado: tienePrestamos ? "activo" : "inactivo" })
+    .eq("id", solicitud.cliente_id);
 
   await supabase.from("historial_movimientos").insert({
     cliente_id: solicitud.cliente_id,
