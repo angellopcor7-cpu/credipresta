@@ -1,12 +1,11 @@
 /**
  * Redimensiona y recomprime una foto (a JPEG) en el navegador antes de
- * mandarla al servidor. Las 4 fotos de documentos que pide "nuevo cliente"
- * se toman con la cámara del celular — eso fácilmente da archivos de varios
- * MB cada una, y entre las 4 más las firmas revientan el límite de tamaño
- * del formulario (ver next.config.ts), tronando el alta completa del
- * cliente con un error genérico y sin dejar ningún rastro (ni cliente ni
- * solicitud creados). Esto evita ese problema de raíz en vez de solo subir
- * el límite.
+ * mandarla al servidor. Cualquier foto tomada con la cámara del celular
+ * fácilmente pesa varios MB, y eso revienta el límite de tamaño del
+ * formulario (ver next.config.ts) — tronando el envío con un error genérico
+ * y sin dejar ningún rastro. Esto evita ese problema de raíz en vez de solo
+ * subir el límite. La usan tanto el alta de "nuevo cliente" (4 fotos +
+ * firmas) como "Subir documento" del lado de Empresa (una foto a la vez).
  */
 export async function comprimirImagen(
   archivo: File,

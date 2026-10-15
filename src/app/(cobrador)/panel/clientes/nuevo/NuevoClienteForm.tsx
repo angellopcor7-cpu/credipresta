@@ -4,7 +4,7 @@ import { useMemo, useState } from "react";
 import { UserRound, Landmark, CalendarClock, FileImage, CircleCheck, FileText, PenLine } from "lucide-react";
 import { crearClienteYSolicitud } from "../../../actions";
 import { FirmaCanvas } from "./FirmaCanvas";
-import { comprimirImagen } from "./comprimirImagen";
+import { comprimirImagen } from "@/lib/comprimirImagen";
 import {
   calcularPorcentajeInteresPorPlan,
   calcularInteres,

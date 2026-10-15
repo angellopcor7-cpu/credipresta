@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { Upload, X } from "lucide-react";
 import { subirDocumentoCliente } from "../../clientes/actions";
+import { comprimirImagen } from "@/lib/comprimirImagen";
 
 const OPCIONES: { value: string; label: string }[] = [
   { value: "ine_frente", label: "INE frente" },
@@ -22,6 +23,34 @@ const OPCIONES: { value: string; label: string }[] = [
  */
 export function SubirDocumentoForm({ clienteId, volverA }: { clienteId: string; volverA: string }) {
   const [abierto, setAbierto] = useState(false);
+  // Se bloquea el botón de enviar mientras la foto se está comprimiendo,
+  // para no mandar el archivo pesado original por ganarle a la compresión.
+  const [procesando, setProcesando] = useState(false);
+
+  /**
+   * Una foto tomada con la cámara del celular fácilmente pesa varios MB —
+   * eso revienta el límite de tamaño del formulario (ver next.config.ts) y
+   * la subida truena con un error genérico. Se recomprime en el navegador
+   * antes de enviarla, reemplazando el archivo del propio input (así no hay
+   * que tocar nada del envío nativo del formulario) — mismo truco que usa
+   * el alta de "nuevo cliente".
+   */
+  async function comprimirDocumento(e: React.ChangeEvent<HTMLInputElement>) {
+    const input = e.currentTarget;
+    const archivo = input.files?.[0];
+    if (!archivo) return;
+    setProcesando(true);
+    try {
+      const comprimida = await comprimirImagen(archivo);
+      if (comprimida !== archivo) {
+        const dt = new DataTransfer();
+        dt.items.add(comprimida);
+        input.files = dt.files;
+      }
+    } finally {
+      setProcesando(false);
+    }
+  }
 
   if (!abierto) {
     return (
@@ -83,12 +112,16 @@ export function SubirDocumentoForm({ clienteId, volverA }: { clienteId: string; 
           type="file"
           accept="image/*,.pdf"
           required
+          onChange={comprimirDocumento}
           className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm file:mr-3 file:rounded file:border-0 file:bg-surface-3 file:px-2 file:py-1 file:text-xs"
         />
       </div>
 
-      <button className="w-full bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold rounded-md py-2 text-sm">
-        Subir
+      <button
+        disabled={procesando}
+        className="w-full bg-amber-500 hover:bg-amber-400 disabled:opacity-60 text-neutral-950 font-semibold rounded-md py-2 text-sm"
+      >
+        {procesando ? "Preparando foto…" : "Subir"}
       </button>
     </form>
   );
