@@ -23,6 +23,7 @@ export type TipoDocumento =
   | "foto_cliente"
   | "contrato_pagare"
   | "pagare_firmado"
+  | "pagare_impreso"
   | "otro";
 
 export type DocumentoCliente = {

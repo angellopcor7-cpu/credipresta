@@ -12,6 +12,16 @@ import {
   calcularSaldo,
   generarCalendarioPagos,
 } from "@/lib/finance/calculos";
+import type { TipoDocumento } from "@/lib/types";
+
+const TIPOS_DOCUMENTO_VALIDOS: TipoDocumento[] = [
+  "ine_frente",
+  "ine_reverso",
+  "foto_cliente",
+  "comprobante_domicilio",
+  "pagare_impreso",
+  "otro",
+];
 
 /**
  * Da de alta un cliente que YA traía un préstamo en curso antes de empezar a
@@ -218,4 +228,56 @@ export async function crearClienteExistente(formData: FormData) {
   redirect(
     `/prestamos/${prestamo.id}?exito=${encodeURIComponent(`${nombreCompleto} se agregó como cliente existente`)}`
   );
+}
+
+/**
+ * Deja que Empresa suba documentos de un cliente directamente desde el
+ * panel de admin — para clientes migrados con "Cliente existente" (que no
+ * pasaron por el alta normal del cobrador y no traen INE/foto/comprobante),
+ * o para completar lo que le falte a cualquier cliente. Incluye
+ * "pagare_impreso": una foto del pagaré ya impreso y firmado en papel que
+ * el negocio ya traía, para esos casos donde NO se genera un pagaré nuevo
+ * en la app.
+ */
+export async function subirDocumentoCliente(formData: FormData) {
+  const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+
+  const clienteId = String(formData.get("cliente_id") || "").trim();
+  const tipoDocumento = String(formData.get("tipo_documento") || "").trim() as TipoDocumento;
+  const volverA = String(formData.get("volver_a") || "/clientes").trim();
+  const archivo = formData.get("archivo") as File | null;
+
+  if (!clienteId) {
+    redirect(`${volverA}?error=${encodeURIComponent("Falta el cliente")}`);
+  }
+  if (!TIPOS_DOCUMENTO_VALIDOS.includes(tipoDocumento)) {
+    redirect(`${volverA}?error=${encodeURIComponent("Elige qué tipo de documento es")}`);
+  }
+  if (!archivo || archivo.size === 0) {
+    redirect(`${volverA}?error=${encodeURIComponent("Elige un archivo para subir")}`);
+  }
+
+  const rutaArchivo = `${clienteId}/${tipoDocumento}/${Date.now()}-${archivo.name}`;
+  const { error: errorSubida } = await supabase.storage
+    .from("documentos-clientes")
+    .upload(rutaArchivo, archivo, { contentType: archivo.type });
+
+  if (errorSubida) {
+    redirect(`${volverA}?error=${encodeURIComponent(errorSubida.message)}`);
+  }
+
+  const { error: errorFila } = await supabase.from("documentos_clientes").insert({
+    cliente_id: clienteId,
+    tipo_documento: tipoDocumento,
+    storage_path: rutaArchivo,
+    subido_por: sesion.id,
+  });
+
+  if (errorFila) {
+    redirect(`${volverA}?error=${encodeURIComponent(errorFila.message)}`);
+  }
+
+  revalidatePath(volverA);
+  redirect(`${volverA}?exito=${encodeURIComponent("Documento subido")}`);
 }

@@ -7,15 +7,26 @@ import { obtenerConfiguraciones } from "@/lib/config";
 import { InfoDiasCobro } from "@/components/InfoDiasCobro";
 import type { CalendarioPago, Mora, Pago, Prestamo, TipoDocumento } from "@/lib/types";
 import { AjusteMoraForm } from "./AjusteMoraForm";
+import { EditarPrestamoForm } from "./EditarPrestamoForm";
+import { SubirDocumentoForm } from "./SubirDocumentoForm";
 
 const ETIQUETAS_DOCUMENTO: Partial<Record<TipoDocumento, string>> = {
   ine_frente: "INE frente",
   ine_reverso: "INE reverso",
   foto_cliente: "Foto del cliente",
   comprobante_domicilio: "Comprobante de domicilio",
+  pagare_impreso: "Pagaré impreso",
+  otro: "Otro",
 };
 
-const ORDEN_DOCUMENTOS: TipoDocumento[] = ["ine_frente", "ine_reverso", "foto_cliente", "comprobante_domicilio"];
+const ORDEN_DOCUMENTOS: TipoDocumento[] = [
+  "ine_frente",
+  "ine_reverso",
+  "foto_cliente",
+  "comprobante_domicilio",
+  "pagare_impreso",
+  "otro",
+];
 
 type PrestamoConClienteDetalle = Prestamo & {
   clientes: { nombre_completo: string; telefono: string | null } | null;
@@ -162,15 +173,35 @@ export default async function DetallePrestamoPage({
         préstamo{Number(p.mora_acumulada) > 0 ? " y se puede perdonar o reducir la mora si Empresa lo negoció con el cliente." : "."}
       </p>
 
-      {puedeRecibirPagos && Number(p.mora_acumulada) > 0 && (
-        <AjusteMoraForm prestamoId={p.id} moraActual={Number(p.mora_acumulada)} />
-      )}
+      <div className="flex flex-wrap items-start gap-3">
+        {puedeRecibirPagos && Number(p.mora_acumulada) > 0 && (
+          <AjusteMoraForm prestamoId={p.id} moraActual={Number(p.mora_acumulada)} />
+        )}
+        {p.estado !== "cancelado" && (
+          <EditarPrestamoForm
+            prestamo={{
+              id: p.id,
+              monto_prestado: Number(p.monto_prestado),
+              porcentaje_interes: Number(p.porcentaje_interes),
+              plazo_dias: p.plazo_dias,
+              fecha_inicio: p.fecha_inicio,
+              metodo_pago: p.metodo_pago,
+              datos_transferencia: p.datos_transferencia,
+              saldo_actual: Number(p.saldo_actual),
+              mora_acumulada: Number(p.mora_acumulada),
+            }}
+          />
+        )}
+      </div>
 
       <div>
-        <h2 className="font-semibold mb-2 flex items-center gap-1.5">
-          <FileText className="h-4 w-4 text-ink-muted" />
-          Documentos del cliente
-        </h2>
+        <div className="flex items-center justify-between gap-3 mb-2">
+          <h2 className="font-semibold flex items-center gap-1.5">
+            <FileText className="h-4 w-4 text-ink-muted" />
+            Documentos del cliente
+          </h2>
+          <SubirDocumentoForm clienteId={p.cliente_id} volverA={`/prestamos/${p.id}`} />
+        </div>
         {documentosConUrl.length === 0 ? (
           <p className="text-sm text-ink-muted">Sin documentos subidos.</p>
         ) : (

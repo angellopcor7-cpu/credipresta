@@ -18,6 +18,7 @@ const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
   foto_cliente: "Foto",
   contrato_pagare: "Contrato",
   pagare_firmado: "Pagaré firmado",
+  pagare_impreso: "Pagaré impreso",
   otro: "Otro",
 };
 
