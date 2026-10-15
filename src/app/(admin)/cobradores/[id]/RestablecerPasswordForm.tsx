@@ -34,7 +34,7 @@ export function RestablecerPasswordForm({
   return (
     <form
       action={restablecerPasswordCobrador}
-      className="w-full bg-danger-chip-bg/20 border border-danger-chip-border rounded-lg p-4 space-y-3"
+      className="animate-panel-in w-full bg-danger-chip-bg/20 border border-danger-chip-border rounded-lg p-4 space-y-3"
     >
       <div className="flex items-center justify-between">
         <p className="text-sm font-medium text-danger-text">Restablecer contraseña</p>

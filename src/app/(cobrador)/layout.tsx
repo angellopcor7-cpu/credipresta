@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { PageTransition } from "@/components/PageTransition";
 
 async function signOut() {
   "use server";
@@ -44,7 +45,9 @@ export default async function CobradorLayout({ children }: { children: React.Rea
           </nav>
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   );
 }

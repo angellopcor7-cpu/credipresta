@@ -102,3 +102,99 @@ body {
   color: var(--ink);
   font-family: Arial, Helvetica, sans-serif;
 }
+
+/*
+ * Animaciones "profesionales" de la app: en vez de tocar botón por botón en
+ * cada pantalla, esto se aplica una sola vez aquí y cubre toda la app.
+ *
+ * - Toda la app (vía <PageTransition>) entra con un fade + slide sutil al
+ *   cambiar de página.
+ * - Los paneles que se abren con un botón (perdonar mora, corregir datos,
+ *   subir documento, restablecer contraseña, etc.) usan `.animate-panel-in`.
+ * - Los botones/enlaces de todas las pantallas ya traen transición de color
+ *   y un pequeño "press" al dar clic, sin tener que agregar clases en cada
+ *   uno.
+ * - Las filas de las tablas resaltan suave al pasar el mouse.
+ * - Las alertas de error/éxito (los chips de color) entran con una
+ *   animación en vez de aparecer de golpe.
+ */
+
+@keyframes fade-slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.animate-page-in {
+  animation: fade-slide-in 0.35s ease-out both;
+}
+
+.animate-panel-in {
+  animation: fade-slide-in 0.2s ease-out both;
+  transform-origin: top;
+}
+
+button,
+a,
+input,
+select,
+textarea {
+  transition:
+    background-color 150ms ease,
+    border-color 150ms ease,
+    color 150ms ease,
+    opacity 150ms ease,
+    box-shadow 150ms ease,
+    transform 100ms ease;
+}
+
+button:active:not(:disabled) {
+  transform: scale(0.97);
+}
+
+tbody tr {
+  transition: background-color 150ms ease;
+}
+
+tbody tr:hover {
+  background-color: var(--surface-2);
+}
+
+/* Cualquier chip/alerta de color (bg-accent-chip-bg, bg-danger-chip-bg...). */
+[class*="chip-bg"] {
+  animation: fade-in 0.25s ease-out both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-page-in,
+  .animate-panel-in,
+  [class*="chip-bg"] {
+    animation: none !important;
+  }
+
+  button,
+  a,
+  input,
+  select,
+  textarea {
+    transition: none !important;
+  }
+
+  button:active:not(:disabled) {
+    transform: none !important;
+  }
+}

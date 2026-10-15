@@ -40,7 +40,7 @@ export function SubirDocumentoForm({ clienteId, volverA }: { clienteId: string; 
     <form
       action={subirDocumentoCliente}
       encType="multipart/form-data"
-      className="space-y-3 bg-surface p-4 rounded-xl border border-border max-w-md"
+      className="animate-panel-in space-y-3 bg-surface p-4 rounded-xl border border-border max-w-md"
     >
       <input type="hidden" name="cliente_id" value={clienteId} />
       <input type="hidden" name="volver_a" value={volverA} />

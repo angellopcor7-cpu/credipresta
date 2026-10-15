@@ -45,7 +45,7 @@ export function AjusteMoraForm({ prestamoId, moraActual }: { prestamoId: string;
   return (
     <form
       action={ajustarMora}
-      className="space-y-3 bg-surface p-4 rounded-xl border border-border max-w-md"
+      className="animate-panel-in space-y-3 bg-surface p-4 rounded-xl border border-border max-w-md"
     >
       <input type="hidden" name="prestamo_id" value={prestamoId} />
       <div className="flex items-center justify-between">

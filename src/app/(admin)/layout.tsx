@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdministrador } from "@/lib/auth/roles";
+import { PageTransition } from "@/components/PageTransition";
 import { AdminNav } from "./AdminNav";
 
 async function signOut() {
@@ -28,7 +29,9 @@ export default async function AdminLayout({
           <AdminNav nombreUsuario={sesion.nombreCompleto} signOutAction={signOut} />
         </div>
       </header>
-      <main className="max-w-6xl mx-auto px-6 py-8">{children}</main>
+      <main className="max-w-6xl mx-auto px-6 py-8">
+        <PageTransition>{children}</PageTransition>
+      </main>
     </div>
   );
 }

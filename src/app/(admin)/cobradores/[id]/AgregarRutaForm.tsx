@@ -22,7 +22,7 @@ export function AgregarRutaForm({ cobradorId }: { cobradorId: string }) {
   }
 
   return (
-    <form action={agregarRutaACobrador} className="flex items-center gap-2">
+    <form action={agregarRutaACobrador} className="animate-panel-in flex items-center gap-2">
       <input type="hidden" name="cobrador_id" value={cobradorId} />
       <input
         name="nombre"

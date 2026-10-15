@@ -42,7 +42,7 @@ export function EditarPrestamoForm({ prestamo }: { prestamo: DatosPrestamo }) {
   return (
     <form
       action={editarDatosPrestamo}
-      className="space-y-3 bg-surface p-4 rounded-xl border border-border max-w-md"
+      className="animate-panel-in space-y-3 bg-surface p-4 rounded-xl border border-border max-w-md"
     >
       <input type="hidden" name="prestamo_id" value={prestamo.id} />
       <div className="flex items-center justify-between">

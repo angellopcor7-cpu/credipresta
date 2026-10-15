@@ -49,7 +49,7 @@ export function ReasignarTodosForm({
           e.preventDefault();
         }
       }}
-      className="flex flex-wrap items-center gap-2 bg-surface border border-border rounded-lg p-3"
+      className="animate-panel-in flex flex-wrap items-center gap-2 bg-surface border border-border rounded-lg p-3"
     >
       <input type="hidden" name="cobrador_origen_id" value={cobradorOrigenId} />
       <select

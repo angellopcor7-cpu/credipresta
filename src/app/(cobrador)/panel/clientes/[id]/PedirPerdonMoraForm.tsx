@@ -29,7 +29,7 @@ export function PedirPerdonMoraForm({ prestamoId }: { prestamoId: string }) {
   return (
     <form
       action={solicitarPerdonMora}
-      className="space-y-2 bg-surface border border-border rounded-xl p-4 max-w-md w-full"
+      className="animate-panel-in space-y-2 bg-surface border border-border rounded-xl p-4 max-w-md w-full"
     >
       <input type="hidden" name="prestamo_id" value={prestamoId} />
       <div className="flex items-center justify-between">
