@@ -5,6 +5,20 @@
  * desincronizándose entre sí.
  */
 
+/** "Buenos días" / "Buenas tardes" / "Buenas noches" según la hora actual en CDMX (para el saludo del panel). */
+export function saludoPorHora(): string {
+  const horaCDMX = Number(
+    new Intl.DateTimeFormat("en-US", {
+      hour: "numeric",
+      hour12: false,
+      timeZone: "America/Mexico_City",
+    }).format(new Date())
+  );
+  if (horaCDMX < 12) return "Buenos días";
+  if (horaCDMX < 19) return "Buenas tardes";
+  return "Buenas noches";
+}
+
 /** La fecha de hoy ("YYYY-MM-DD") en hora de CDMX, como objeto Date en UTC a mediodía (evita saltos de día). */
 export function hoyEnMexicoComoFecha(): Date {
   const partes = new Intl.DateTimeFormat("en-CA", {
