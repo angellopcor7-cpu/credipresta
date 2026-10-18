@@ -12,9 +12,7 @@ import {
   UserPlus,
   Clock,
   ChevronRight,
-  FileText,
   UserRoundCog,
-  Scissors,
   type LucideIcon,
 } from "lucide-react";
 import type { PuntoOtorgadoCobrado, PuntoMora } from "./AnalisisCharts";
@@ -127,14 +125,6 @@ export default async function DashboardPage() {
     red: "border-danger-chip-border/50",
   };
 
-  const accesos: { label: string; href: string; icon: LucideIcon }[] = [
-    { label: "Solicitudes", href: "/solicitudes", icon: FileText },
-    { label: "Clientes", href: "/clientes", icon: UserRound },
-    { label: "Cobradores", href: "/cobradores", icon: Users },
-    { label: "Préstamos", href: "/prestamos", icon: Landmark },
-    { label: "Hacer corte", href: "/corte", icon: Scissors },
-  ];
-
   // --- Análisis: tendencias por periodo (semana = días, mes = semanas, 6 meses = meses) ---
   function construirAnalisis(
     buckets: { clave: string; etiqueta: string }[],
@@ -210,24 +200,6 @@ export default async function DashboardPage() {
             <p className={`text-xl font-semibold mt-2 ${colorValor[s.tono]}`}>{s.value}</p>
           </div>
         ))}
-      </div>
-
-      <div>
-        <h2 className="text-sm font-semibold text-ink-secondary mb-3">Accesos rápidos</h2>
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-          {accesos.map((a) => (
-            <Link
-              key={a.href}
-              href={a.href}
-              className="flex flex-col items-center gap-2 bg-surface border border-border hover:border-amber-500/50 hover:bg-surface-2 rounded-xl p-4 text-center transition-colors"
-            >
-              <div className="rounded-full bg-surface-2 p-2">
-                <a.icon className="h-5 w-5 text-accent-text" />
-              </div>
-              <span className="text-sm text-ink-strong">{a.label}</span>
-            </Link>
-          ))}
-        </div>
       </div>
 
       <AnalisisPeriodos
