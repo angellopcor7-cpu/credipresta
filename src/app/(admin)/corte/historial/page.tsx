@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
-import { ChevronLeft, History } from "lucide-react";
+import { ChevronLeft, History, FileDown } from "lucide-react";
 import { formatoRangoSemana } from "@/lib/fechas";
 
 function currency(n: number) {
@@ -25,7 +25,7 @@ export default async function HistorialCortesPage() {
   const { data } = await supabase
     .from("cortes_semanales")
     .select(
-      "id, clave_lunes, fecha_corte, total_clientes_activos, total_prestado_semana, total_cobrado_semana, total_mora_generada_semana, total_falta_por_cobrar, total_comision, usuarios(nombre_completo)"
+      "id, clave_lunes, fecha_corte, total_clientes_activos, total_prestado_semana, total_cobrado_semana, total_mora_generada_semana, total_falta_por_cobrar, total_comision, pdf_path, usuarios(nombre_completo)"
     )
     .order("clave_lunes", { ascending: false });
 
@@ -39,8 +39,21 @@ export default async function HistorialCortesPage() {
     total_mora_generada_semana: number;
     total_falta_por_cobrar: number;
     total_comision: number;
+    pdf_path: string | null;
     usuarios: { nombre_completo: string } | null;
   }[];
+
+  // Las URLs firmadas se calculan aquí (no en el cliente) porque el bucket
+  // "respaldos-corte" es privado — solo un administrador autenticado puede
+  // pedir estas firmas, igual que ya se hace con los documentos del cliente.
+  const rutasConPdf = cortes.map((c) => c.pdf_path).filter((p): p is string => !!p);
+  let urlPorRuta = new Map<string, string>();
+  if (rutasConPdf.length > 0) {
+    const { data: firmados } = await supabase.storage.from("respaldos-corte").createSignedUrls(rutasConPdf, 3600);
+    urlPorRuta = new Map(
+      rutasConPdf.map((ruta, i) => [ruta, firmados?.[i]?.signedUrl ?? ""]).filter(([, url]) => url) as [string, string][]
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -77,6 +90,7 @@ export default async function HistorialCortesPage() {
                 <th className="px-4 py-3">Mora generada</th>
                 <th className="px-4 py-3">Falta por cobrar</th>
                 <th className="px-4 py-3">Comisión</th>
+                <th className="px-4 py-3">Respaldo</th>
               </tr>
             </thead>
             <tbody>
@@ -97,6 +111,21 @@ export default async function HistorialCortesPage() {
                   <td className="px-4 py-3 text-danger-text">{currency(Number(c.total_mora_generada_semana))}</td>
                   <td className="px-4 py-3 font-medium">{currency(Number(c.total_falta_por_cobrar))}</td>
                   <td className="px-4 py-3 text-accent-text">{currency(Number(c.total_comision))}</td>
+                  <td className="px-4 py-3">
+                    {c.pdf_path && urlPorRuta.get(c.pdf_path) ? (
+                      <a
+                        href={urlPorRuta.get(c.pdf_path)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center gap-1 text-xs text-accent-text hover:underline"
+                      >
+                        <FileDown className="h-3.5 w-3.5" />
+                        PDF
+                      </a>
+                    ) : (
+                      <span className="text-xs text-ink-muted">—</span>
+                    )}
+                  </td>
                 </tr>
               ))}
             </tbody>

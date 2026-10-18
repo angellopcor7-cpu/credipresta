@@ -12,6 +12,7 @@ import {
   CircleCheck,
   Banknote,
   History,
+  FileDown,
   type LucideIcon,
 } from "lucide-react";
 import { claveSemana, lunesDeHoy, semanaMasDelta, formatoRangoSemana } from "@/lib/fechas";
@@ -63,7 +64,7 @@ export default async function CortePage({
     calcularCorte(supabase, claveLunes),
     supabase
       .from("cortes_semanales")
-      .select("id, fecha_corte, creado_por, usuarios(nombre_completo)")
+      .select("id, fecha_corte, creado_por, pdf_path, usuarios(nombre_completo)")
       .eq("clave_lunes", claveLunes)
       .maybeSingle(),
   ]);
@@ -72,8 +73,15 @@ export default async function CortePage({
     id: string;
     fecha_corte: string;
     creado_por: string | null;
+    pdf_path: string | null;
     usuarios: { nombre_completo: string } | null;
   } | null;
+
+  let urlRespaldoPdf: string | null = null;
+  if (corte?.pdf_path) {
+    const { data: firmado } = await supabase.storage.from("respaldos-corte").createSignedUrl(corte.pdf_path, 3600);
+    urlRespaldoPdf = firmado?.signedUrl ?? null;
+  }
 
   const stats: { label: string; value: string; icon: LucideIcon; tono: "neutral" | "amber" | "red"; href?: string }[] = [
     { label: "Clientes activos", value: String(totales.clientesActivos), icon: Users, tono: "neutral" },
@@ -142,17 +150,30 @@ export default async function CortePage({
       )}
 
       {corte ? (
-        <div className="flex items-center gap-2 bg-surface-2 border border-border-soft rounded-md px-4 py-3 text-sm text-ink-secondary">
-          <CircleCheck className="h-4 w-4 text-accent-text shrink-0" />
-          <p>
-            Corte de esta semana ya confirmado el {formatoFechaHora(corte.fecha_corte)}
-            {corte.usuarios?.nombre_completo ? ` por ${corte.usuarios.nombre_completo}` : ""}. Estos números quedaron
-            congelados en el{" "}
-            <Link href="/corte/historial" className="text-accent-text hover:underline">
-              historial
-            </Link>
-            .
-          </p>
+        <div className="flex items-center justify-between gap-3 bg-surface-2 border border-border-soft rounded-md px-4 py-3 text-sm text-ink-secondary">
+          <div className="flex items-start gap-2">
+            <CircleCheck className="h-4 w-4 text-accent-text shrink-0 mt-0.5" />
+            <p>
+              Corte de esta semana ya confirmado el {formatoFechaHora(corte.fecha_corte)}
+              {corte.usuarios?.nombre_completo ? ` por ${corte.usuarios.nombre_completo}` : ""}. Estos números quedaron
+              congelados en el{" "}
+              <Link href="/corte/historial" className="text-accent-text hover:underline">
+                historial
+              </Link>
+              .
+            </p>
+          </div>
+          {urlRespaldoPdf && (
+            <a
+              href={urlRespaldoPdf}
+              target="_blank"
+              rel="noreferrer"
+              className="shrink-0 inline-flex items-center gap-1.5 text-xs bg-surface-2 hover:bg-surface-3 border border-border-strong text-ink font-medium rounded-md px-3 py-1.5"
+            >
+              <FileDown className="h-3.5 w-3.5" />
+              Respaldo PDF
+            </a>
+          )}
         </div>
       ) : (
         esSemanaActual && (

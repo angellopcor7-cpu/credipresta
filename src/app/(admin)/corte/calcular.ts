@@ -1,8 +1,98 @@
 import type { createClient } from "@/lib/supabase/server";
 import { estaEnSemana, domingoDe } from "@/lib/fechas";
+import { formatoFechaCorta } from "@/lib/format";
 import type { TipoComision, FilaCorteCobrador, TotalesCorte } from "@/lib/types";
 
 export type { FilaCorteCobrador, TotalesCorte };
+
+const ETIQUETA_ESTADO_CLIENTE: Record<string, string> = {
+  activo: "Activo",
+  pendiente_aprobacion: "Pendiente",
+  inactivo: "Inactivo",
+};
+
+const ETIQUETA_ESTADO_PRESTAMO: Record<string, string> = {
+  activo: "Activo",
+  en_mora: "En mora",
+  liquidado: "Liquidado",
+  cancelado: "Cancelado",
+};
+
+export type ClienteRespaldo = {
+  nombre: string;
+  telefono: string | null;
+  cobrador: string;
+  estadoCliente: string;
+  prestamoEstado: string | null;
+  montoPrestado: number | null;
+  saldoActual: number | null;
+  moraAcumulada: number | null;
+  faltaPorCobrar: number | null;
+  fechaInicio: string | null;
+};
+
+/**
+ * Inventario completo de TODOS los clientes (sin importar su estado, para
+ * que el respaldo en PDF sirva de verdad como copia completa) con su
+ * préstamo más reciente — no solo el activo, porque un cliente ya liquidado
+ * también debe quedar en el respaldo con su último préstamo. Es una foto del
+ * momento (no está limitada a la semana del corte, a diferencia de
+ * `calcularCorte`): el respaldo es del estado actual de TODA la cartera.
+ */
+export async function construirDetalleClientes(
+  supabase: Awaited<ReturnType<typeof createClient>>
+): Promise<ClienteRespaldo[]> {
+  const [{ data: clientesData }, { data: cobradoresData }, { data: prestamosData }] = await Promise.all([
+    supabase.from("clientes").select("id, nombre_completo, telefono, estado, cobrador_id").order("nombre_completo"),
+    supabase.from("cobradores").select("id, usuarios(nombre_completo)"),
+    supabase
+      .from("prestamos")
+      .select("cliente_id, monto_prestado, saldo_actual, mora_acumulada, estado, fecha_inicio, created_at")
+      .order("created_at", { ascending: false }),
+  ]);
+
+  const clientes = (clientesData ?? []) as {
+    id: string;
+    nombre_completo: string;
+    telefono: string | null;
+    estado: string;
+    cobrador_id: string | null;
+  }[];
+  const cobradores = (cobradoresData ?? []) as unknown as { id: string; usuarios: { nombre_completo: string } | null }[];
+  const prestamos = (prestamosData ?? []) as {
+    cliente_id: string;
+    monto_prestado: number;
+    saldo_actual: number;
+    mora_acumulada: number;
+    estado: string;
+    fecha_inicio: string;
+    created_at: string;
+  }[];
+
+  const nombreCobradorPorId = new Map(cobradores.map((c) => [c.id, c.usuarios?.nombre_completo ?? "—"]));
+  // Ya vienen ordenados por created_at descendente, así que el primero que
+  // se encuentre por cliente es su préstamo más reciente.
+  const prestamoMasRecientePorCliente = new Map<string, (typeof prestamos)[number]>();
+  for (const p of prestamos) {
+    if (!prestamoMasRecientePorCliente.has(p.cliente_id)) prestamoMasRecientePorCliente.set(p.cliente_id, p);
+  }
+
+  return clientes.map((c) => {
+    const prestamo = prestamoMasRecientePorCliente.get(c.id);
+    return {
+      nombre: c.nombre_completo,
+      telefono: c.telefono,
+      cobrador: c.cobrador_id ? (nombreCobradorPorId.get(c.cobrador_id) ?? "—") : "—",
+      estadoCliente: ETIQUETA_ESTADO_CLIENTE[c.estado] ?? c.estado,
+      prestamoEstado: prestamo ? (ETIQUETA_ESTADO_PRESTAMO[prestamo.estado] ?? prestamo.estado) : null,
+      montoPrestado: prestamo ? Number(prestamo.monto_prestado) : null,
+      saldoActual: prestamo ? Number(prestamo.saldo_actual) : null,
+      moraAcumulada: prestamo ? Number(prestamo.mora_acumulada) : null,
+      faltaPorCobrar: prestamo ? Number(prestamo.saldo_actual) + Number(prestamo.mora_acumulada) : null,
+      fechaInicio: prestamo ? formatoFechaCorta(prestamo.fecha_inicio) : null,
+    };
+  });
+}
 
 /**
  * Arma el corte (prestado/recolectado/mora/comisión por cobrador, más

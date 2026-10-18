@@ -271,4 +271,6 @@ export type CorteSemanal = {
   total_falta_por_cobrar: number;
   total_comision: number;
   detalle: FilaCorteCobrador[];
+  /** Ruta en el bucket privado "respaldos-corte" del PDF de respaldo completo de ese corte, si se pudo generar. */
+  pdf_path: string | null;
 };
