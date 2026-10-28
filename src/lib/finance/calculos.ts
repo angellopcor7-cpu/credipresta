@@ -140,6 +140,34 @@ export function tieneCuotaVencidaSinPagar(calendario: CuotaCalendario[], hoy: st
 }
 
 /**
+ * Semáforo de un cliente para la vista de Empresa — qué tan al día va con
+ * sus pagos, de un vistazo:
+ * - "rojo": tiene mora (acumulada o por una cuota vencida sin pagar), o su
+ *   préstamo ya está marcado "en_mora".
+ * - "amarillo": no tiene nada atrasado, pero hoy SÍ le toca pagar y todavía
+ *   no se ha registrado su pago de hoy.
+ * - "verde": todo en orden — ya pagó hoy, o hoy no era día de cobro para él.
+ * - "sin_prestamo": no tiene un préstamo activo en este momento (está
+ *   pendiente de aprobación, liquidado sin renovar, o inactivo) — el
+ *   semáforo no aplica.
+ */
+export type SemaforoCliente = "verde" | "amarillo" | "rojo" | "sin_prestamo";
+
+export function calcularSemaforoCliente(params: {
+  tienePrestamoActivo: boolean;
+  enMora: boolean;
+  moraAcumulada: number;
+  tieneCuotaVencida: boolean;
+  esDiaDeCobroHoy: boolean;
+  yaPagoHoy: boolean;
+}): SemaforoCliente {
+  if (!params.tienePrestamoActivo) return "sin_prestamo";
+  if (params.enMora || params.moraAcumulada > 0 || params.tieneCuotaVencida) return "rojo";
+  if (params.esDiaDeCobroHoy && !params.yaPagoHoy) return "amarillo";
+  return "verde";
+}
+
+/**
  * Determina si una fecha es día de cobro para un préstamo, según su monto —
  * a menos que ese préstamo tenga días personalizados (`diasPersonalizados`,
  * elegidos por el cobrador al crearlo), en cuyo caso esos mandan sobre la

@@ -8,6 +8,7 @@ import {
   calcularPorcentajeInteresPorPlan,
   esPlanValido,
   calcularMontoMora,
+  calcularSemaforoCliente,
   calcularDescuentoApertura,
   aplicarDescuentoApertura,
   DESCUENTO_APERTURA_NORMAL,
@@ -333,6 +334,45 @@ describe("generación del calendario de pagos", () => {
       return diaSemana === 0 || diaSemana === 6;
     });
     expect(incluyeFinDeSemana).toBe(true);
+  });
+});
+
+describe("semáforo de cliente", () => {
+  const base = {
+    tienePrestamoActivo: true,
+    enMora: false,
+    moraAcumulada: 0,
+    tieneCuotaVencida: false,
+    esDiaDeCobroHoy: false,
+    yaPagoHoy: false,
+  };
+
+  it("sin préstamo activo: no aplica el semáforo", () => {
+    expect(calcularSemaforoCliente({ ...base, tienePrestamoActivo: false })).toBe("sin_prestamo");
+  });
+
+  it("en_mora manda a rojo aunque no tenga mora acumulada registrada", () => {
+    expect(calcularSemaforoCliente({ ...base, enMora: true })).toBe("rojo");
+  });
+
+  it("mora acumulada > 0 es rojo", () => {
+    expect(calcularSemaforoCliente({ ...base, moraAcumulada: 50 })).toBe("rojo");
+  });
+
+  it("cuota vencida sin pagar es rojo, aunque la mora todavía no se haya aplicado", () => {
+    expect(calcularSemaforoCliente({ ...base, tieneCuotaVencida: true })).toBe("rojo");
+  });
+
+  it("hoy le toca pagar y no ha pagado: amarillo", () => {
+    expect(calcularSemaforoCliente({ ...base, esDiaDeCobroHoy: true, yaPagoHoy: false })).toBe("amarillo");
+  });
+
+  it("hoy le toca pagar y ya pagó: verde", () => {
+    expect(calcularSemaforoCliente({ ...base, esDiaDeCobroHoy: true, yaPagoHoy: true })).toBe("verde");
+  });
+
+  it("hoy no le toca pagar y no tiene nada atrasado: verde", () => {
+    expect(calcularSemaforoCliente({ ...base, esDiaDeCobroHoy: false })).toBe("verde");
   });
 });
 

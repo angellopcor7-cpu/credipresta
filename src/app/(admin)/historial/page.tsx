@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { TrendingUp, TrendingDown, Minus } from "lucide-react";
 import { formatoRangoSemana } from "@/lib/fechas";
+import { GananciaChart, type PuntoGanancia } from "./GananciaChart";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -73,6 +74,24 @@ export default async function HistorialPage() {
   const moraAcumuladaActual = corteMasReciente ? Number(corteMasReciente.total_mora_acumulada) : 0;
   const faltaPorCobrarActualConMora = corteMasReciente ? Number(corteMasReciente.total_falta_por_cobrar) : 0;
 
+  // Para la gráfica: de más vieja a más nueva (se lee de izquierda a
+  // derecha), con la ganancia/pérdida estimada de cada semana ya calculada.
+  const datosGanancia: PuntoGanancia[] = [...cortes]
+    .reverse()
+    .map((c) => {
+      const gastoSemana = gastoDeLaSemana(gastos, c.clave_lunes, c.clave_domingo);
+      const comision = Number(c.total_comision);
+      const ingreso = Number(c.total_cobrado_semana);
+      return {
+        id: c.id,
+        etiqueta: formatoRangoSemana(c.clave_lunes),
+        ingreso,
+        comision,
+        gasto: gastoSemana,
+        ganancia: ingreso - comision - gastoSemana,
+      };
+    });
+
   return (
     <div className="space-y-8">
       <div>
@@ -99,6 +118,17 @@ export default async function HistorialPage() {
           <Resumen label="Comisión pagada a cobradores" value={currency(totalComisionHistorica)} />
           <Resumen label="Gasto total" value={currency(gastoTotalHistorico)} tono="rojo" />
           <Resumen label="Gasto este mes" value={currency(gastoEsteMes)} tono="rojo" />
+        </div>
+      </div>
+
+      <div>
+        <h2 className="font-semibold mb-1">¿El negocio va rentable?</h2>
+        <p className="text-ink-muted text-xs mb-3">
+          Ganancia o pérdida estimada por semana (cobrado − comisión de cobradores − gastos). No separa todavía
+          capital de interés, así que es una foto del flujo de caja, no la utilidad contable exacta.
+        </p>
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <GananciaChart datos={datosGanancia} />
         </div>
       </div>
 
