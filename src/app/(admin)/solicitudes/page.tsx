@@ -2,6 +2,7 @@ import { createClient } from "@/lib/supabase/server";
 import type { SolicitudConCliente, SolicitudPerdonMoraConDetalle, TipoDocumento } from "@/lib/types";
 import { rechazarSolicitud, aprobarPerdonMora, rechazarPerdonMora } from "./actions";
 import { SolicitudAprobarForm } from "./SolicitudAprobarForm";
+import { calcularDescuentoAperturaSolicitud } from "./descuentoApertura";
 
 type SolicitudRevisada = SolicitudConCliente & {
   usuarios: { nombre_completo: string } | null;
@@ -143,6 +144,17 @@ export default async function SolicitudesPage({
     supabase,
     listaPendientes.map((s) => s.cliente_id)
   );
+  const descuentoAperturaPorSolicitud = new Map(
+    await Promise.all(
+      listaPendientes.map(async (s) => {
+        const info = await calcularDescuentoAperturaSolicitud(supabase, {
+          clienteId: s.cliente_id,
+          fechaSolicitud: s.fecha_solicitud,
+        });
+        return [s.id, info] as const;
+      })
+    )
+  );
 
   return (
     <div className="space-y-8">
@@ -202,6 +214,8 @@ export default async function SolicitudesPage({
                     }
                     diasPersonalizados={s.dias_cobro_personalizados}
                     administradores={listaAdministradores}
+                    descuentoApertura={descuentoAperturaPorSolicitud.get(s.id)?.descuento ?? 0}
+                    motivoDescuentoApertura={descuentoAperturaPorSolicitud.get(s.id)?.motivo ?? "cliente_nuevo"}
                   />
 
                   <form action={rechazarSolicitud} className="flex flex-wrap items-center gap-2">

@@ -10,7 +10,10 @@ import {
   calcularMontoTotal,
   calcularCuotaSugerida,
   generarCalendarioPagos,
+  aplicarDescuentoApertura,
+  type MotivoDescuentoApertura,
 } from "@/lib/finance/calculos";
+import { calcularDescuentoAperturaSolicitud } from "./descuentoApertura";
 
 /**
  * "Quién aprobó/rechazó" se elige de una lista (no se toma automático de la
@@ -64,7 +67,9 @@ export async function aprobarSolicitud(formData: FormData) {
 
   const { data: solicitud } = await supabase
     .from("solicitudes_prestamo")
-    .select("id, cliente_id, monto_solicitado, plazo_dias, estado, metodo_pago, datos_transferencia, dias_cobro_personalizados")
+    .select(
+      "id, cliente_id, monto_solicitado, plazo_dias, estado, metodo_pago, datos_transferencia, dias_cobro_personalizados, fecha_solicitud"
+    )
     .eq("id", solicitudId)
     .single();
 
@@ -83,7 +88,18 @@ export async function aprobarSolicitud(formData: FormData) {
   const montoPrestado = Number(solicitud.monto_solicitado);
   const plazoDias = solicitud.plazo_dias;
   const montoInteres = calcularInteres(montoPrestado, porcentaje);
-  const montoTotal = calcularMontoTotal(montoPrestado, porcentaje);
+  const montoTotalSinDescuento = calcularMontoTotal(montoPrestado, porcentaje);
+
+  // Descuento fijo de apertura ($50 cliente nuevo/renovación normal, $150 si
+  // liquidó antes de tiempo y renueva el mismo día) — el cliente recibe el
+  // monto completo que pidió, pero el total que debe pagar baja por este
+  // descuento. Se calcula con los mismos datos que ya se le mostraron a
+  // Empresa en /solicitudes antes de aprobar.
+  const { descuento: descuentoApertura, motivo: motivoDescuento } = await calcularDescuentoAperturaSolicitud(supabase, {
+    clienteId: solicitud.cliente_id,
+    fechaSolicitud: solicitud.fecha_solicitud,
+  });
+  const montoTotal = aplicarDescuentoApertura(montoTotalSinDescuento, descuentoApertura);
   const montoCuota = calcularCuotaSugerida(montoTotal, plazoDias);
 
   const { data: prestamo, error } = await supabase
@@ -139,13 +155,19 @@ export async function aprobarSolicitud(formData: FormData) {
 
   await supabase.from("clientes").update({ estado: "activo" }).eq("id", solicitud.cliente_id);
 
+  const etiquetaMotivoDescuento: Record<MotivoDescuentoApertura, string> = {
+    cliente_nuevo: "cliente nuevo",
+    renovacion_normal: "renovación",
+    renovacion_mismo_dia_liquidacion_anticipada: "renovación el mismo día de una liquidación anticipada",
+  };
+
   await supabase.from("historial_movimientos").insert({
     prestamo_id: prestamo.id,
     cliente_id: solicitud.cliente_id,
     usuario_id: sesion.id,
     tipo_movimiento: "aprobacion_solicitud",
     monto: montoPrestado,
-    descripcion: `Solicitud aprobada: préstamo de $${montoPrestado} creado (total $${montoTotal}, plan ${plazoDias} días)`,
+    descripcion: `Solicitud aprobada: préstamo de $${montoPrestado} creado (total $${montoTotal} ya con descuento de apertura de $${descuentoApertura} por ${etiquetaMotivoDescuento[motivoDescuento]}, plan ${plazoDias} días)`,
   });
 
   revalidatePath("/solicitudes");

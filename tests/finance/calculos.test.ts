@@ -8,6 +8,10 @@ import {
   calcularPorcentajeInteresPorPlan,
   esPlanValido,
   calcularMontoMora,
+  calcularDescuentoApertura,
+  aplicarDescuentoApertura,
+  DESCUENTO_APERTURA_NORMAL,
+  DESCUENTO_APERTURA_RENOVACION_EXPRES,
   calcularSaldoConMora,
   calcularAsignacionPago,
   tieneCuotaVencidaSinPagar,
@@ -329,5 +333,55 @@ describe("generación del calendario de pagos", () => {
       return diaSemana === 0 || diaSemana === 6;
     });
     expect(incluyeFinDeSemana).toBe(true);
+  });
+});
+
+describe("descuento de apertura", () => {
+  it("cliente nuevo: $50, sin importar lo demás", () => {
+    const { descuento, motivo } = calcularDescuentoApertura({
+      esClienteNuevo: true,
+      liquidoAntesDeTiempo: true,
+      renovacionMismoDiaQueLiquidacion: true,
+    });
+    expect(descuento).toBe(DESCUENTO_APERTURA_NORMAL);
+    expect(motivo).toBe("cliente_nuevo");
+  });
+
+  it("renovación en otro día (sin importar si liquidó antes de tiempo): $50", () => {
+    const { descuento, motivo } = calcularDescuentoApertura({
+      esClienteNuevo: false,
+      liquidoAntesDeTiempo: true,
+      renovacionMismoDiaQueLiquidacion: false,
+    });
+    expect(descuento).toBe(DESCUENTO_APERTURA_NORMAL);
+    expect(motivo).toBe("renovacion_normal");
+  });
+
+  it("renovación el mismo día pero liquidó a tiempo (no antes): $50", () => {
+    const { descuento, motivo } = calcularDescuentoApertura({
+      esClienteNuevo: false,
+      liquidoAntesDeTiempo: false,
+      renovacionMismoDiaQueLiquidacion: true,
+    });
+    expect(descuento).toBe(DESCUENTO_APERTURA_NORMAL);
+    expect(motivo).toBe("renovacion_normal");
+  });
+
+  it("liquidó antes de tiempo Y renueva el mismo día: $150", () => {
+    const { descuento, motivo } = calcularDescuentoApertura({
+      esClienteNuevo: false,
+      liquidoAntesDeTiempo: true,
+      renovacionMismoDiaQueLiquidacion: true,
+    });
+    expect(descuento).toBe(DESCUENTO_APERTURA_RENOVACION_EXPRES);
+    expect(motivo).toBe("renovacion_mismo_dia_liquidacion_anticipada");
+  });
+
+  it("aplicarDescuentoApertura resta del total ya calculado con interés, nunca negativo", () => {
+    // Plan 20 días (20%): pide $1,000 -> total normal $1,200. Con el
+    // descuento de $50 queda $1,150 (el ejemplo que confirmó Angel).
+    expect(aplicarDescuentoApertura(calcularMontoTotal(1000, 20), 50)).toBe(1150);
+    // Un préstamo chiquito no puede quedar en negativo por el descuento.
+    expect(aplicarDescuentoApertura(100, 150)).toBe(0);
   });
 });

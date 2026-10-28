@@ -1,7 +1,15 @@
 "use client";
 
 import { useState } from "react";
-import { calcularPorcentajeInteresPorPlan, calcularInteres, calcularMontoTotal, calcularCuotaSugerida, esPlanValido } from "@/lib/finance/calculos";
+import {
+  calcularPorcentajeInteresPorPlan,
+  calcularInteres,
+  calcularMontoTotal,
+  calcularCuotaSugerida,
+  aplicarDescuentoApertura,
+  esPlanValido,
+  type MotivoDescuentoApertura,
+} from "@/lib/finance/calculos";
 import { aprobarSolicitud } from "./actions";
 
 function currency(n: number) {
@@ -10,11 +18,23 @@ function currency(n: number) {
 
 const DIAS_SEMANA_LABEL = ["Domingo", "Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado"];
 
+const ETIQUETA_MOTIVO_DESCUENTO: Record<MotivoDescuentoApertura, string> = {
+  cliente_nuevo: "cliente nuevo",
+  renovacion_normal: "renovación",
+  renovacion_mismo_dia_liquidacion_anticipada: "liquidó antes de tiempo y renueva el mismo día",
+};
+
 /**
  * Aprobar/rechazar: el % de interés total viene precargado (el fijo del
  * plan, o el que haya propuesto el cobrador si mandó uno personalizado),
  * pero Empresa lo puede cambiar aquí mismo antes de aprobar — el número que
  * quede en el cuadro es el que se usa para crear el préstamo.
+ *
+ * El descuento de apertura ($50 o $150, ver `calcularDescuentoApertura`) ya
+ * viene calculado desde el servidor (mismo cálculo que usará
+ * `aprobarSolicitud` al crear el préstamo) — aquí solo se muestra y se resta
+ * del total, para que Empresa vea antes de aprobar cuánto se le va a
+ * descontar al cliente y por qué.
  */
 export function SolicitudAprobarForm({
   solicitudId,
@@ -23,6 +43,8 @@ export function SolicitudAprobarForm({
   porcentajePersonalizado,
   diasPersonalizados,
   administradores,
+  descuentoApertura,
+  motivoDescuentoApertura,
 }: {
   solicitudId: string;
   montoSolicitado: number;
@@ -30,6 +52,8 @@ export function SolicitudAprobarForm({
   porcentajePersonalizado: number | null;
   diasPersonalizados: number[] | null;
   administradores: { id: string; nombre: string }[];
+  descuentoApertura: number;
+  motivoDescuentoApertura: MotivoDescuentoApertura;
 }) {
   const porcentajeInicial =
     porcentajePersonalizado ?? (esPlanValido(plazoDias) ? calcularPorcentajeInteresPorPlan(plazoDias) : 0);
@@ -37,7 +61,8 @@ export function SolicitudAprobarForm({
 
   const porcentaje = Number(porcentajeTexto) || 0;
   const interes = porcentaje > 0 ? calcularInteres(montoSolicitado, porcentaje) : 0;
-  const total = porcentaje > 0 ? calcularMontoTotal(montoSolicitado, porcentaje) : montoSolicitado;
+  const totalSinDescuento = porcentaje > 0 ? calcularMontoTotal(montoSolicitado, porcentaje) : montoSolicitado;
+  const total = aplicarDescuentoApertura(totalSinDescuento, descuentoApertura);
   const pagoDiario = porcentaje > 0 && plazoDias > 0 ? calcularCuotaSugerida(total, plazoDias) : 0;
 
   return (
@@ -71,6 +96,14 @@ export function SolicitudAprobarForm({
           <p className="font-semibold">{currency(pagoDiario)}</p>
         </div>
       </div>
+
+      {descuentoApertura > 0 && (
+        <p className="text-xs text-accent-text">
+          Se le aplicará un descuento de apertura de {currency(descuentoApertura)} por{" "}
+          {ETIQUETA_MOTIVO_DESCUENTO[motivoDescuentoApertura]} (ya restado del total de arriba: sin descuento
+          serían {currency(totalSinDescuento)}).
+        </p>
+      )}
 
       {diasPersonalizados && (
         <p className="text-xs text-accent-text">

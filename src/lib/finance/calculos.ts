@@ -202,6 +202,45 @@ export function generarCalendarioPagos(params: {
   return dias;
 }
 
-function redondear(valor: number): number {
+export function redondear(valor: number): number {
   return Math.round(valor * 100) / 100;
+}
+
+/**
+ * Descuento fijo de "apertura" que Empresa le hace al cliente sobre el TOTAL
+ * a pagar (no se le resta de lo que recibe, ni se le suma a su deuda — se
+ * resta directo del monto_total ya calculado con interés) cada vez que se
+ * abre un préstamo:
+ * - Cliente nuevo (nunca tuvo otro préstamo con el negocio): $50.
+ * - Renovación en un día distinto al que liquidó su préstamo anterior (o
+ *   habiendo completado su plazo normal): $50.
+ * - Renovación el MISMO día en que liquidó Y liquidó antes de completar su
+ *   plazo (pagó de más rápido de lo que le tocaba y de inmediato pidió otro
+ *   préstamo): $150 en total — así lo definió Angel.
+ */
+export const DESCUENTO_APERTURA_NORMAL = 50;
+export const DESCUENTO_APERTURA_RENOVACION_EXPRES = 150;
+
+export type MotivoDescuentoApertura =
+  | "cliente_nuevo"
+  | "renovacion_normal"
+  | "renovacion_mismo_dia_liquidacion_anticipada";
+
+export function calcularDescuentoApertura(params: {
+  esClienteNuevo: boolean;
+  liquidoAntesDeTiempo: boolean;
+  renovacionMismoDiaQueLiquidacion: boolean;
+}): { descuento: number; motivo: MotivoDescuentoApertura } {
+  if (params.esClienteNuevo) {
+    return { descuento: DESCUENTO_APERTURA_NORMAL, motivo: "cliente_nuevo" };
+  }
+  if (params.liquidoAntesDeTiempo && params.renovacionMismoDiaQueLiquidacion) {
+    return { descuento: DESCUENTO_APERTURA_RENOVACION_EXPRES, motivo: "renovacion_mismo_dia_liquidacion_anticipada" };
+  }
+  return { descuento: DESCUENTO_APERTURA_NORMAL, motivo: "renovacion_normal" };
+}
+
+/** monto_total ya con el descuento de apertura aplicado, nunca negativo. */
+export function aplicarDescuentoApertura(montoTotal: number, descuento: number): number {
+  return Math.max(0, redondear(montoTotal - descuento));
 }
