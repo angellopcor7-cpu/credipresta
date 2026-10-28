@@ -274,3 +274,17 @@ export type CorteSemanal = {
   /** Ruta en el bucket privado "respaldos-corte" del PDF de respaldo completo de ese corte, si se pudo generar. */
   pdf_path: string | null;
 };
+
+export type CategoriaGasto = "piso" | "comision_cobradores" | "otro";
+
+/** Un gasto del negocio (renta del piso, pago de comisión a cobradores, o cualquier otro gasto operativo). */
+export type Gasto = {
+  id: string;
+  categoria: CategoriaGasto;
+  concepto: string;
+  monto: number;
+  fecha: string;
+  notas: string | null;
+  creado_por: string | null;
+  created_at: string;
+};

@@ -10,6 +10,8 @@ import {
   Users,
   Landmark,
   Scissors,
+  History,
+  Receipt,
   Menu,
   X,
 } from "lucide-react";
@@ -21,6 +23,8 @@ const MODULOS = [
   { label: "Cobradores", href: "/cobradores", icon: Users },
   { label: "Préstamos", href: "/prestamos", icon: Landmark },
   { label: "Hacer corte", href: "/corte", icon: Scissors },
+  { label: "Historial", href: "/historial", icon: History },
+  { label: "Gastos", href: "/gastos", icon: Receipt },
 ];
 
 const TITULO_BASE = "CrediPresta";
