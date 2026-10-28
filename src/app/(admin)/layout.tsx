@@ -21,9 +21,15 @@ export default async function AdminLayout({
   const sesion = await exigirAdministrador();
   const primerNombre = sesion.nombreCompleto.trim().split(/\s+/)[0] ?? sesion.nombreCompleto;
 
+  const supabase = await createClient();
+  const { count: solicitudesPendientesCount } = await supabase
+    .from("solicitudes_prestamo")
+    .select("id", { count: "exact", head: true })
+    .eq("estado", "pendiente");
+
   return (
     <div className="min-h-screen bg-page text-ink md:flex">
-      <AdminSidebar />
+      <AdminSidebar solicitudesPendientesInicial={solicitudesPendientesCount ?? 0} />
       <div className="flex-1 min-w-0">
         <header className="border-b border-border">
           <div className="pl-14 pr-4 py-4 md:px-8 flex items-center justify-between gap-3 flex-wrap">

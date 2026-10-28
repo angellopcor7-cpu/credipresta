@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   LayoutDashboard,
   FileText,
@@ -23,6 +23,14 @@ const MODULOS = [
   { label: "Hacer corte", href: "/corte", icon: Scissors },
 ];
 
+const TITULO_BASE = "CrediPresta";
+// Cada cuántos milisegundos se vuelve a preguntar por el conteo de
+// solicitudes pendientes mientras la pestaña sigue abierta — no son
+// notificaciones push de verdad (eso Angel pidió dejarlo para después),
+// nomás que el numerito del sidebar y el título de la pestaña no se queden
+// desactualizados si se quedan viendo otra pantalla un buen rato.
+const INTERVALO_REFRESCO_MS = 45_000;
+
 function estaActivo(pathname: string, href: string) {
   if (href === "/dashboard") return pathname === "/dashboard";
   return pathname === href || pathname.startsWith(`${href}/`);
@@ -35,15 +43,53 @@ function estaActivo(pathname: string, href: string) {
  * escritorio queda siempre visible; en celular/tablet se esconde y se abre
  * como un cajón con el botón de hamburguesa (fijo en la esquina para no
  * pelearse con el layout del header).
+ *
+ * También avisa cuando hay solicitudes esperando respuesta: un numerito
+ * junto a "Solicitudes" (aquí y en el cajón de móvil) y el mismo número en
+ * el título de la pestaña del navegador, para que se note aunque Empresa
+ * esté viendo otra parte de la app. El número llega ya calculado del
+ * servidor al cargar la página, y de ahí en adelante se refresca solo cada
+ * rato (ver INTERVALO_REFRESCO_MS) pidiéndolo a /api/solicitudes-pendientes-count.
  */
-export function AdminSidebar() {
+export function AdminSidebar({ solicitudesPendientesInicial }: { solicitudesPendientesInicial: number }) {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
+  const [pendientes, setPendientes] = useState(solicitudesPendientesInicial);
+  // Para "adoptar" el valor nuevo del servidor cuando cambia (por ejemplo,
+  // al navegar a otra pantalla del panel) sin esperar al siguiente refresco
+  // por tiempo. Comparar y ajustar aquí mismo, durante el render, es el
+  // patrón que React recomienda para esto — un useEffect que solo refleja
+  // una prop hacia el estado dispara una vuelta extra de render de más.
+  const [solicitudesPendientesPrevias, setSolicitudesPendientesPrevias] = useState(solicitudesPendientesInicial);
+  if (solicitudesPendientesInicial !== solicitudesPendientesPrevias) {
+    setSolicitudesPendientesPrevias(solicitudesPendientesInicial);
+    setPendientes(solicitudesPendientesInicial);
+  }
+
+  useEffect(() => {
+    const intervalo = setInterval(async () => {
+      try {
+        const res = await fetch("/api/solicitudes-pendientes-count", { cache: "no-store" });
+        if (!res.ok) return;
+        const datos: { count: number } = await res.json();
+        setPendientes(datos.count);
+      } catch {
+        // Sin conexión momentánea o lo que sea: se intenta de nuevo en el
+        // siguiente ciclo, no hace falta avisar nada por esto.
+      }
+    }, INTERVALO_REFRESCO_MS);
+    return () => clearInterval(intervalo);
+  }, []);
+
+  useEffect(() => {
+    document.title = pendientes > 0 ? `(${pendientes}) ${TITULO_BASE}` : TITULO_BASE;
+  }, [pendientes]);
 
   const enlaces = (
     <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
       {MODULOS.map((m) => {
         const activo = estaActivo(pathname, m.href);
+        const avisoSolicitudes = m.href === "/solicitudes" && pendientes > 0;
         return (
           <Link
             key={m.href}
@@ -56,7 +102,12 @@ export function AdminSidebar() {
             }`}
           >
             <m.icon className="h-4 w-4 shrink-0" />
-            {m.label}
+            <span className="flex-1">{m.label}</span>
+            {avisoSolicitudes && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] font-bold text-white">
+                {pendientes}
+              </span>
+            )}
           </Link>
         );
       })}
