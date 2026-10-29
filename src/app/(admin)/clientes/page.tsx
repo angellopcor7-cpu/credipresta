@@ -148,7 +148,11 @@ export default async function ClientesPage() {
                         <span className="sr-only">{estilo.titulo}</span>
                       </span>
                     </td>
-                    <td className="px-4 py-3">{c.nombre_completo}</td>
+                    <td className="px-4 py-3">
+                      <Link href={`/clientes/${c.id}`} className="font-medium text-ink hover:text-accent-text hover:underline">
+                        {c.nombre_completo}
+                      </Link>
+                    </td>
                     <td className="px-4 py-3 text-ink-secondary">{c.telefono ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-secondary">{c.identificacion ?? "—"}</td>
                     <td className="px-4 py-3 text-ink-secondary">{estadoLabel[c.estado]}</td>
