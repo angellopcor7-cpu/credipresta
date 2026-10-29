@@ -23,6 +23,9 @@ export default async function RenovarPrestamoPage({
   const { id } = await params;
   const { error } = await searchParams;
   const sesion = await exigirVistaCobrador();
+  if (!sesion.puedeDarPrestamos) {
+    redirect(`/panel/clientes/${id}?error=${encodeURIComponent("No tienes permiso para dar préstamos — solo puedes cobrar")}`);
+  }
   const supabase = await createClient();
 
   const { data: cliente } = await supabase

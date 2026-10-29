@@ -26,9 +26,11 @@ export default async function CobradorLayout({ children }: { children: React.Rea
             <Link href="/panel" className="hover:text-ink">
               Mis clientes
             </Link>
-            <Link href="/panel/clientes/nuevo" className="hover:text-ink">
-              + Nuevo cliente
-            </Link>
+            {sesion.puedeDarPrestamos && (
+              <Link href="/panel/clientes/nuevo" className="hover:text-ink">
+                + Nuevo cliente
+              </Link>
+            )}
             {sesion.rol === "administrador" && (
               <Link
                 href="/dashboard"

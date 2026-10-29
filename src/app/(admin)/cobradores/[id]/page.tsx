@@ -17,7 +17,9 @@ import { EditarCobradorForm } from "./EditarCobradorForm";
 import { RestablecerPasswordForm } from "./RestablecerPasswordForm";
 import { AgregarRutaForm } from "./AgregarRutaForm";
 import { EstadoCobradorButton } from "./EstadoCobradorButton";
+import { PuedeDarPrestamosButton } from "./PuedeDarPrestamosButton";
 import { ReasignarTodosForm } from "./ReasignarTodosForm";
+import { CoberturaRutaForm } from "./CoberturaRutaForm";
 import { reasignarCliente } from "../actions";
 import { TIPOS_COMISION, type TipoComision } from "@/lib/types";
 
@@ -55,7 +57,7 @@ export default async function DetalleCobradorPage({
   const { data: cobrador } = await supabase
     .from("cobradores")
     .select(
-      "id, usuario_id, zona, fecha_ingreso, activo, tipo_comision, porcentaje_comision, usuarios(nombre_completo, telefono)"
+      "id, usuario_id, zona, fecha_ingreso, activo, tipo_comision, porcentaje_comision, puede_dar_prestamos, usuarios(nombre_completo, telefono)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -70,6 +72,7 @@ export default async function DetalleCobradorPage({
     activo: boolean;
     tipo_comision: TipoComision;
     porcentaje_comision: number;
+    puede_dar_prestamos: boolean;
     usuarios: { nombre_completo: string; telefono: string | null } | null;
   };
 
@@ -82,7 +85,14 @@ export default async function DetalleCobradorPage({
     email = null;
   }
 
-  const [{ data: clientes }, { data: rutas }, { data: prestamos }, { data: otrosCobradoresData }] = await Promise.all([
+  const [
+    { data: clientes },
+    { data: rutas },
+    { data: prestamos },
+    { data: otrosCobradoresData },
+    { data: cubriendoAEsteData },
+    { data: esteCubreAData },
+  ] = await Promise.all([
     supabase.from("clientes").select("id, nombre_completo, estado").eq("cobrador_id", id).order("nombre_completo"),
     supabase.from("rutas").select("id, nombre, activa").eq("cobrador_id", id).order("nombre"),
     supabase.from("prestamos").select("estado, saldo_actual, mora_acumulada, monto_prestado").eq("cobrador_id", id),
@@ -91,12 +101,57 @@ export default async function DetalleCobradorPage({
       .select("id, usuarios(nombre_completo)")
       .eq("activo", true)
       .neq("id", id),
+    supabase
+      .from("coberturas_cobrador")
+      .select("id, cobrador_cubre_id")
+      .eq("cobrador_cubierto_id", id)
+      .eq("activo", true),
+    supabase
+      .from("coberturas_cobrador")
+      .select("id, cobrador_cubierto_id")
+      .eq("cobrador_cubre_id", id)
+      .eq("activo", true),
   ]);
 
   const otrosCobradores = (otrosCobradoresData ?? []).map((c) => {
     const co = c as unknown as { id: string; usuarios: { nombre_completo: string } | null };
     return { id: co.id, nombre: co.usuarios?.nombre_completo ?? "—" };
   });
+
+  const listaCubriendoAEste = (cubriendoAEsteData ?? []) as { id: string; cobrador_cubre_id: string }[];
+  const listaEsteCubreA = (esteCubreAData ?? []) as { id: string; cobrador_cubierto_id: string }[];
+
+  // Los nombres de los cobradores involucrados en las coberturas se resuelven
+  // aparte (en vez de un embed anidado con dos FK a la misma tabla, que
+  // PostgREST no puede resolver sin ambigüedad) — casi siempre ya están en
+  // `otrosCobradores`, y si alguno se desactivó se busca su nombre aparte.
+  const nombrePorCobradorId = new Map(otrosCobradores.map((o) => [o.id, o.nombre]));
+  const idsFaltantes = [
+    ...new Set(
+      [...listaCubriendoAEste.map((c) => c.cobrador_cubre_id), ...listaEsteCubreA.map((c) => c.cobrador_cubierto_id)].filter(
+        (otroId) => !nombrePorCobradorId.has(otroId)
+      )
+    ),
+  ];
+  if (idsFaltantes.length > 0) {
+    const { data: faltantesData } = await supabase.from("cobradores").select("id, usuarios(nombre_completo)").in("id", idsFaltantes);
+    for (const c of faltantesData ?? []) {
+      const co = c as unknown as { id: string; usuarios: { nombre_completo: string } | null };
+      nombrePorCobradorId.set(co.id, co.usuarios?.nombre_completo ?? "—");
+    }
+  }
+
+  const cubriendoAEste = listaCubriendoAEste.map((c) => ({
+    id: c.id,
+    cobradorId: c.cobrador_cubre_id,
+    nombre: nombrePorCobradorId.get(c.cobrador_cubre_id) ?? "—",
+  }));
+
+  const esteCubreA = listaEsteCubreA.map((c) => ({
+    id: c.id,
+    cobradorId: c.cobrador_cubierto_id,
+    nombre: nombrePorCobradorId.get(c.cobrador_cubierto_id) ?? "—",
+  }));
 
   const listaClientes = clientes ?? [];
   const listaPrestamos = prestamos ?? [];
@@ -175,13 +230,26 @@ export default async function DetalleCobradorPage({
             </span>
           </div>
         </div>
-        <EstadoCobradorButton
-          cobradorId={cobradorTyped.id}
-          usuarioId={cobradorTyped.usuario_id}
-          nombreCobrador={nombreCobrador}
-          activo={cobradorTyped.activo}
-        />
+        <div className="flex flex-col items-end gap-2">
+          <EstadoCobradorButton
+            cobradorId={cobradorTyped.id}
+            usuarioId={cobradorTyped.usuario_id}
+            nombreCobrador={nombreCobrador}
+            activo={cobradorTyped.activo}
+          />
+          <PuedeDarPrestamosButton
+            cobradorId={cobradorTyped.id}
+            nombreCobrador={nombreCobrador}
+            puedeDarPrestamos={cobradorTyped.puede_dar_prestamos}
+          />
+        </div>
       </div>
+
+      {!cobradorTyped.puede_dar_prestamos && (
+        <p className="text-xs text-accent-text bg-accent-chip-bg/50 border border-accent-chip-border rounded-md px-3 py-2 max-w-2xl">
+          Este cobrador solo puede cobrar — no puede dar de alta clientes nuevos ni renovar préstamos.
+        </p>
+      )}
 
       {error && (
         <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">{error}</p>
@@ -243,6 +311,21 @@ export default async function DetalleCobradorPage({
         ) : (
           <p className="text-ink-muted text-sm">Sin rutas asignadas todavía.</p>
         )}
+      </div>
+
+      <div className="space-y-3 bg-surface border border-border rounded-xl p-4">
+        <h2 className="text-sm font-semibold text-ink-secondary">Cobertura de ruta</h2>
+        <p className="text-ink-muted text-xs -mt-1">
+          Para cuando un cobrador va a cubrir la ruta de otro mientras no está: comparte sus clientes sin
+          quitárselos. No afecta el permiso de dar préstamos — ese se controla aparte, arriba.
+        </p>
+        <CoberturaRutaForm
+          cobradorId={cobradorTyped.id}
+          nombreCobrador={nombreCobrador}
+          cubriendoAEste={cubriendoAEste}
+          esteCubreA={esteCubreA}
+          otrosCobradores={otrosCobradores}
+        />
       </div>
 
       <div className="space-y-3">

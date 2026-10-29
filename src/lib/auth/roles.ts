@@ -16,6 +16,13 @@ export type SesionUsuario = {
   nombreCompleto: string;
   rol: Rol;
   cobradorId: string | null;
+  /**
+   * false = este cobrador puede entrar a cobrar (pagos, mora, días extra)
+   * pero no puede dar de alta clientes nuevos ni renovar préstamos — pensado
+   * para quien solo va a cubrir la ruta de otro cobrador. Empresa lo prende
+   * o apaga desde la ficha del cobrador. Un administrador siempre puede.
+   */
+  puedeDarPrestamos: boolean;
 };
 
 /** A dónde debe ir cada rol al entrar — para no mandar a nadie a una pantalla que no le toca. */
@@ -39,7 +46,7 @@ export async function getSesionUsuario(): Promise<SesionUsuario | null> {
 
   const { data: perfil } = await supabase
     .from("usuarios")
-    .select("nombre_completo, activo, roles(nombre), cobradores(id)")
+    .select("nombre_completo, activo, roles(nombre), cobradores(id, puede_dar_prestamos)")
     .eq("id", user.id)
     .maybeSingle();
 
@@ -48,15 +55,21 @@ export async function getSesionUsuario(): Promise<SesionUsuario | null> {
   const rolNombre = (perfil.roles as unknown as { nombre: string } | null)?.nombre;
   if (rolNombre !== "administrador" && rolNombre !== "cobrador") return null;
 
-  const cobrador = perfil.cobradores as unknown as { id: string } | { id: string }[] | null;
-  const cobradorId = Array.isArray(cobrador) ? cobrador[0]?.id ?? null : cobrador?.id ?? null;
+  const cobrador = perfil.cobradores as unknown as
+    | { id: string; puede_dar_prestamos: boolean }
+    | { id: string; puede_dar_prestamos: boolean }[]
+    | null;
+  const cobradorFila = Array.isArray(cobrador) ? cobrador[0] ?? null : cobrador;
 
   return {
     id: user.id,
     email: user.email,
     nombreCompleto: perfil.nombre_completo,
     rol: rolNombre,
-    cobradorId,
+    cobradorId: cobradorFila?.id ?? null,
+    // Un administrador sin fila propia de cobrador (todavía no entró a la
+    // vista de cobrador) de todos modos puede dar préstamos.
+    puedeDarPrestamos: cobradorFila?.puede_dar_prestamos ?? true,
   };
 }
 

@@ -51,11 +51,10 @@ export default async function PanelCobradorPage({
   const sesion = await exigirVistaCobrador();
   const supabase = await createClient();
 
-  const { data: clientesData } = await supabase
-    .from("clientes")
-    .select("*")
-    .eq("cobrador_id", sesion.cobradorId)
-    .order("created_at", { ascending: false });
+  // Sin filtrar por cobrador_id a propósito: RLS (cliente_asignado_a_mi) ya
+  // regresa tanto los clientes propios como los de cualquier ruta que este
+  // cobrador esté cubriendo temporalmente.
+  const { data: clientesData } = await supabase.from("clientes").select("*").order("created_at", { ascending: false });
   const clientes = (clientesData ?? []) as Cliente[];
   const clienteIds = clientes.map((c) => c.id);
 
@@ -131,13 +130,15 @@ export default async function PanelCobradorPage({
               )}
             </p>
           </div>
-          <Link
-            href="/panel/clientes/nuevo"
-            className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 transition-colors text-neutral-950 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg shadow-amber-950/50"
-          >
-            <Plus className="h-4 w-4" strokeWidth={2.5} />
-            Nuevo cliente
-          </Link>
+          {sesion.puedeDarPrestamos && (
+            <Link
+              href="/panel/clientes/nuevo"
+              className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 transition-colors text-neutral-950 font-semibold text-sm px-4 py-2.5 rounded-lg shadow-lg shadow-amber-950/50"
+            >
+              <Plus className="h-4 w-4" strokeWidth={2.5} />
+              Nuevo cliente
+            </Link>
+          )}
         </div>
       </div>
 
@@ -170,7 +171,9 @@ export default async function PanelCobradorPage({
           </div>
           <p className="text-ink-secondary font-medium">Todavía no tienes clientes</p>
           <p className="text-ink-muted text-sm max-w-xs">
-            Da de alta al primero con el botón &quot;Nuevo cliente&quot; de arriba.
+            {sesion.puedeDarPrestamos
+              ? 'Da de alta al primero con el botón "Nuevo cliente" de arriba.'
+              : "Cuando Empresa te asigne una ruta para cubrir, tus clientes van a aparecer aquí."}
           </p>
         </div>
       ) : (
@@ -196,7 +199,17 @@ export default async function PanelCobradorPage({
                   {iniciales(cliente.nombre_completo)}
                 </div>
                 <div className="min-w-0">
-                  <p className="font-medium truncate">{cliente.nombre_completo}</p>
+                  <p className="font-medium truncate flex items-center gap-1.5">
+                    {cliente.nombre_completo}
+                    {cliente.cobrador_id !== sesion.cobradorId && (
+                      <span
+                        title="No es tu cliente — estás cubriendo esta ruta"
+                        className="shrink-0 text-[10px] font-normal bg-accent-chip-bg text-accent-text border border-accent-chip-border rounded-full px-1.5 py-0.5"
+                      >
+                        Cubriendo
+                      </span>
+                    )}
+                  </p>
                   <p className="text-ink-muted text-xs flex items-center gap-1">
                     <Phone className="h-3 w-3" />
                     {cliente.telefono ?? "Sin teléfono"}

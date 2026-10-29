@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { ArrowLeft, UserPlus } from "lucide-react";
 import { NuevoClienteForm } from "./NuevoClienteForm";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
@@ -12,6 +13,9 @@ export default async function NuevoClientePage({
 }) {
   const { error } = await searchParams;
   const sesion = await exigirVistaCobrador();
+  if (!sesion.puedeDarPrestamos) {
+    redirect(`/panel?error=${encodeURIComponent("No tienes permiso para dar préstamos — solo puedes cobrar")}`);
+  }
   const config = await obtenerConfiguraciones();
 
   return (

@@ -285,6 +285,22 @@ export type SolicitudPagoExtraConDetalle = SolicitudPagoExtra & {
 };
 
 /**
+ * Un cobrador (cobrador_cubre_id) cubriendo temporalmente la cartera de otro
+ * (cobrador_cubierto_id): mientras `activo` sea true, ve y puede cobrar a
+ * los clientes de ese otro cobrador (no se los quita, solo los comparte) —
+ * pero igual no puede dar préstamos si no tiene `puede_dar_prestamos`.
+ */
+export type CoberturaCobrador = {
+  id: string;
+  cobrador_cubre_id: string;
+  cobrador_cubierto_id: string;
+  activo: boolean;
+  fecha_inicio: string;
+  fecha_fin: string | null;
+  creado_por: string | null;
+};
+
+/**
  * Registro permanente de un corte semanal ya confirmado (botón "Confirmar
  * corte" en /corte). `detalle` guarda el arreglo de FilaCorteCobrador tal
  * como estaba al momento de cerrar la semana — es la foto fija que no

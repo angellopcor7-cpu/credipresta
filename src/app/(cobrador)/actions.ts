@@ -43,6 +43,9 @@ function leerDiasPersonalizados(formData: FormData): number[] | null {
  */
 export async function crearClienteYSolicitud(formData: FormData) {
   const sesion = await exigirVistaCobrador();
+  if (!sesion.puedeDarPrestamos) {
+    redirect(`/panel?error=${encodeURIComponent("No tienes permiso para dar préstamos — solo puedes cobrar")}`);
+  }
   const supabase = await createClient();
 
   const nombreCompleto = String(formData.get("nombre_completo") || "").trim();
@@ -217,9 +220,11 @@ export async function crearClienteYSolicitud(formData: FormData) {
  */
 export async function solicitarNuevoPrestamoClienteExistente(formData: FormData) {
   const sesion = await exigirVistaCobrador();
-  const supabase = await createClient();
-
   const clienteId = String(formData.get("cliente_id") || "").trim();
+  if (!sesion.puedeDarPrestamos) {
+    redirect(`/panel/clientes/${clienteId}?error=${encodeURIComponent("No tienes permiso para dar préstamos — solo puedes cobrar")}`);
+  }
+  const supabase = await createClient();
   const montoSolicitado = Number(formData.get("monto_solicitado"));
   const plazoDias = Number(formData.get("plazo_dias"));
   const porcentajePersonalizadoTexto = formData.get("porcentaje_interes_personalizado");

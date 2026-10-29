@@ -68,15 +68,14 @@ export default async function DetalleClientePage({
   const sesion = await exigirVistaCobrador();
   const supabase = await createClient();
 
-  const { data: clienteData } = await supabase
-    .from("clientes")
-    .select("*")
-    .eq("id", id)
-    .eq("cobrador_id", sesion.cobradorId)
-    .maybeSingle();
+  // Sin filtrar por cobrador_id a propósito: RLS (cliente_asignado_a_mi) ya
+  // deja pasar tanto los clientes propios como los de cualquier ruta que
+  // este cobrador esté cubriendo temporalmente.
+  const { data: clienteData } = await supabase.from("clientes").select("*").eq("id", id).maybeSingle();
 
   if (!clienteData) notFound();
   const cliente = clienteData as Cliente;
+  const esMiCliente = cliente.cobrador_id === sesion.cobradorId;
 
   const [{ data: prestamosData }, { data: documentosData }, { data: solicitudesData }] = await Promise.all([
     supabase.from("prestamos").select("*").eq("cliente_id", id).order("created_at", { ascending: false }),
@@ -173,7 +172,12 @@ export default async function DetalleClientePage({
   // un préstamo en su historial, aunque ya esté liquidado) pero no tiene uno
   // abierto ahorita, y no hay ya otra solicitud esperando respuesta.
   const puedeSolicitarNuevo =
-    prestamos.length > 0 && !puedeCobrar && !solicitudPendiente && cliente.estado !== "pendiente_aprobacion";
+    esMiCliente &&
+    sesion.puedeDarPrestamos &&
+    prestamos.length > 0 &&
+    !puedeCobrar &&
+    !solicitudPendiente &&
+    cliente.estado !== "pendiente_aprobacion";
 
   return (
     <div className="space-y-6">
@@ -204,15 +208,24 @@ export default async function DetalleClientePage({
           </div>
         </div>
 
-        <div className="mt-2">
-          <EditarClienteForm
-            clienteId={cliente.id}
-            nombreCompleto={cliente.nombre_completo}
-            telefono={cliente.telefono}
-            direccion={cliente.direccion}
-          />
-        </div>
+        {esMiCliente && (
+          <div className="mt-2">
+            <EditarClienteForm
+              clienteId={cliente.id}
+              nombreCompleto={cliente.nombre_completo}
+              telefono={cliente.telefono}
+              direccion={cliente.direccion}
+            />
+          </div>
+        )}
       </div>
+
+      {!esMiCliente && (
+        <div className="flex items-start gap-2 bg-surface border border-border rounded-md px-4 py-3 text-sm text-ink-secondary">
+          <Clock className="h-4 w-4 shrink-0 mt-0.5 text-ink-muted" />
+          <p>Este cliente no es tuyo — estás cubriendo esta ruta temporalmente, así que solo puedes cobrarle.</p>
+        </div>
+      )}
 
       {error && (
         <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">{error}</p>

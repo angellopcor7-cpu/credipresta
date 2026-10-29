@@ -385,3 +385,94 @@ export async function reasignarTodosLosClientes(formData: FormData) {
     )}`
   );
 }
+
+/**
+ * Prende o apaga el permiso de dar préstamos (dar de alta cliente nuevo /
+ * renovar) de un cobrador — pensado para alguien que solo va a cubrir la
+ * ruta de otro mientras no está, sin que pueda comprometer dinero de
+ * Empresa en préstamos nuevos. No le afecta su acceso para cobrar.
+ */
+export async function cambiarPuedeDarPrestamos(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const cobradorId = String(formData.get("cobrador_id") || "");
+  const puedeDarPrestamos = String(formData.get("puede_dar_prestamos") || "") === "si";
+
+  const { error } = await supabase
+    .from("cobradores")
+    .update({ puede_dar_prestamos: puedeDarPrestamos })
+    .eq("id", cobradorId);
+
+  if (error) {
+    redirect(`/cobradores/${cobradorId}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/cobradores/${cobradorId}`);
+  redirect(
+    `/cobradores/${cobradorId}?exito=${encodeURIComponent(
+      puedeDarPrestamos ? "Ahora sí puede dar préstamos" : "Ya no puede dar préstamos (solo puede cobrar)"
+    )}`
+  );
+}
+
+/**
+ * Empieza una cobertura: `cobradorCubreId` va a poder ver y cobrar, además
+ * de los suyos, los clientes de `cobradorCubiertoId` — sin quitárselos, los
+ * comparten mientras la cobertura esté activa.
+ */
+export async function iniciarCobertura(formData: FormData) {
+  const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+
+  const cobradorCubreId = String(formData.get("cobrador_cubre_id") || "");
+  const cobradorCubiertoId = String(formData.get("cobrador_cubierto_id") || "");
+  // La ficha de cualquiera de los dos cobradores puede iniciar la cobertura
+  // (una tiene el selector "va a cubrir a…", la otra "lo va a cubrir…") —
+  // así que quien llama manda a cuál de las dos fichas regresar.
+  const volverA = String(formData.get("volver_a") || "");
+
+  if (!cobradorCubreId || !cobradorCubiertoId || cobradorCubreId === cobradorCubiertoId) {
+    redirect(`${volverA}?error=${encodeURIComponent("Elige un cobrador distinto para la cobertura")}`);
+  }
+
+  const { error } = await supabase.from("coberturas_cobrador").insert({
+    cobrador_cubre_id: cobradorCubreId,
+    cobrador_cubierto_id: cobradorCubiertoId,
+    creado_por: sesion.id,
+  });
+
+  if (error) {
+    redirect(`${volverA}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/cobradores/${cobradorCubreId}`);
+  revalidatePath(`/cobradores/${cobradorCubiertoId}`);
+  redirect(`${volverA}?exito=${encodeURIComponent("Cobertura iniciada")}`);
+}
+
+/** Termina una cobertura activa — los clientes vuelven a verse solo desde su cobrador original. */
+export async function terminarCobertura(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const coberturaId = String(formData.get("cobertura_id") || "");
+  const volverA = String(formData.get("volver_a") || "");
+
+  const { data: cobertura, error } = await supabase
+    .from("coberturas_cobrador")
+    .update({ activo: false, fecha_fin: new Date().toISOString() })
+    .eq("id", coberturaId)
+    .select("cobrador_cubre_id, cobrador_cubierto_id")
+    .single();
+
+  if (error) {
+    redirect(`${volverA}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  if (cobertura) {
+    revalidatePath(`/cobradores/${cobertura.cobrador_cubre_id}`);
+    revalidatePath(`/cobradores/${cobertura.cobrador_cubierto_id}`);
+  }
+  redirect(`${volverA}?exito=${encodeURIComponent("Cobertura terminada")}`);
+}
