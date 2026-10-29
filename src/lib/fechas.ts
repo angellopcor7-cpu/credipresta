@@ -166,3 +166,16 @@ export function formatoRangoSemana(claveLunes: string): string {
   }).format(domingo);
   return `${diaLunes} - ${textoDomingo}`;
 }
+
+/** Versión compacta sin año ("1-7 sep"), para etiquetas de eje donde no cabe el formato completo. */
+export function formatoRangoSemanaCorto(claveLunes: string): string {
+  const lunes = new Date(`${claveLunes}T12:00:00Z`);
+  const domingo = new Date(`${domingoDe(claveLunes)}T12:00:00Z`);
+  const diaLunes = lunes.getUTCDate();
+  const textoDomingo = new Intl.DateTimeFormat("es-MX", {
+    day: "numeric",
+    month: "short",
+    timeZone: "UTC",
+  }).format(domingo);
+  return `${diaLunes}-${textoDomingo}`;
+}

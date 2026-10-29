@@ -5,7 +5,10 @@ import { useId, useState } from "react";
 export type PuntoGanancia = {
   /** clave_lunes de esa semana, para la key. */
   id: string;
+  /** Texto completo (con año) — se usa en el tooltip al pasar el mouse. */
   etiqueta: string;
+  /** Texto corto (sin año) — se usa en las etiquetas del eje, donde no cabe el completo. */
+  etiquetaCorta: string;
   ingreso: number;
   comision: number;
   gasto: number;
@@ -51,6 +54,18 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
 
   const anchoBarra = Math.min(36, (anchoUtil / datos.length) * 0.56);
   const paso = anchoUtil / datos.length;
+  // Si hay muchas semanas, no se puede poner una etiqueta por barra (se
+  // amontonan, sobre todo en celular) — se eligen como máximo 4,
+  // repartidas parejo, siempre incluyendo la primera y la última semana.
+  const MAX_ETIQUETAS = 4;
+  const indicesConEtiqueta = new Set<number>();
+  if (datos.length <= MAX_ETIQUETAS) {
+    datos.forEach((_, i) => indicesConEtiqueta.add(i));
+  } else {
+    for (let k = 0; k < MAX_ETIQUETAS; k++) {
+      indicesConEtiqueta.add(Math.round((k * (datos.length - 1)) / (MAX_ETIQUETAS - 1)));
+    }
+  }
 
   const puntoActivo = activo !== null ? datos[activo] : null;
 
@@ -134,9 +149,30 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
         )}
       </div>
 
-      <div className="flex justify-between text-[10px] text-ink-muted px-1">
-        <span>{datos[0]?.etiqueta}</span>
-        {datos.length > 1 && <span>{datos[datos.length - 1]?.etiqueta}</span>}
+      <div
+        className="flex text-[10px] text-ink-muted"
+        style={{ paddingLeft: `${(MARGEN.izquierda / ANCHO) * 100}%`, paddingRight: `${(MARGEN.derecha / ANCHO) * 100}%` }}
+      >
+        {datos.map((d, i) => {
+          if (!indicesConEtiqueta.has(i)) {
+            return <div key={d.id} style={{ width: `${(paso / ANCHO) * 100}%` }} />;
+          }
+          // Cada etiqueta vive en la franja de SU barra (para quedar bien
+          // alineada), pero puede desbordarse hacia las franjas vacías de al
+          // lado sin cortarse — si no, en celular quedaban truncadas a una
+          // sola letra. La primera se alinea a la izquierda y la última a la
+          // derecha para no salirse de la gráfica.
+          const alineacion = i === 0 ? "text-left" : i === datos.length - 1 ? "text-right" : "text-center";
+          return (
+            <div
+              key={d.id}
+              className={`whitespace-nowrap overflow-visible ${alineacion}`}
+              style={{ width: `${(paso / ANCHO) * 100}%` }}
+            >
+              {d.etiquetaCorta}
+            </div>
+          );
+        })}
       </div>
     </div>
   );
