@@ -334,8 +334,12 @@ export async function solicitarNuevoPrestamoClienteExistente(formData: FormData)
 }
 
 /**
- * "Aplicar pago del día": registra la cuota de hoy como pagada (por el monto
- * sugerido del calendario) para ese préstamo. Usa la misma tabla `pagos` y
+ * "Aplicar pago del día": registra la cuota de hoy como pagada, SIEMPRE por
+ * el monto sugerido del préstamo — el cobrador ya no puede escribir un
+ * monto distinto (antes se podía, y causaba descuadres). Si el cliente paga
+ * de más (el doble, el triple...), eso no se aplica aquí: se manda una
+ * solicitud de "pagó varios días" (`solicitarPagoExtra`) para que Empresa
+ * decida si se le cuentan esos días extra. Usa la misma tabla `pagos` y
  * política RLS que ya deja al cobrador registrar pagos de sus propios
  * clientes.
  */
@@ -344,7 +348,6 @@ export async function aplicarPagoDelDia(formData: FormData) {
   const supabase = await createClient();
 
   const prestamoId = String(formData.get("prestamo_id") || "");
-  const montoTexto = formData.get("monto");
 
   const { data: prestamo } = await supabase
     .from("prestamos")
@@ -372,7 +375,7 @@ export async function aplicarPagoDelDia(formData: FormData) {
 
   const saldoActual = Number(prestamo.saldo_actual);
   const moraActual = Number(prestamo.mora_acumulada);
-  const monto = montoTexto ? Number(montoTexto) : Number(prestamo.monto_cuota_sugerida);
+  const monto = Number(prestamo.monto_cuota_sugerida);
   const montoAplicado = Math.min(monto, saldoActual + moraActual);
 
   if (!montoAplicado || montoAplicado <= 0) {
@@ -410,6 +413,70 @@ export async function aplicarPagoDelDia(formData: FormData) {
   revalidatePath("/panel");
   revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
   redirect(`/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent(`Pago de $${montoAplicado} aplicado`)}`);
+}
+
+/**
+ * "Pagó varios días": el cobrador NO aplica esto directo — solo manda la
+ * solicitud con cuántos días EXTRA dice que pagó el cliente (aparte del día
+ * de hoy, que se aplica aparte con el botón normal). Empresa la revisa en
+ * /solicitudes y decide si la acepta tal cual o la rechaza; no puede
+ * cambiar el número de días.
+ */
+export async function solicitarPagoExtra(formData: FormData) {
+  const sesion = await exigirVistaCobrador();
+  const supabase = await createClient();
+
+  const prestamoId = String(formData.get("prestamo_id") || "");
+  const diasExtra = Math.trunc(Number(formData.get("dias_extra")));
+  const notas = String(formData.get("notas") || "").trim() || null;
+
+  const { data: prestamo } = await supabase
+    .from("prestamos")
+    .select("id, cliente_id, cobrador_id, monto_cuota_sugerida, estado")
+    .eq("id", prestamoId)
+    .single();
+
+  if (!prestamo) {
+    redirect(`/panel?error=${encodeURIComponent("Préstamo no encontrado")}`);
+  }
+  if (prestamo.estado === "liquidado" || prestamo.estado === "cancelado") {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Este préstamo ya está cerrado")}`);
+  }
+  if (!Number.isFinite(diasExtra) || diasExtra < 1) {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("El número de días debe ser al menos 1")}`);
+  }
+
+  const { count: solicitudPendiente } = await supabase
+    .from("solicitudes_pago_extra")
+    .select("id", { count: "exact", head: true })
+    .eq("prestamo_id", prestamoId)
+    .eq("estado", "pendiente");
+
+  if (solicitudPendiente) {
+    redirect(
+      `/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Ya hay una solicitud de días extra esperando respuesta")}`
+    );
+  }
+
+  const montoPorDia = Number(prestamo.monto_cuota_sugerida);
+
+  const { error } = await supabase.from("solicitudes_pago_extra").insert({
+    prestamo_id: prestamoId,
+    cliente_id: prestamo.cliente_id,
+    cobrador_id: prestamo.cobrador_id,
+    dias_extra: diasExtra,
+    monto_por_dia: montoPorDia,
+    monto_total: Math.round(montoPorDia * diasExtra * 100) / 100,
+    notas_cobrador: notas,
+    solicitado_por: sesion.id,
+  });
+
+  if (error) {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
+  redirect(`/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent("Se mandó la solicitud de días extra a Empresa")}`);
 }
 
 /**

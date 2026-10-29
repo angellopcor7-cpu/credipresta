@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { formatoFechaCorta } from "@/lib/format";
 import { obtenerConfiguraciones } from "@/lib/config";
 import { InfoDiasCobro } from "@/components/InfoDiasCobro";
+import { CalendarioPagosMensual } from "@/components/CalendarioPagosMensual";
+import { obtenerFechasPagadas } from "@/lib/finance/calculos";
 import type { CalendarioPago, Mora, Pago, Prestamo, TipoDocumento } from "@/lib/types";
 import { AjusteMoraForm } from "./AjusteMoraForm";
 import { EditarPrestamoForm } from "./EditarPrestamoForm";
@@ -74,6 +76,13 @@ export default async function DetallePrestamoPage({
   const listaCalendario = (calendario ?? []) as CalendarioPago[];
   const listaMoras = (moras ?? []) as Mora[];
   const puedeRecibirPagos = p.estado === "activo" || p.estado === "en_mora";
+
+  const hoy = new Date().toISOString().slice(0, 10);
+  const cantidadPagosCuota = listaPagos.filter((pago) => pago.tipo === "cuota_diaria").length;
+  const fechasPagadas = obtenerFechasPagadas(
+    listaCalendario.map((d) => ({ numeroDia: d.numero_dia, fechaProgramada: d.fecha_programada })),
+    cantidadPagosCuota
+  );
 
   // Documentos del cliente (INE, foto, domicilio) — de solo lectura aquí; se
   // suben desde el alta que hace el cobrador en su panel.
@@ -297,26 +306,7 @@ export default async function DetallePrestamoPage({
               diasMayorIgualUmbral={config.diasCobroMayorIgualUmbral}
             />
           </div>
-          <div className="border border-border rounded-xl overflow-hidden max-h-80 overflow-y-auto">
-            <table className="w-full text-sm">
-              <thead className="bg-surface text-ink-muted text-left sticky top-0">
-                <tr>
-                  <th className="px-3 py-2">Día</th>
-                  <th className="px-3 py-2">Fecha</th>
-                  <th className="px-3 py-2">Monto esperado</th>
-                </tr>
-              </thead>
-              <tbody>
-                {listaCalendario.map((d) => (
-                  <tr key={d.id} className="border-t border-border">
-                    <td className="px-3 py-2 text-ink-secondary">{d.numero_dia}</td>
-                    <td className="px-3 py-2 text-ink-secondary">{d.fecha_programada}</td>
-                    <td className="px-3 py-2">{currency(Number(d.monto_esperado))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+          <CalendarioPagosMensual calendario={listaCalendario} fechasPagadas={fechasPagadas} hoy={hoy} />
         </div>
       </div>
     </div>

@@ -121,6 +121,36 @@ export function calcularAsignacionPago(
   };
 }
 
+/**
+ * Aplica varios días de cuota diaria seguidos (para cuando Empresa aprueba
+ * una solicitud de "pagó varios días"). Reparte cada día con la misma regla
+ * de `calcularAsignacionPago` (primero mora, luego saldo) y se detiene antes
+ * de usar todos los días pedidos si el préstamo ya quedó en $0 — así nunca
+ * se registra un día de $0. Devuelve el monto de cada día por separado para
+ * poder insertar un renglón de `pagos` por día, igual que si el cliente
+ * hubiera pagado uno por uno.
+ */
+export function aplicarPagoVariosDias(
+  saldoActual: number,
+  moraAcumulada: number,
+  montoCuota: number,
+  dias: number
+): { montosPorDia: number[]; saldoFinal: number; moraFinal: number } {
+  let saldo = saldoActual;
+  let mora = moraAcumulada;
+  const montosPorDia: number[] = [];
+  for (let i = 0; i < dias; i++) {
+    const restante = redondear(saldo + mora);
+    if (restante <= 0) break;
+    const montoDia = Math.min(montoCuota, restante);
+    const { saldoNuevo, moraNueva } = calcularAsignacionPago(saldo, mora, montoDia);
+    montosPorDia.push(montoDia);
+    saldo = saldoNuevo;
+    mora = moraNueva;
+  }
+  return { montosPorDia, saldoFinal: saldo, moraFinal: mora };
+}
+
 export type EstadoCuota = "pendiente" | "pagado" | "parcial" | "no_aplica";
 
 export type CuotaCalendario = {
@@ -137,6 +167,25 @@ export function tieneCuotaVencidaSinPagar(calendario: CuotaCalendario[], hoy: st
   return calendario.some(
     (dia) => dia.fechaProgramada < hoy && (dia.estado === "pendiente" || dia.estado === "parcial")
   );
+}
+
+/**
+ * Para pintar el calendario de cobro como calendario (no como tabla): el
+ * sistema no guarda a qué día del calendario corresponde cada pago (los
+ * pagos solo tienen un monto y una fecha en que se registraron, no un
+ * "número de día" — y un pago de un préstamo nuevo cubre el día 1, el 2, el
+ * 3... en orden, sin importar qué fecha real haya sido). Entonces: se
+ * cuentan cuántos pagos de cuota diaria se han registrado en total y se
+ * marcan como "pagados" esos mismos N días del calendario, en orden
+ * (numero_dia 1, 2, 3...) — así el calendario avanza correcto incluso si un
+ * día se pagaron dos o tres cuotas de un jalón (pago de varios días).
+ */
+export function obtenerFechasPagadas(
+  calendario: { numeroDia: number; fechaProgramada: string }[],
+  cantidadPagos: number
+): Set<string> {
+  const ordenado = [...calendario].sort((a, b) => a.numeroDia - b.numeroDia);
+  return new Set(ordenado.slice(0, cantidadPagos).map((d) => d.fechaProgramada));
 }
 
 /**

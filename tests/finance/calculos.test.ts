@@ -19,6 +19,8 @@ import {
   esDiaDeCobro,
   generarCalendarioPagos,
   validarMontoPago,
+  aplicarPagoVariosDias,
+  obtenerFechasPagadas,
 } from "../../src/lib/finance/calculos";
 
 describe("interés y total", () => {
@@ -423,5 +425,61 @@ describe("descuento de apertura", () => {
     expect(aplicarDescuentoApertura(calcularMontoTotal(1000, 20), 50)).toBe(1150);
     // Un préstamo chiquito no puede quedar en negativo por el descuento.
     expect(aplicarDescuentoApertura(100, 150)).toBe(0);
+  });
+});
+
+describe("pago de varios días (solicitud aprobada por Empresa)", () => {
+  it("reparte cada día por separado con el mismo monto de cuota", () => {
+    const { montosPorDia, saldoFinal, moraFinal } = aplicarPagoVariosDias(1000, 0, 100, 3);
+    expect(montosPorDia).toEqual([100, 100, 100]);
+    expect(saldoFinal).toBe(700);
+    expect(moraFinal).toBe(0);
+  });
+
+  it("primero limpia la mora en el primer día, como un pago normal", () => {
+    const { montosPorDia, saldoFinal, moraFinal } = aplicarPagoVariosDias(1000, 50, 100, 2);
+    // Día 1: $50 a mora, $50 a saldo. Día 2: $100 completo a saldo.
+    expect(montosPorDia).toEqual([100, 100]);
+    expect(saldoFinal).toBe(850);
+    expect(moraFinal).toBe(0);
+  });
+
+  it("se detiene antes si el préstamo se liquida, sin generar días de $0", () => {
+    // Solo quedan $150 de deuda — con cuota de $100 alcanza para día y medio.
+    const { montosPorDia, saldoFinal, moraFinal } = aplicarPagoVariosDias(150, 0, 100, 5);
+    expect(montosPorDia).toEqual([100, 50]);
+    expect(saldoFinal).toBe(0);
+    expect(moraFinal).toBe(0);
+  });
+
+  it("si ya no debe nada, no genera ningún día", () => {
+    const { montosPorDia, saldoFinal } = aplicarPagoVariosDias(0, 0, 100, 3);
+    expect(montosPorDia).toEqual([]);
+    expect(saldoFinal).toBe(0);
+  });
+});
+
+describe("fechas pagadas del calendario (para pintarlo como calendario)", () => {
+  const calendario = [
+    { numeroDia: 1, fechaProgramada: "2026-10-05" },
+    { numeroDia: 2, fechaProgramada: "2026-10-06" },
+    { numeroDia: 3, fechaProgramada: "2026-10-07" },
+    { numeroDia: 4, fechaProgramada: "2026-10-08" },
+  ];
+
+  it("marca como pagados los primeros N días en orden, sin importar el orden del arreglo", () => {
+    const desordenado = [calendario[2], calendario[0], calendario[3], calendario[1]];
+    const pagadas = obtenerFechasPagadas(desordenado, 2);
+    expect(pagadas).toEqual(new Set(["2026-10-05", "2026-10-06"]));
+  });
+
+  it("con 0 pagos no marca ningún día", () => {
+    expect(obtenerFechasPagadas(calendario, 0)).toEqual(new Set());
+  });
+
+  it("si hay más pagos que días del calendario, marca todos sin tronar", () => {
+    expect(obtenerFechasPagadas(calendario, 10)).toEqual(
+      new Set(["2026-10-05", "2026-10-06", "2026-10-07", "2026-10-08"])
+    );
   });
 });

@@ -7,6 +7,9 @@ import { aplicarPagoDelDia, marcarIncumplidoDelDia } from "../../../actions";
 import { EliminarClienteButton } from "../../EliminarClienteButton";
 import { EditarClienteForm } from "./EditarClienteForm";
 import { PedirPerdonMoraForm } from "./PedirPerdonMoraForm";
+import { PedirPagoExtraForm } from "./PedirPagoExtraForm";
+import { CalendarioPagosMensual } from "@/components/CalendarioPagosMensual";
+import { obtenerFechasPagadas } from "@/lib/finance/calculos";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
 import {
   ArrowLeft,
@@ -89,31 +92,45 @@ export default async function DetalleClientePage({
   const solicitudes = (solicitudesData ?? []) as SolicitudPrestamo[];
   const prestamoActivo = prestamos.find((p) => p.estado === "activo" || p.estado === "en_mora") ?? prestamos[0];
 
-  const [{ data: pagosData }, { data: calendarioData }, { data: morasData }, { data: solicitudMoraData }] =
-    await Promise.all([
-      prestamoActivo
-        ? supabase.from("pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("created_at", { ascending: false })
-        : Promise.resolve({ data: [] as Pago[] }),
-      prestamoActivo
-        ? supabase.from("calendario_pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("numero_dia")
-        : Promise.resolve({ data: [] as CalendarioPago[] }),
-      prestamoActivo
-        ? supabase.from("moras").select("*").eq("prestamo_id", prestamoActivo.id).order("fecha_generada", { ascending: false })
-        : Promise.resolve({ data: [] as Mora[] }),
-      prestamoActivo
-        ? supabase
-            .from("solicitudes_perdon_mora")
-            .select("id, estado")
-            .eq("prestamo_id", prestamoActivo.id)
-            .eq("estado", "pendiente")
-            .maybeSingle()
-        : Promise.resolve({ data: null }),
-    ]);
+  const [
+    { data: pagosData },
+    { data: calendarioData },
+    { data: morasData },
+    { data: solicitudMoraData },
+    { data: solicitudPagoExtraData },
+  ] = await Promise.all([
+    prestamoActivo
+      ? supabase.from("pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("created_at", { ascending: false })
+      : Promise.resolve({ data: [] as Pago[] }),
+    prestamoActivo
+      ? supabase.from("calendario_pagos").select("*").eq("prestamo_id", prestamoActivo.id).order("numero_dia")
+      : Promise.resolve({ data: [] as CalendarioPago[] }),
+    prestamoActivo
+      ? supabase.from("moras").select("*").eq("prestamo_id", prestamoActivo.id).order("fecha_generada", { ascending: false })
+      : Promise.resolve({ data: [] as Mora[] }),
+    prestamoActivo
+      ? supabase
+          .from("solicitudes_perdon_mora")
+          .select("id, estado")
+          .eq("prestamo_id", prestamoActivo.id)
+          .eq("estado", "pendiente")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+    prestamoActivo
+      ? supabase
+          .from("solicitudes_pago_extra")
+          .select("id, estado")
+          .eq("prestamo_id", prestamoActivo.id)
+          .eq("estado", "pendiente")
+          .maybeSingle()
+      : Promise.resolve({ data: null }),
+  ]);
 
   const pagos = (pagosData ?? []) as Pago[];
   const calendario = (calendarioData ?? []) as CalendarioPago[];
   const moras = (morasData ?? []) as Mora[];
   const solicitudMoraPendiente = solicitudMoraData as { id: string; estado: string } | null;
+  const solicitudPagoExtraPendiente = solicitudPagoExtraData as { id: string; estado: string } | null;
   const diasAtraso = moras[0]?.dia_atraso ?? 0;
 
   const documentosPorTipo = (documentosData ?? []) as { tipo_documento: TipoDocumento; storage_path: string }[];
@@ -135,6 +152,12 @@ export default async function DetalleClientePage({
   // cobrador — se genera sola cuando pasan 24 horas sin pago.
   const hoy = new Date().toISOString().slice(0, 10);
   const yaPagoHoy = pagos.some((p) => p.tipo === "cuota_diaria" && p.fecha_pago?.slice(0, 10) === hoy);
+
+  const cantidadPagosCuota = pagos.filter((p) => p.tipo === "cuota_diaria").length;
+  const fechasPagadas = obtenerFechasPagadas(
+    calendario.map((d) => ({ numeroDia: d.numero_dia, fechaProgramada: d.fecha_programada })),
+    cantidadPagosCuota
+  );
 
   const puedeCobrar = !!prestamoActivo && (prestamoActivo.estado === "activo" || prestamoActivo.estado === "en_mora");
   const abonado = prestamoActivo ? Number(prestamoActivo.monto_total) - Number(prestamoActivo.saldo_actual) : 0;
@@ -328,19 +351,9 @@ export default async function DetalleClientePage({
                   className="flex items-center gap-2 bg-surface border border-border rounded-xl px-4 py-3"
                 >
                   <input type="hidden" name="prestamo_id" value={prestamoActivo.id} />
-                  <label className="text-sm text-ink-secondary" htmlFor="monto">
-                    Monto
-                  </label>
-                  <input
-                    id="monto"
-                    name="monto"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    max={Number(prestamoActivo.saldo_actual) + Number(prestamoActivo.mora_acumulada)}
-                    defaultValue={prestamoActivo.monto_cuota_sugerida}
-                    className="w-28 rounded-md bg-surface-2 border border-border-strong px-2 py-1.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                  />
+                  <span className="text-sm text-ink-secondary">
+                    Cuota del día: <span className="font-semibold text-ink">{currency(Number(prestamoActivo.monto_cuota_sugerida))}</span>
+                  </span>
                   <button className="inline-flex items-center gap-1.5 bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-3 py-1.5 rounded-md">
                     <CircleCheck className="h-4 w-4" />
                     Aplicar pago del día
@@ -355,6 +368,15 @@ export default async function DetalleClientePage({
                   No pagó hoy (aplicar mora)
                 </button>
               </form>
+
+              {solicitudPagoExtraPendiente ? (
+                <span className="inline-flex items-center gap-1.5 text-sm bg-surface border border-border text-ink-muted rounded-xl px-4 py-3">
+                  <Clock className="h-4 w-4" />
+                  Esperando que Empresa responda tu solicitud de días extra
+                </span>
+              ) : (
+                <PedirPagoExtraForm prestamoId={prestamoActivo.id} />
+              )}
 
               {Number(prestamoActivo.mora_acumulada) > 0 && diasAtraso >= 2 && (
                 solicitudMoraPendiente ? (
@@ -395,6 +417,16 @@ export default async function DetalleClientePage({
           </div>
         )}
       </div>
+
+      {calendario.length > 0 && (
+        <div>
+          <h2 className="font-semibold mb-2 flex items-center gap-1.5">
+            <CalendarDays className="h-4 w-4 text-ink-muted" />
+            Calendario de pagos
+          </h2>
+          <CalendarioPagosMensual calendario={calendario} fechasPagadas={fechasPagadas} hoy={hoy} />
+        </div>
+      )}
 
       {moras.length > 0 && (
         <div>

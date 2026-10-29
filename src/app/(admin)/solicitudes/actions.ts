@@ -11,6 +11,8 @@ import {
   calcularCuotaSugerida,
   generarCalendarioPagos,
   aplicarDescuentoApertura,
+  aplicarPagoVariosDias,
+  calcularAsignacionPago,
   type MotivoDescuentoApertura,
 } from "@/lib/finance/calculos";
 import { calcularDescuentoAperturaSolicitud } from "./descuentoApertura";
@@ -387,4 +389,181 @@ export async function rechazarPerdonMora(formData: FormData) {
 
   revalidatePath("/solicitudes");
   redirect(`/solicitudes?exito=${encodeURIComponent("Solicitud de perdón de mora rechazada")}`);
+}
+
+/**
+ * Aprueba una solicitud de "pagó varios días" TAL CUAL la pidió el cobrador
+ * — Empresa no puede cambiar el número de días, solo aceptar o rechazar.
+ * Aplica cada día por separado (misma regla que un pago normal: primero
+ * mora, luego saldo) y se detiene sola si el préstamo se liquida antes de
+ * usar todos los días pedidos.
+ */
+export async function aprobarPagoExtra(formData: FormData) {
+  const sesion = await exigirAdministrador();
+  const supabase = await createClient();
+
+  const solicitudId = String(formData.get("solicitud_id") || "");
+  const notas = String(formData.get("notas") || "").trim() || null;
+  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
+    supabase,
+    String(formData.get("resuelto_por") || "")
+  );
+
+  if (!resueltoPorSeleccionado) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién aprueba esta solicitud")}`);
+  }
+
+  const { data: solicitud } = await supabase
+    .from("solicitudes_pago_extra")
+    .select("id, prestamo_id, cliente_id, cobrador_id, dias_extra, estado, solicitado_por")
+    .eq("id", solicitudId)
+    .single();
+
+  if (!solicitud) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Solicitud no encontrada")}`);
+  }
+  if (solicitud.estado !== "pendiente") {
+    redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue resuelta")}`);
+  }
+
+  const { data: prestamo } = await supabase
+    .from("prestamos")
+    .select("id, saldo_actual, mora_acumulada, monto_cuota_sugerida, estado")
+    .eq("id", solicitud.prestamo_id)
+    .single();
+
+  if (!prestamo) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Préstamo no encontrado")}`);
+  }
+  if (prestamo.estado === "liquidado" || prestamo.estado === "cancelado") {
+    redirect(`/solicitudes?error=${encodeURIComponent("Este préstamo ya está cerrado, no se le puede aplicar más pagos")}`);
+  }
+
+  const saldoActual = Number(prestamo.saldo_actual);
+  const moraActual = Number(prestamo.mora_acumulada);
+  const montoCuota = Number(prestamo.monto_cuota_sugerida);
+
+  const { montosPorDia, saldoFinal, moraFinal } = aplicarPagoVariosDias(
+    saldoActual,
+    moraActual,
+    montoCuota,
+    solicitud.dias_extra
+  );
+
+  if (montosPorDia.length === 0) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Este préstamo ya no tiene saldo pendiente")}`);
+  }
+
+  let saldoCorrida = saldoActual;
+  let moraCorrida = moraActual;
+  const ahora = Date.now();
+  const filasPago = montosPorDia.map((monto, i) => {
+    const { saldoNuevo, moraNueva } = calcularAsignacionPago(saldoCorrida, moraCorrida, monto);
+    const fila = {
+      prestamo_id: solicitud.prestamo_id,
+      cliente_id: solicitud.cliente_id,
+      cobrador_id: solicitud.cobrador_id,
+      monto,
+      tipo: "cuota_diaria" as const,
+      registrado_por: solicitud.solicitado_por ?? sesion.id,
+      saldo_anterior: saldoCorrida,
+      saldo_posterior: saldoNuevo,
+      // Cada día extra queda registrado con un timestamp distinto (aunque
+      // sea el mismo día real) para que el orden de los días quede claro en
+      // el historial de pagos.
+      fecha_pago: new Date(ahora + i * 1000).toISOString(),
+    };
+    saldoCorrida = saldoNuevo;
+    moraCorrida = moraNueva;
+    return fila;
+  });
+
+  const { error: errorPagos } = await supabase.from("pagos").insert(filasPago);
+  if (errorPagos) {
+    redirect(`/solicitudes?error=${encodeURIComponent(errorPagos.message)}`);
+  }
+
+  const liquidado = saldoFinal === 0 && moraFinal === 0;
+  await supabase
+    .from("prestamos")
+    .update({
+      saldo_actual: saldoFinal,
+      mora_acumulada: moraFinal,
+      estado: liquidado ? "liquidado" : prestamo.estado,
+      fecha_liquidacion: liquidado ? new Date().toISOString() : null,
+    })
+    .eq("id", solicitud.prestamo_id);
+
+  const montoTotalAplicado = montosPorDia.reduce((s, m) => s + m, 0);
+
+  await supabase
+    .from("solicitudes_pago_extra")
+    .update({
+      estado: "aprobada",
+      notas_resolucion: notas,
+      resuelto_por: resueltoPorSeleccionado,
+      fecha_resolucion: new Date().toISOString(),
+    })
+    .eq("id", solicitudId)
+    .eq("estado", "pendiente");
+
+  await supabase.from("historial_movimientos").insert({
+    prestamo_id: solicitud.prestamo_id,
+    cliente_id: solicitud.cliente_id,
+    usuario_id: sesion.id,
+    tipo_movimiento: "pago",
+    monto: montoTotalAplicado,
+    descripcion: `Pago de ${montosPorDia.length} día(s) extra aprobado (pedido por el cobrador): $${montoTotalAplicado}${montosPorDia.length < solicitud.dias_extra ? ` (se liquidó antes de completar los ${solicitud.dias_extra} días pedidos)` : ""}`,
+  });
+
+  revalidatePath("/solicitudes");
+  revalidatePath(`/prestamos/${solicitud.prestamo_id}`);
+  revalidatePath(`/panel/clientes/${solicitud.cliente_id}`);
+  revalidatePath("/panel");
+  revalidatePath("/dashboard");
+  redirect(`/solicitudes?exito=${encodeURIComponent(`Se aplicaron ${montosPorDia.length} día(s) de pago ($${montoTotalAplicado})`)}`);
+}
+
+/** Rechaza una solicitud de "pagó varios días" pendiente, con una nota opcional de por qué. */
+export async function rechazarPagoExtra(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const solicitudId = String(formData.get("solicitud_id") || "");
+  const notas = String(formData.get("notas") || "").trim() || null;
+  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
+    supabase,
+    String(formData.get("resuelto_por") || "")
+  );
+
+  if (!resueltoPorSeleccionado) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién rechaza esta solicitud")}`);
+  }
+
+  const { data: solicitud } = await supabase
+    .from("solicitudes_pago_extra")
+    .select("id, estado")
+    .eq("id", solicitudId)
+    .single();
+
+  if (!solicitud) {
+    redirect(`/solicitudes?error=${encodeURIComponent("Solicitud no encontrada")}`);
+  }
+  if (solicitud.estado !== "pendiente") {
+    redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue resuelta")}`);
+  }
+
+  await supabase
+    .from("solicitudes_pago_extra")
+    .update({
+      estado: "rechazada",
+      notas_resolucion: notas,
+      resuelto_por: resueltoPorSeleccionado,
+      fecha_resolucion: new Date().toISOString(),
+    })
+    .eq("id", solicitudId)
+    .eq("estado", "pendiente");
+
+  revalidatePath("/solicitudes");
+  redirect(`/solicitudes?exito=${encodeURIComponent("Solicitud de días extra rechazada")}`);
 }

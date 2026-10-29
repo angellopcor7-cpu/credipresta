@@ -16,10 +16,10 @@ export async function GET() {
   }
 
   const supabase = await createClient();
-  const { count } = await supabase
-    .from("solicitudes_prestamo")
-    .select("id", { count: "exact", head: true })
-    .eq("estado", "pendiente");
+  const [{ count: countPrestamo }, { count: countPagoExtra }] = await Promise.all([
+    supabase.from("solicitudes_prestamo").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    supabase.from("solicitudes_pago_extra").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+  ]);
 
-  return NextResponse.json({ count: count ?? 0 });
+  return NextResponse.json({ count: (countPrestamo ?? 0) + (countPagoExtra ?? 0) });
 }

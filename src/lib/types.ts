@@ -252,6 +252,39 @@ export type SolicitudPerdonMoraConDetalle = SolicitudPerdonMora & {
 };
 
 /**
+ * Solicitud de "pagó varios días": el cobrador ya no puede registrar él
+ * mismo más de un día de cuota a la vez (solo tiene el botón de "Aplicar
+ * pago del día", que siempre cobra exactamente la cuota sugerida) — si el
+ * cliente paga el doble, el triple, etc., el cobrador manda esta solicitud
+ * con cuántos días EXTRA pagó (aparte del día de hoy, que se aplica aparte
+ * con el botón normal) y Empresa decide si los acepta o los rechaza tal
+ * cual, sin poder cambiar el número de días.
+ */
+export type EstadoSolicitudPagoExtra = "pendiente" | "aprobada" | "rechazada";
+
+export type SolicitudPagoExtra = {
+  id: string;
+  prestamo_id: string;
+  cliente_id: string;
+  cobrador_id: string | null;
+  dias_extra: number;
+  monto_por_dia: number;
+  monto_total: number;
+  estado: EstadoSolicitudPagoExtra;
+  notas_cobrador: string | null;
+  notas_resolucion: string | null;
+  solicitado_por: string | null;
+  resuelto_por: string | null;
+  created_at: string;
+  fecha_resolucion: string | null;
+};
+
+export type SolicitudPagoExtraConDetalle = SolicitudPagoExtra & {
+  clientes: { nombre_completo: string; telefono: string | null } | null;
+  cobradores: { usuarios: { nombre_completo: string } | null } | null;
+};
+
+/**
  * Registro permanente de un corte semanal ya confirmado (botón "Confirmar
  * corte" en /corte). `detalle` guarda el arreglo de FilaCorteCobrador tal
  * como estaba al momento de cerrar la semana — es la foto fija que no
