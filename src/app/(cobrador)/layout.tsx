@@ -6,6 +6,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { PageTransition } from "@/components/PageTransition";
 import { NotificacionesPushBoton } from "@/components/NotificacionesPushBoton";
 import { NotificacionesLinkBadge } from "@/components/NotificacionesLinkBadge";
+import { ProbarNotificacionBoton } from "@/components/ProbarNotificacionBoton";
 import { salirDeImpersonacion } from "./actions";
 
 async function signOut() {
@@ -66,6 +67,7 @@ export default async function CobradorLayout({ children }: { children: React.Rea
             )}
             <NotificacionesLinkBadge href="/panel/notificaciones" noLeidasInicial={notificacionesNoLeidasCount ?? 0} />
             <NotificacionesPushBoton />
+            <ProbarNotificacionBoton />
             <ThemeToggle />
             <span className="text-ink-muted">{sesion.nombreCompleto}</span>
             <form action={signOut}>

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { LogOut, Repeat } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { NotificacionesPushBoton } from "@/components/NotificacionesPushBoton";
+import { ProbarNotificacionBoton } from "@/components/ProbarNotificacionBoton";
 
 /**
  * Nav del admin: a petición de Empresa se quitaron los enlaces de texto
@@ -30,6 +31,7 @@ export function AdminNav({
         Vista Cobrador
       </Link>
       <NotificacionesPushBoton />
+      <ProbarNotificacionBoton />
       <ThemeToggle />
       <form action={signOutAction}>
         <button className="inline-flex items-center gap-1.5 text-xs bg-surface-2 hover:bg-surface-3 border border-border-strong text-ink font-medium rounded-full px-3 py-1.5">
