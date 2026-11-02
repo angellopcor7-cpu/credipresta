@@ -98,6 +98,8 @@ export async function aprobarSolicitud(formData: FormData) {
       monto_interes: montoInteres,
       monto_total: montoTotal,
       saldo_actual: montoTotal,
+      descuento_apertura: descuentoApertura,
+      motivo_descuento_apertura: motivoDescuento,
       plazo_dias: plazoDias,
       monto_cuota_sugerida: montoCuota,
       estado: "activo",
