@@ -121,40 +121,31 @@ export default async function ClientesPage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <div className="flex items-center gap-1.5 text-ink-muted">
-            <Users className="h-3.5 w-3.5" />
-            <p className="text-xs">Clientes agregados</p>
-          </div>
-          <p className="text-xl font-semibold mt-2">{clientes.length}</p>
-        </div>
-        <div className="bg-surface border border-border rounded-xl p-4">
-          <div className="flex items-center gap-1.5 text-ink-muted">
-            <HardDrive className="h-3.5 w-3.5" />
-            <p className="text-xs">Cupo estimado con tu plan actual de Supabase</p>
-          </div>
-          <p className="text-xl font-semibold mt-2">~{cupoEstimadoClientes.toLocaleString("es-MX")} clientes</p>
-          <p className="text-ink-muted text-xs mt-1">
-            Según cuánto pesan en promedio los documentos de tus clientes reales. Si subes a Pro, este número sube
-            solo.
-          </p>
-        </div>
-      </div>
-
       {clientes.length === 0 ? (
         <p className="text-ink-muted text-sm">Aún no hay clientes.</p>
       ) : (
         <>
-          <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
-            <span className="inline-flex items-center gap-1.5">
-              <Circle className="h-3 w-3 text-green-500 fill-current" /> Al día
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Circle className="h-3 w-3 text-amber-400 fill-current" /> Hoy le toca pagar, aún no paga
-            </span>
-            <span className="inline-flex items-center gap-1.5">
-              <Circle className="h-3 w-3 text-red-500 fill-current" /> Atrasado / con mora
+          <div className="flex flex-wrap items-center justify-between gap-2 text-xs text-ink-muted">
+            <div className="flex flex-wrap items-center gap-4">
+              <span className="inline-flex items-center gap-1.5">
+                <Circle className="h-3 w-3 text-green-500 fill-current" /> Al día
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Circle className="h-3 w-3 text-amber-400 fill-current" /> Hoy le toca pagar, aún no paga
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Circle className="h-3 w-3 text-red-500 fill-current" /> Atrasado / con mora
+              </span>
+            </div>
+            <span
+              className="inline-flex items-center gap-1.5 shrink-0"
+              title="Cupo estimado según cuánto pesan en promedio los documentos de tus clientes reales. Si subes a Pro, este número sube solo."
+            >
+              <Users className="h-3 w-3" />
+              {clientes.length} cliente{clientes.length === 1 ? "" : "s"}
+              <span className="text-ink-muted/60">·</span>
+              <HardDrive className="h-3 w-3" />
+              cupo ~{cupoEstimadoClientes.toLocaleString("es-MX")}
             </span>
           </div>
           <div className="border border-border rounded-xl overflow-hidden">
