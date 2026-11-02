@@ -16,6 +16,15 @@ import {
   type MotivoDescuentoApertura,
 } from "@/lib/finance/calculos";
 import { calcularDescuentoAperturaSolicitud } from "./descuentoApertura";
+import { enviarPushAUsuario } from "@/lib/push/enviar";
+
+/** Lee el nombre del cliente de una relación embebida de Supabase, que según
+ * la consulta puede llegar como objeto único o como arreglo de un elemento. */
+function nombreClienteEmbebido(c: unknown): string | null {
+  if (!c) return null;
+  if (Array.isArray(c)) return (c[0] as { nombre_completo?: string | null } | undefined)?.nombre_completo ?? null;
+  return (c as { nombre_completo?: string | null }).nombre_completo ?? null;
+}
 
 /**
  * Aprueba una solicitud que armó un cobrador (datos del cliente + INE + foto
@@ -56,7 +65,11 @@ export async function aprobarSolicitud(formData: FormData) {
     redirect(`/solicitudes?error=${encodeURIComponent("El plazo en días debe ser mayor a 0")}`);
   }
 
-  const { data: cliente } = await supabase.from("clientes").select("cobrador_id").eq("id", solicitud.cliente_id).single();
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("cobrador_id, creado_por, nombre_completo")
+    .eq("id", solicitud.cliente_id)
+    .single();
 
   const montoPrestado = Number(solicitud.monto_solicitado);
   const plazoDias = solicitud.plazo_dias;
@@ -143,6 +156,14 @@ export async function aprobarSolicitud(formData: FormData) {
     descripcion: `Solicitud aprobada: préstamo de $${montoPrestado} creado (total $${montoTotal} ya con descuento de apertura de $${descuentoApertura} por ${etiquetaMotivoDescuento[motivoDescuento]}, plan ${plazoDias} días)`,
   });
 
+  if (cliente?.creado_por) {
+    await enviarPushAUsuario(cliente.creado_por, {
+      title: "Préstamo aprobado",
+      body: `${cliente.nombre_completo ?? "Tu cliente"}: préstamo de $${montoPrestado} aprobado`,
+      url: `/panel/clientes/${solicitud.cliente_id}`,
+    });
+  }
+
   revalidatePath("/solicitudes");
   revalidatePath("/prestamos");
   redirect(`/prestamos/${prestamo.id}`);
@@ -174,6 +195,12 @@ export async function rechazarSolicitud(formData: FormData) {
   if (solicitud.estado !== "pendiente") {
     redirect(`/solicitudes?error=${encodeURIComponent("Esta solicitud ya fue revisada")}`);
   }
+
+  const { data: cliente } = await supabase
+    .from("clientes")
+    .select("creado_por, nombre_completo")
+    .eq("id", solicitud.cliente_id)
+    .single();
 
   await supabase
     .from("solicitudes_prestamo")
@@ -210,6 +237,14 @@ export async function rechazarSolicitud(formData: FormData) {
     descripcion: `Solicitud rechazada${notas ? `: ${notas}` : ""}`,
   });
 
+  if (cliente?.creado_por) {
+    await enviarPushAUsuario(cliente.creado_por, {
+      title: "Préstamo rechazado",
+      body: `${cliente.nombre_completo ?? "Tu cliente"}: la solicitud fue rechazada${notas ? ` (${notas})` : ""}`,
+      url: "/panel",
+    });
+  }
+
   revalidatePath("/solicitudes");
   revalidatePath("/panel");
   redirect("/solicitudes");
@@ -232,7 +267,7 @@ export async function aprobarPerdonMora(formData: FormData) {
 
   const { data: solicitud } = await supabase
     .from("solicitudes_perdon_mora")
-    .select("id, prestamo_id, cliente_id, estado")
+    .select("id, prestamo_id, cliente_id, estado, solicitado_por, clientes(nombre_completo)")
     .eq("id", solicitudId)
     .single();
 
@@ -295,6 +330,14 @@ export async function aprobarPerdonMora(formData: FormData) {
     descripcion: `Perdón de mora aprobado (pedido por el cobrador): $${moraActual} → $${moraNueva} (se perdonaron $${montoPerdonado})`,
   });
 
+  if (solicitud.solicitado_por) {
+    await enviarPushAUsuario(solicitud.solicitado_por, {
+      title: "Perdón de mora aprobado",
+      body: `${nombreClienteEmbebido(solicitud.clientes) ?? "Tu cliente"}: se perdonaron $${montoPerdonado} de mora`,
+      url: `/panel/clientes/${solicitud.cliente_id}`,
+    });
+  }
+
   revalidatePath("/solicitudes");
   revalidatePath(`/prestamos/${solicitud.prestamo_id}`);
   revalidatePath(`/panel/clientes/${solicitud.cliente_id}`);
@@ -312,7 +355,7 @@ export async function rechazarPerdonMora(formData: FormData) {
 
   const { data: solicitud } = await supabase
     .from("solicitudes_perdon_mora")
-    .select("id, estado")
+    .select("id, cliente_id, estado, solicitado_por, clientes(nombre_completo)")
     .eq("id", solicitudId)
     .single();
 
@@ -334,6 +377,14 @@ export async function rechazarPerdonMora(formData: FormData) {
     .eq("id", solicitudId)
     .eq("estado", "pendiente");
 
+  if (solicitud.solicitado_por) {
+    await enviarPushAUsuario(solicitud.solicitado_por, {
+      title: "Perdón de mora rechazado",
+      body: `${nombreClienteEmbebido(solicitud.clientes) ?? "Tu cliente"}: Empresa rechazó el perdón de mora${notas ? ` (${notas})` : ""}`,
+      url: `/panel/clientes/${solicitud.cliente_id}`,
+    });
+  }
+
   revalidatePath("/solicitudes");
   redirect(`/solicitudes?exito=${encodeURIComponent("Solicitud de perdón de mora rechazada")}`);
 }
@@ -354,7 +405,9 @@ export async function aprobarPagoExtra(formData: FormData) {
 
   const { data: solicitud } = await supabase
     .from("solicitudes_pago_extra")
-    .select("id, prestamo_id, cliente_id, cobrador_id, tipo, dias_extra, monto_personalizado, estado, solicitado_por")
+    .select(
+      "id, prestamo_id, cliente_id, cobrador_id, tipo, dias_extra, monto_personalizado, estado, solicitado_por, clientes(nombre_completo)"
+    )
     .eq("id", solicitudId)
     .single();
 
@@ -474,6 +527,14 @@ export async function aprobarPagoExtra(formData: FormData) {
     descripcion,
   });
 
+  if (solicitud.solicitado_por) {
+    await enviarPushAUsuario(solicitud.solicitado_por, {
+      title: esPersonalizado ? "Pago personalizado aprobado" : "Días extra aprobados",
+      body: `${nombreClienteEmbebido(solicitud.clientes) ?? "Tu cliente"}: se aplicó $${montoTotalAplicado}`,
+      url: `/panel/clientes/${solicitud.cliente_id}`,
+    });
+  }
+
   revalidatePath("/solicitudes");
   revalidatePath(`/prestamos/${solicitud.prestamo_id}`);
   revalidatePath(`/panel/clientes/${solicitud.cliente_id}`);
@@ -496,7 +557,7 @@ export async function rechazarPagoExtra(formData: FormData) {
 
   const { data: solicitud } = await supabase
     .from("solicitudes_pago_extra")
-    .select("id, estado")
+    .select("id, cliente_id, estado, solicitado_por, clientes(nombre_completo)")
     .eq("id", solicitudId)
     .single();
 
@@ -517,6 +578,14 @@ export async function rechazarPagoExtra(formData: FormData) {
     })
     .eq("id", solicitudId)
     .eq("estado", "pendiente");
+
+  if (solicitud.solicitado_por) {
+    await enviarPushAUsuario(solicitud.solicitado_por, {
+      title: "Solicitud rechazada",
+      body: `${nombreClienteEmbebido(solicitud.clientes) ?? "Tu cliente"}: Empresa rechazó la solicitud${notas ? ` (${notas})` : ""}`,
+      url: `/panel/clientes/${solicitud.cliente_id}`,
+    });
+  }
 
   revalidatePath("/solicitudes");
   redirect(`/solicitudes?exito=${encodeURIComponent("Solicitud de días extra rechazada")}`);

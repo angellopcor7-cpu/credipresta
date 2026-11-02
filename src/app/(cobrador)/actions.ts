@@ -19,7 +19,20 @@ import {
 import { obtenerConfiguraciones } from "@/lib/config";
 import { generarPagarePDF } from "@/lib/pdf/pagare";
 import { comprimirDocumentoSiAplica } from "@/lib/storage/comprimirImagen";
+import { enviarPushAEmpresa } from "@/lib/push/enviar";
 import type { TipoDocumento } from "@/lib/types";
+
+/** Lee el nombre del cliente de una relación embebida de Supabase, que según
+ * la consulta puede llegar como objeto único o como arreglo de un elemento. */
+function nombreClienteEmbebido(c: unknown): string | null {
+  if (!c) return null;
+  if (Array.isArray(c)) return (c[0] as { nombre_completo?: string | null } | undefined)?.nombre_completo ?? null;
+  return (c as { nombre_completo?: string | null }).nombre_completo ?? null;
+}
+
+function currency(n: number) {
+  return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
+}
 
 /** Un data URL de PNG con contenido real (no solo el prefijo, dibujado a mano en la cuadrícula de firma). */
 function esFirmaValida(valor: FormDataEntryValue | null): valor is string {
@@ -216,6 +229,12 @@ export async function crearClienteYSolicitud(formData: FormData) {
     redirect(`/panel/clientes/nuevo?error=${encodeURIComponent(errorSolicitud.message)}`);
   }
 
+  await enviarPushAEmpresa({
+    title: "Nueva solicitud de préstamo",
+    body: `${nombreCompleto} pidió ${currency(montoSolicitado)} (${sesion.nombreCompleto})`,
+    url: "/solicitudes",
+  });
+
   revalidatePath("/panel");
   redirect("/panel?exito=" + encodeURIComponent(`${nombreCompleto} quedó pendiente de aprobación por Empresa.`));
 }
@@ -342,6 +361,12 @@ export async function solicitarNuevoPrestamoClienteExistente(formData: FormData)
 
   await supabase.from("clientes").update({ estado: "pendiente_aprobacion" }).eq("id", clienteId);
 
+  await enviarPushAEmpresa({
+    title: "Nueva solicitud de préstamo",
+    body: `${cliente.nombre_completo} pidió renovar: ${currency(montoSolicitado)} (${sesion.nombreCompleto})`,
+    url: "/solicitudes",
+  });
+
   revalidatePath(`/panel/clientes/${clienteId}`);
   revalidatePath("/panel");
   redirect(
@@ -448,7 +473,7 @@ export async function solicitarPagoExtra(formData: FormData) {
 
   const { data: prestamo } = await supabase
     .from("prestamos")
-    .select("id, cliente_id, cobrador_id, monto_cuota_sugerida, estado")
+    .select("id, cliente_id, cobrador_id, monto_cuota_sugerida, estado, clientes(nombre_completo)")
     .eq("id", prestamoId)
     .single();
 
@@ -492,6 +517,12 @@ export async function solicitarPagoExtra(formData: FormData) {
     redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(error.message)}`);
   }
 
+  await enviarPushAEmpresa({
+    title: "Pidieron días extra",
+    body: `${nombreClienteEmbebido(prestamo.clientes) ?? "Un cliente"} pagó ${diasExtra} día${diasExtra === 1 ? "" : "s"} extra (${sesion.nombreCompleto})`,
+    url: "/solicitudes",
+  });
+
   revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
   redirect(`/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent("Se mandó la solicitud de días extra a Empresa")}`);
 }
@@ -514,7 +545,7 @@ export async function solicitarPagoPersonalizado(formData: FormData) {
 
   const { data: prestamo } = await supabase
     .from("prestamos")
-    .select("id, cliente_id, cobrador_id, estado")
+    .select("id, cliente_id, cobrador_id, estado, clientes(nombre_completo)")
     .eq("id", prestamoId)
     .single();
 
@@ -554,6 +585,12 @@ export async function solicitarPagoPersonalizado(formData: FormData) {
   if (error) {
     redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(error.message)}`);
   }
+
+  await enviarPushAEmpresa({
+    title: "Pago personalizado",
+    body: `${nombreClienteEmbebido(prestamo.clientes) ?? "Un cliente"} pagó ${currency(montoPersonalizado)} (${sesion.nombreCompleto})`,
+    url: "/solicitudes",
+  });
 
   revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
   redirect(
@@ -673,7 +710,7 @@ export async function solicitarPerdonMora(formData: FormData) {
 
   const { data: prestamo } = await supabase
     .from("prestamos")
-    .select("id, cliente_id, cobrador_id, mora_acumulada, estado")
+    .select("id, cliente_id, cobrador_id, mora_acumulada, estado, clientes(nombre_completo)")
     .eq("id", prestamoId)
     .single();
 
@@ -723,6 +760,12 @@ export async function solicitarPerdonMora(formData: FormData) {
   if (error) {
     redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(error.message)}`);
   }
+
+  await enviarPushAEmpresa({
+    title: "Piden perdón de mora",
+    body: `${nombreClienteEmbebido(prestamo.clientes) ?? "Un cliente"} lleva ${currency(Number(prestamo.mora_acumulada))} de mora (${sesion.nombreCompleto})`,
+    url: "/solicitudes",
+  });
 
   revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
   redirect(`/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent("Se mandó la solicitud a Empresa")}`);

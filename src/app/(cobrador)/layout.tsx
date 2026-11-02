@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PageTransition } from "@/components/PageTransition";
+import { NotificacionesPushBoton } from "@/components/NotificacionesPushBoton";
 import { salirDeImpersonacion } from "./actions";
 
 async function signOut() {
@@ -56,6 +57,7 @@ export default async function CobradorLayout({ children }: { children: React.Rea
                 Vista Empresa
               </Link>
             )}
+            <NotificacionesPushBoton />
             <ThemeToggle />
             <span className="text-ink-muted">{sesion.nombreCompleto}</span>
             <form action={signOut}>
