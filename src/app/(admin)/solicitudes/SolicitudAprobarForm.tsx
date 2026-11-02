@@ -42,7 +42,6 @@ export function SolicitudAprobarForm({
   plazoDias,
   porcentajePersonalizado,
   diasPersonalizados,
-  administradores,
   descuentoApertura,
   motivoDescuentoApertura,
 }: {
@@ -51,7 +50,6 @@ export function SolicitudAprobarForm({
   plazoDias: number;
   porcentajePersonalizado: number | null;
   diasPersonalizados: number[] | null;
-  administradores: { id: string; nombre: string }[];
   descuentoApertura: number;
   motivoDescuentoApertura: MotivoDescuentoApertura;
 }) {
@@ -115,21 +113,6 @@ export function SolicitudAprobarForm({
       <form action={aprobarSolicitud} className="flex flex-wrap items-center gap-2">
         <input type="hidden" name="solicitud_id" value={solicitudId} />
         <input type="hidden" name="porcentaje_interes" value={porcentajeTexto} />
-        <select
-          name="revisado_por"
-          required
-          defaultValue=""
-          className="rounded-md bg-surface-2 border border-border-strong px-2 py-1.5 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-        >
-          <option value="" disabled>
-            ¿Quién aprueba?
-          </option>
-          {administradores.map((a) => (
-            <option key={a.id} value={a.id}>
-              {a.nombre}
-            </option>
-          ))}
-        </select>
         <button className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-3 py-1.5 rounded-md">
           Aprobar
         </button>

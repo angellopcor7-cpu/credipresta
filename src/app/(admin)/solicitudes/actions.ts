@@ -18,28 +18,6 @@ import {
 import { calcularDescuentoAperturaSolicitud } from "./descuentoApertura";
 
 /**
- * "Quién aprobó/rechazó" se elige de una lista (no se toma automático de la
- * sesión) porque en este negocio varias personas comparten la misma cuenta
- * de administrador — el nombre elegido aquí es el que queda registrado como
- * quien revisó la solicitud. Se valida contra usuarios activos con rol
- * administrador para que no se pueda mandar cualquier id desde el formulario.
- */
-async function validarAdministradorSeleccionado(
-  supabase: Awaited<ReturnType<typeof createClient>>,
-  usuarioId: string
-) {
-  if (!usuarioId) return null;
-  const { data } = await supabase
-    .from("usuarios")
-    .select("id, roles!inner(nombre)")
-    .eq("id", usuarioId)
-    .eq("activo", true)
-    .eq("roles.nombre", "administrador")
-    .maybeSingle();
-  return data ? usuarioId : null;
-}
-
-/**
  * Aprueba una solicitud que armó un cobrador (datos del cliente + INE + foto
  * del pagaré ya firmado a mano + plan de 20/30 días o uno personalizado). El
  * % de interés total viene precargado en el formulario (el fijo del plan, o
@@ -55,14 +33,7 @@ export async function aprobarSolicitud(formData: FormData) {
 
   const solicitudId = String(formData.get("solicitud_id") || "");
   const porcentaje = Number(formData.get("porcentaje_interes"));
-  const revisadoPorSeleccionado = await validarAdministradorSeleccionado(
-    supabase,
-    String(formData.get("revisado_por") || "")
-  );
 
-  if (!revisadoPorSeleccionado) {
-    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién aprueba esta solicitud")}`);
-  }
   if (!porcentaje || porcentaje <= 0) {
     redirect(`/solicitudes?error=${encodeURIComponent("El % de interés debe ser mayor a 0")}`);
   }
@@ -120,7 +91,7 @@ export async function aprobarSolicitud(formData: FormData) {
       metodo_pago: solicitud.metodo_pago,
       datos_transferencia: solicitud.datos_transferencia,
       dias_cobro_personalizados: solicitud.dias_cobro_personalizados,
-      creado_por: revisadoPorSeleccionado,
+      creado_por: sesion.id,
     })
     .select("id, fecha_inicio")
     .single();
@@ -149,7 +120,7 @@ export async function aprobarSolicitud(formData: FormData) {
     .from("solicitudes_prestamo")
     .update({
       estado: "aprobada",
-      revisado_por: revisadoPorSeleccionado,
+      revisado_por: sesion.id,
       fecha_revision: new Date().toISOString(),
       prestamo_id: prestamo.id,
     })
@@ -190,14 +161,6 @@ export async function rechazarSolicitud(formData: FormData) {
 
   const solicitudId = String(formData.get("solicitud_id") || "");
   const notas = String(formData.get("notas") || "").trim() || null;
-  const revisadoPorSeleccionado = await validarAdministradorSeleccionado(
-    supabase,
-    String(formData.get("revisado_por") || "")
-  );
-
-  if (!revisadoPorSeleccionado) {
-    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién rechaza esta solicitud")}`);
-  }
 
   const { data: solicitud } = await supabase
     .from("solicitudes_prestamo")
@@ -216,7 +179,7 @@ export async function rechazarSolicitud(formData: FormData) {
     .from("solicitudes_prestamo")
     .update({
       estado: "rechazada",
-      revisado_por: revisadoPorSeleccionado,
+      revisado_por: sesion.id,
       fecha_revision: new Date().toISOString(),
       notas_revision: notas,
     })
@@ -266,14 +229,6 @@ export async function aprobarPerdonMora(formData: FormData) {
   const solicitudId = String(formData.get("solicitud_id") || "");
   const montoPerdonado = Number(formData.get("monto_perdonado"));
   const notas = String(formData.get("notas") || "").trim() || null;
-  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
-    supabase,
-    String(formData.get("resuelto_por") || "")
-  );
-
-  if (!resueltoPorSeleccionado) {
-    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién perdona esta mora")}`);
-  }
 
   const { data: solicitud } = await supabase
     .from("solicitudes_perdon_mora")
@@ -325,7 +280,7 @@ export async function aprobarPerdonMora(formData: FormData) {
       estado: "aprobada",
       monto_perdonado: montoPerdonado,
       notas_resolucion: notas,
-      resuelto_por: resueltoPorSeleccionado,
+      resuelto_por: sesion.id,
       fecha_resolucion: new Date().toISOString(),
     })
     .eq("id", solicitudId)
@@ -349,19 +304,11 @@ export async function aprobarPerdonMora(formData: FormData) {
 
 /** Rechaza una solicitud de perdón de mora pendiente, con una nota opcional de por qué. */
 export async function rechazarPerdonMora(formData: FormData) {
-  await exigirAdministrador();
+  const sesion = await exigirAdministrador();
   const supabase = await createClient();
 
   const solicitudId = String(formData.get("solicitud_id") || "");
   const notas = String(formData.get("notas") || "").trim() || null;
-  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
-    supabase,
-    String(formData.get("resuelto_por") || "")
-  );
-
-  if (!resueltoPorSeleccionado) {
-    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién rechaza esta solicitud")}`);
-  }
 
   const { data: solicitud } = await supabase
     .from("solicitudes_perdon_mora")
@@ -381,7 +328,7 @@ export async function rechazarPerdonMora(formData: FormData) {
     .update({
       estado: "rechazada",
       notas_resolucion: notas,
-      resuelto_por: resueltoPorSeleccionado,
+      resuelto_por: sesion.id,
       fecha_resolucion: new Date().toISOString(),
     })
     .eq("id", solicitudId)
@@ -404,14 +351,6 @@ export async function aprobarPagoExtra(formData: FormData) {
 
   const solicitudId = String(formData.get("solicitud_id") || "");
   const notas = String(formData.get("notas") || "").trim() || null;
-  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
-    supabase,
-    String(formData.get("resuelto_por") || "")
-  );
-
-  if (!resueltoPorSeleccionado) {
-    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién aprueba esta solicitud")}`);
-  }
 
   const { data: solicitud } = await supabase
     .from("solicitudes_pago_extra")
@@ -508,7 +447,7 @@ export async function aprobarPagoExtra(formData: FormData) {
     .update({
       estado: "aprobada",
       notas_resolucion: notas,
-      resuelto_por: resueltoPorSeleccionado,
+      resuelto_por: sesion.id,
       fecha_resolucion: new Date().toISOString(),
     })
     .eq("id", solicitudId)
@@ -549,19 +488,11 @@ export async function aprobarPagoExtra(formData: FormData) {
 
 /** Rechaza una solicitud de "pagó varios días" pendiente, con una nota opcional de por qué. */
 export async function rechazarPagoExtra(formData: FormData) {
-  await exigirAdministrador();
+  const sesion = await exigirAdministrador();
   const supabase = await createClient();
 
   const solicitudId = String(formData.get("solicitud_id") || "");
   const notas = String(formData.get("notas") || "").trim() || null;
-  const resueltoPorSeleccionado = await validarAdministradorSeleccionado(
-    supabase,
-    String(formData.get("resuelto_por") || "")
-  );
-
-  if (!resueltoPorSeleccionado) {
-    redirect(`/solicitudes?error=${encodeURIComponent("Selecciona quién rechaza esta solicitud")}`);
-  }
 
   const { data: solicitud } = await supabase
     .from("solicitudes_pago_extra")
@@ -581,7 +512,7 @@ export async function rechazarPagoExtra(formData: FormData) {
     .update({
       estado: "rechazada",
       notas_resolucion: notas,
-      resuelto_por: resueltoPorSeleccionado,
+      resuelto_por: sesion.id,
       fecha_resolucion: new Date().toISOString(),
     })
     .eq("id", solicitudId)

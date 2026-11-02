@@ -99,7 +99,6 @@ export default async function SolicitudesPage({
   const [
     { data: pendientes },
     { data: revisadas },
-    { data: administradores },
     { data: pendientesMora },
     { data: revisadasMora },
     { data: pendientesPagoExtra },
@@ -116,12 +115,6 @@ export default async function SolicitudesPage({
       .in("estado", ["aprobada", "rechazada"])
       .order("fecha_revision", { ascending: false })
       .limit(20),
-    supabase
-      .from("usuarios")
-      .select("id, nombre_completo, roles!inner(nombre)")
-      .eq("roles.nombre", "administrador")
-      .eq("activo", true)
-      .order("nombre_completo"),
     supabase
       .from("solicitudes_perdon_mora")
       .select("*, clientes(nombre_completo, telefono), cobradores(usuarios(nombre_completo))")
@@ -152,9 +145,6 @@ export default async function SolicitudesPage({
   const listaRevisadasMora = (revisadasMora ?? []) as unknown as SolicitudMoraRevisada[];
   const listaPendientesPagoExtra = (pendientesPagoExtra ?? []) as unknown as SolicitudPagoExtraConDetalle[];
   const listaRevisadasPagoExtra = (revisadasPagoExtra ?? []) as unknown as SolicitudPagoExtraRevisada[];
-  const listaAdministradores = ((administradores ?? []) as unknown as { id: string; nombre_completo: string }[]).map(
-    (u) => ({ id: u.id, nombre: u.nombre_completo })
-  );
   const documentosPorCliente = await obtenerDocumentosPorCliente(
     supabase,
     listaPendientes.map((s) => s.cliente_id)
@@ -232,28 +222,12 @@ export default async function SolicitudesPage({
                       s.porcentaje_interes_personalizado != null ? Number(s.porcentaje_interes_personalizado) : null
                     }
                     diasPersonalizados={s.dias_cobro_personalizados}
-                    administradores={listaAdministradores}
                     descuentoApertura={descuentoAperturaPorSolicitud.get(s.id)?.descuento ?? 0}
                     motivoDescuentoApertura={descuentoAperturaPorSolicitud.get(s.id)?.motivo ?? "cliente_nuevo"}
                   />
 
                   <form action={rechazarSolicitud} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="solicitud_id" value={s.id} />
-                    <select
-                      name="revisado_por"
-                      required
-                      defaultValue=""
-                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="" disabled>
-                        ¿Quién rechaza?
-                      </option>
-                      {listaAdministradores.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre}
-                        </option>
-                      ))}
-                    </select>
                     <input
                       name="notas"
                       placeholder="Motivo (opcional)"
@@ -303,21 +277,6 @@ export default async function SolicitudesPage({
                       defaultValue={Number(s.mora_al_momento)}
                       className="w-28 rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
-                    <select
-                      name="resuelto_por"
-                      required
-                      defaultValue=""
-                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="" disabled>
-                        ¿Quién perdona?
-                      </option>
-                      {listaAdministradores.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre}
-                        </option>
-                      ))}
-                    </select>
                     <input
                       name="notas"
                       placeholder="Nota (opcional)"
@@ -330,21 +289,6 @@ export default async function SolicitudesPage({
 
                   <form action={rechazarPerdonMora} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="solicitud_id" value={s.id} />
-                    <select
-                      name="resuelto_por"
-                      required
-                      defaultValue=""
-                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="" disabled>
-                        ¿Quién rechaza?
-                      </option>
-                      {listaAdministradores.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre}
-                        </option>
-                      ))}
-                    </select>
                     <input
                       name="notas"
                       placeholder="Motivo (opcional)"
@@ -435,21 +379,6 @@ export default async function SolicitudesPage({
                 <div className="flex flex-wrap items-start gap-4">
                   <form action={aprobarPagoExtra} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="solicitud_id" value={s.id} />
-                    <select
-                      name="resuelto_por"
-                      required
-                      defaultValue=""
-                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
-                    >
-                      <option value="" disabled>
-                        ¿Quién aprueba?
-                      </option>
-                      {listaAdministradores.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre}
-                        </option>
-                      ))}
-                    </select>
                     <input
                       name="notas"
                       placeholder="Nota (opcional)"
@@ -462,21 +391,6 @@ export default async function SolicitudesPage({
 
                   <form action={rechazarPagoExtra} className="flex flex-wrap items-center gap-2">
                     <input type="hidden" name="solicitud_id" value={s.id} />
-                    <select
-                      name="resuelto_por"
-                      required
-                      defaultValue=""
-                      className="rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-red-500"
-                    >
-                      <option value="" disabled>
-                        ¿Quién rechaza?
-                      </option>
-                      {listaAdministradores.map((a) => (
-                        <option key={a.id} value={a.id}>
-                          {a.nombre}
-                        </option>
-                      ))}
-                    </select>
                     <input
                       name="notas"
                       placeholder="Motivo (opcional)"
