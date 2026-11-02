@@ -8,6 +8,7 @@ import { EliminarClienteButton } from "../../EliminarClienteButton";
 import { EditarClienteForm } from "./EditarClienteForm";
 import { PedirPerdonMoraForm } from "./PedirPerdonMoraForm";
 import { PedirPagoExtraForm } from "./PedirPagoExtraForm";
+import { PedirPagoPersonalizadoForm } from "./PedirPagoPersonalizadoForm";
 import { CalendarioPagosMensual } from "@/components/CalendarioPagosMensual";
 import { obtenerFechasPagadas } from "@/lib/finance/calculos";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
@@ -385,10 +386,13 @@ export default async function DetalleClientePage({
               {solicitudPagoExtraPendiente ? (
                 <span className="inline-flex items-center gap-1.5 text-sm bg-surface border border-border text-ink-muted rounded-xl px-4 py-3">
                   <Clock className="h-4 w-4" />
-                  Esperando que Empresa responda tu solicitud de días extra
+                  Esperando que Empresa responda tu solicitud de pago
                 </span>
               ) : (
-                <PedirPagoExtraForm prestamoId={prestamoActivo.id} />
+                <>
+                  <PedirPagoExtraForm prestamoId={prestamoActivo.id} />
+                  <PedirPagoPersonalizadoForm prestamoId={prestamoActivo.id} />
+                </>
               )}
 
               {Number(prestamoActivo.mora_acumulada) > 0 && diasAtraso >= 2 && (

@@ -415,7 +415,7 @@ export async function aprobarPagoExtra(formData: FormData) {
 
   const { data: solicitud } = await supabase
     .from("solicitudes_pago_extra")
-    .select("id, prestamo_id, cliente_id, cobrador_id, dias_extra, estado, solicitado_por")
+    .select("id, prestamo_id, cliente_id, cobrador_id, tipo, dias_extra, monto_personalizado, estado, solicitado_por")
     .eq("id", solicitudId)
     .single();
 
@@ -443,12 +443,19 @@ export async function aprobarPagoExtra(formData: FormData) {
   const moraActual = Number(prestamo.mora_acumulada);
   const montoCuota = Number(prestamo.monto_cuota_sugerida);
 
-  const { montosPorDia, saldoFinal, moraFinal } = aplicarPagoVariosDias(
-    saldoActual,
-    moraActual,
-    montoCuota,
-    solicitud.dias_extra
-  );
+  // "Pagó varios días" reparte cada día por separado; "monto personalizado"
+  // es un solo pago por la cantidad exacta que pidió el cobrador (topado a
+  // lo que en realidad debía, por si pagó de más de lo que le quedaba).
+  const esPersonalizado = solicitud.tipo === "monto_personalizado";
+  const { montosPorDia, saldoFinal, moraFinal } = esPersonalizado
+    ? (() => {
+        const restante = Math.round((saldoActual + moraActual) * 100) / 100;
+        const monto = Math.min(Number(solicitud.monto_personalizado), restante);
+        if (monto <= 0) return { montosPorDia: [] as number[], saldoFinal: saldoActual, moraFinal: moraActual };
+        const { saldoNuevo, moraNueva } = calcularAsignacionPago(saldoActual, moraActual, monto);
+        return { montosPorDia: [monto], saldoFinal: saldoNuevo, moraFinal: moraNueva };
+      })()
+    : aplicarPagoVariosDias(saldoActual, moraActual, montoCuota, solicitud.dias_extra ?? 0);
 
   if (montosPorDia.length === 0) {
     redirect(`/solicitudes?error=${encodeURIComponent("Este préstamo ya no tiene saldo pendiente")}`);
@@ -507,13 +514,25 @@ export async function aprobarPagoExtra(formData: FormData) {
     .eq("id", solicitudId)
     .eq("estado", "pendiente");
 
+  const descripcion = esPersonalizado
+    ? `Pago personalizado aprobado (pedido por el cobrador): $${montoTotalAplicado}${
+        montoTotalAplicado < Number(solicitud.monto_personalizado)
+          ? ` (el cliente pagó $${solicitud.monto_personalizado}, pero el préstamo ya se liquidó con $${montoTotalAplicado})`
+          : ""
+      }`
+    : `Pago de ${montosPorDia.length} día(s) extra aprobado (pedido por el cobrador): $${montoTotalAplicado}${
+        montosPorDia.length < (solicitud.dias_extra ?? 0)
+          ? ` (se liquidó antes de completar los ${solicitud.dias_extra} días pedidos)`
+          : ""
+      }`;
+
   await supabase.from("historial_movimientos").insert({
     prestamo_id: solicitud.prestamo_id,
     cliente_id: solicitud.cliente_id,
     usuario_id: sesion.id,
     tipo_movimiento: "pago",
     monto: montoTotalAplicado,
-    descripcion: `Pago de ${montosPorDia.length} día(s) extra aprobado (pedido por el cobrador): $${montoTotalAplicado}${montosPorDia.length < solicitud.dias_extra ? ` (se liquidó antes de completar los ${solicitud.dias_extra} días pedidos)` : ""}`,
+    descripcion,
   });
 
   revalidatePath("/solicitudes");
@@ -521,7 +540,11 @@ export async function aprobarPagoExtra(formData: FormData) {
   revalidatePath(`/panel/clientes/${solicitud.cliente_id}`);
   revalidatePath("/panel");
   revalidatePath("/dashboard");
-  redirect(`/solicitudes?exito=${encodeURIComponent(`Se aplicaron ${montosPorDia.length} día(s) de pago ($${montoTotalAplicado})`)}`);
+  redirect(
+    `/solicitudes?exito=${encodeURIComponent(
+      esPersonalizado ? `Se aplicó el pago personalizado ($${montoTotalAplicado})` : `Se aplicaron ${montosPorDia.length} día(s) de pago ($${montoTotalAplicado})`
+    )}`
+  );
 }
 
 /** Rechaza una solicitud de "pagó varios días" pendiente, con una nota opcional de por qué. */

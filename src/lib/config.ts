@@ -47,6 +47,13 @@ export async function obtenerConfiguraciones() {
   const lugarPagare = cadena("lugar_pagare", "");
   const interesMoratorioDiarioPagare = numero("interes_moratorio_diario_pagare", 5);
 
+  // Límite de almacenamiento de archivos (fotos/documentos) del plan actual
+  // de Supabase. Por defecto el del plan gratis (1GB) — si se sube a Pro,
+  // este valor se actualiza en la tabla `configuraciones` (clave
+  // "limite_storage_bytes") para que el aviso de "casi llegas al límite" en
+  // el panel use el límite correcto.
+  const limiteStorageBytes = numero("limite_storage_bytes", 1024 * 1024 * 1024);
+
   const reglaDiasCobro: ReglaDiasCobro = {
     umbral: umbralMora,
     diasMenorUmbral: diasCobroMenorUmbral,
@@ -71,5 +78,6 @@ export async function obtenerConfiguraciones() {
     reglaMora,
     lugarPagare,
     interesMoratorioDiarioPagare,
+    limiteStorageBytes,
   };
 }

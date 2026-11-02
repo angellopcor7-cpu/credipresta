@@ -404,9 +404,9 @@ export default async function SolicitudesPage({
       )}
 
       <div>
-        <h2 className="font-semibold mb-2">Solicitudes de pago de varios días ({listaPendientesPagoExtra.length})</h2>
+        <h2 className="font-semibold mb-2">Solicitudes de pago de varios días o personalizado ({listaPendientesPagoExtra.length})</h2>
         {listaPendientesPagoExtra.length === 0 ? (
-          <p className="text-ink-muted text-sm">No hay solicitudes de días extra pendientes.</p>
+          <p className="text-ink-muted text-sm">No hay solicitudes de pago pendientes.</p>
         ) : (
           <div className="space-y-3">
             {listaPendientesPagoExtra.map((s) => (
@@ -421,13 +421,15 @@ export default async function SolicitudesPage({
                     )}
                   </div>
                   <p className="text-accent-text font-semibold">
-                    {s.dias_extra} día{s.dias_extra === 1 ? "" : "s"} extra · {currency(Number(s.monto_por_dia))} c/u ≈{" "}
-                    {currency(Number(s.monto_total))}
+                    {s.tipo === "monto_personalizado"
+                      ? `Pago personalizado · ${currency(Number(s.monto_total))}`
+                      : `${s.dias_extra} día${s.dias_extra === 1 ? "" : "s"} extra · ${currency(Number(s.monto_por_dia))} c/u ≈ ${currency(Number(s.monto_total))}`}
                   </p>
                 </div>
                 <p className="text-ink-muted text-xs">
-                  El monto final se aplica según el saldo real del préstamo al momento de aprobar (puede ser menos si
-                  el préstamo se liquida antes de completar los {s.dias_extra} días).
+                  {s.tipo === "monto_personalizado"
+                    ? "El monto final se aplica según el saldo real del préstamo al momento de aprobar (si el cliente pagó más de lo que debía, solo se aplica lo que debía)."
+                    : `El monto final se aplica según el saldo real del préstamo al momento de aprobar (puede ser menos si el préstamo se liquida antes de completar los ${s.dias_extra} días).`}
                 </p>
 
                 <div className="flex flex-wrap items-start gap-4">
@@ -454,7 +456,7 @@ export default async function SolicitudesPage({
                       className="w-36 rounded-md bg-surface-2 border border-border-strong px-2 py-1 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
                     />
                     <button className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-3 py-1.5 rounded-md">
-                      Aprobar {s.dias_extra} día{s.dias_extra === 1 ? "" : "s"}
+                      {s.tipo === "monto_personalizado" ? `Aprobar ${currency(Number(s.monto_total))}` : `Aprobar ${s.dias_extra} día${s.dias_extra === 1 ? "" : "s"}`}
                     </button>
                   </form>
 
@@ -509,7 +511,9 @@ export default async function SolicitudesPage({
                   <tr key={s.id} className="border-t border-border">
                     <td className="px-3 py-2">{s.clientes?.nombre_completo ?? "—"}</td>
                     <td className="px-3 py-2 text-ink-secondary">
-                      {s.dias_extra} día{s.dias_extra === 1 ? "" : "s"} ({currency(Number(s.monto_total))})
+                      {s.tipo === "monto_personalizado"
+                        ? `Personalizado (${currency(Number(s.monto_total))})`
+                        : `${s.dias_extra} día${s.dias_extra === 1 ? "" : "s"} (${currency(Number(s.monto_total))})`}
                     </td>
                     <td className="px-3 py-2">
                       <span

@@ -13,11 +13,14 @@ import {
   Clock,
   ChevronRight,
   UserRoundCog,
+  HardDrive,
   type LucideIcon,
 } from "lucide-react";
 import type { PuntoOtorgadoCobrado, PuntoMora } from "./AnalisisCharts";
 import { AnalisisPeriodos } from "./AnalisisPeriodos";
 import { claveMes, ultimosMeses, claveDia, ultimosDias, claveSemana, ultimasSemanas } from "@/lib/fechas";
+import { obtenerConfiguraciones } from "@/lib/config";
+import { obtenerUsoStorage, formatoBytes } from "@/lib/storage/usoStorage";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -75,6 +78,8 @@ export default async function DashboardPage() {
     { data: actividadReciente },
     { data: todasLasMoras },
     { data: todosLosPagos },
+    config,
+    usoStorage,
   ] = await Promise.all([
     supabase.from("clientes").select("*", { count: "exact", head: true }).eq("estado", "activo"),
     supabase.from("cobradores").select("*", { count: "exact", head: true }).eq("activo", true),
@@ -89,7 +94,13 @@ export default async function DashboardPage() {
       .limit(8),
     supabase.from("moras").select("monto_mora, fecha_generada"),
     supabase.from("pagos").select("monto, fecha_pago"),
+    obtenerConfiguraciones(),
+    obtenerUsoStorage(),
   ]);
+
+  const porcentajeStorageUsado = Math.min(100, Math.round((usoStorage.bytesTotal / config.limiteStorageBytes) * 100));
+  const nivelStorage: "ok" | "amber" | "red" =
+    porcentajeStorageUsado >= 90 ? "red" : porcentajeStorageUsado >= 70 ? "amber" : "ok";
 
   const listaPrestamos = prestamos ?? [];
   const activos = listaPrestamos.filter((p) => p.estado === "activo" || p.estado === "en_mora");
@@ -107,6 +118,12 @@ export default async function DashboardPage() {
     { label: "Cartera pendiente", value: currency(carteraActiva), icon: Wallet, tono: "amber" },
     { label: "Mora pendiente", value: currency(moraTotal), icon: CircleAlert, tono: moraTotal > 0 ? "red" : "neutral" },
     { label: "Total prestado (histórico)", value: currency(totalPrestado), icon: TrendingUp, tono: "neutral" },
+    {
+      label: "Almacenamiento usado",
+      value: `${porcentajeStorageUsado}% (${formatoBytes(usoStorage.bytesTotal)})`,
+      icon: HardDrive,
+      tono: nivelStorage === "ok" ? "neutral" : nivelStorage,
+    },
   ];
 
   const colorIcono: Record<string, string> = {
@@ -188,6 +205,34 @@ export default async function DashboardPage() {
           </div>
           <ChevronRight className="h-4 w-4 text-accent-text shrink-0" />
         </Link>
+      )}
+
+      {nivelStorage !== "ok" && (
+        <div
+          className={`flex items-start gap-3 rounded-xl px-5 py-4 border ${
+            nivelStorage === "red"
+              ? "bg-danger-chip-bg border-danger-chip-border/60"
+              : "bg-amber-500/10 border-amber-600/40"
+          }`}
+        >
+          <div className={`rounded-full p-2 shrink-0 ${nivelStorage === "red" ? "bg-danger-chip-bg" : "bg-amber-500/20"}`}>
+            <HardDrive className={`h-5 w-5 ${nivelStorage === "red" ? "text-danger-text" : "text-accent-text"}`} />
+          </div>
+          <div>
+            <p className={`font-semibold ${nivelStorage === "red" ? "text-danger-text" : "text-accent-text"}`}>
+              {nivelStorage === "red"
+                ? `¡Ya vas en ${porcentajeStorageUsado}% del almacenamiento de Supabase!`
+                : `Vas en ${porcentajeStorageUsado}% del almacenamiento de Supabase`}
+            </p>
+            <p className={`text-xs mt-0.5 ${nivelStorage === "red" ? "text-danger-text/80" : "text-accent-text/70"}`}>
+              {formatoBytes(usoStorage.bytesTotal)} usados de {formatoBytes(config.limiteStorageBytes)} disponibles en
+              tu plan.{" "}
+              {nivelStorage === "red"
+                ? "Sube a Pro (más espacio) o borra documentos de clientes que ya liquidaron y lleven mucho tiempo inactivos, antes de que se sature."
+                : "Cuando se te acerque más, piensa en subir a Pro o en borrar documentos de clientes muy inactivos."}
+            </p>
+          </div>
+        </div>
       )}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">

@@ -262,13 +262,23 @@ export type SolicitudPerdonMoraConDetalle = SolicitudPerdonMora & {
  */
 export type EstadoSolicitudPagoExtra = "pendiente" | "aprobada" | "rechazada";
 
+/**
+ * "dias_extra": el de siempre (ver arriba). "monto_personalizado": el
+ * cliente pagó una cantidad cualquiera que no corresponde a días completos
+ * de cuota — el cobrador manda el monto exacto y, igual que con días extra,
+ * Empresa tiene que aprobarlo antes de que se aplique al préstamo.
+ */
+export type TipoSolicitudPagoExtra = "dias_extra" | "monto_personalizado";
+
 export type SolicitudPagoExtra = {
   id: string;
   prestamo_id: string;
   cliente_id: string;
   cobrador_id: string | null;
-  dias_extra: number;
-  monto_por_dia: number;
+  tipo: TipoSolicitudPagoExtra;
+  dias_extra: number | null;
+  monto_por_dia: number | null;
+  monto_personalizado: number | null;
   monto_total: number;
   estado: EstadoSolicitudPagoExtra;
   notas_cobrador: string | null;

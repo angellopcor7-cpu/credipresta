@@ -16,6 +16,7 @@ import {
 } from "@/lib/finance/calculos";
 import { obtenerConfiguraciones } from "@/lib/config";
 import { generarPagarePDF } from "@/lib/pdf/pagare";
+import { comprimirDocumentoSiAplica } from "@/lib/storage/comprimirImagen";
 import type { TipoDocumento } from "@/lib/types";
 
 /** Un data URL de PNG con contenido real (no solo el prefijo, dibujado a mano en la cuadrícula de firma). */
@@ -127,10 +128,11 @@ export async function crearClienteYSolicitud(formData: FormData) {
   ];
 
   for (const { archivo, tipo } of documentos) {
-    const rutaArchivo = `${cliente.id}/${tipo}/${Date.now()}-${archivo.name}`;
+    const { buffer, contentType, nombre } = await comprimirDocumentoSiAplica(archivo);
+    const rutaArchivo = `${cliente.id}/${tipo}/${Date.now()}-${nombre}`;
     const { error: errorSubida } = await supabase.storage
       .from("documentos-clientes")
-      .upload(rutaArchivo, archivo, { contentType: archivo.type });
+      .upload(rutaArchivo, buffer, { contentType });
 
     if (!errorSubida) {
       await supabase.from("documentos_clientes").insert({
@@ -469,6 +471,7 @@ export async function solicitarPagoExtra(formData: FormData) {
     prestamo_id: prestamoId,
     cliente_id: prestamo.cliente_id,
     cobrador_id: prestamo.cobrador_id,
+    tipo: "dias_extra",
     dias_extra: diasExtra,
     monto_por_dia: montoPorDia,
     monto_total: Math.round(montoPorDia * diasExtra * 100) / 100,
@@ -482,6 +485,71 @@ export async function solicitarPagoExtra(formData: FormData) {
 
   revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
   redirect(`/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent("Se mandó la solicitud de días extra a Empresa")}`);
+}
+
+/**
+ * "Insertar pago personalizado": para cuando el cliente paga una cantidad
+ * que no corresponde a días completos de cuota (p. ej. abonó $350 y su
+ * cuota diaria es $200). El cobrador NO lo aplica directo — igual que con
+ * los días extra, manda el monto exacto a Empresa y se aplica solo si
+ * Empresa lo aprueba en /solicitudes (primero a la mora, luego al saldo,
+ * igual que un pago normal).
+ */
+export async function solicitarPagoPersonalizado(formData: FormData) {
+  const sesion = await exigirVistaCobrador();
+  const supabase = await createClient();
+
+  const prestamoId = String(formData.get("prestamo_id") || "");
+  const montoPersonalizado = Number(formData.get("monto_personalizado"));
+  const notas = String(formData.get("notas") || "").trim() || null;
+
+  const { data: prestamo } = await supabase
+    .from("prestamos")
+    .select("id, cliente_id, cobrador_id, estado")
+    .eq("id", prestamoId)
+    .single();
+
+  if (!prestamo) {
+    redirect(`/panel?error=${encodeURIComponent("Préstamo no encontrado")}`);
+  }
+  if (prestamo.estado === "liquidado" || prestamo.estado === "cancelado") {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Este préstamo ya está cerrado")}`);
+  }
+  if (!Number.isFinite(montoPersonalizado) || montoPersonalizado <= 0) {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Pon la cantidad que pagó el cliente")}`);
+  }
+
+  const { count: solicitudPendiente } = await supabase
+    .from("solicitudes_pago_extra")
+    .select("id", { count: "exact", head: true })
+    .eq("prestamo_id", prestamoId)
+    .eq("estado", "pendiente");
+
+  if (solicitudPendiente) {
+    redirect(
+      `/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent("Ya hay una solicitud esperando respuesta de Empresa")}`
+    );
+  }
+
+  const { error } = await supabase.from("solicitudes_pago_extra").insert({
+    prestamo_id: prestamoId,
+    cliente_id: prestamo.cliente_id,
+    cobrador_id: prestamo.cobrador_id,
+    tipo: "monto_personalizado",
+    monto_personalizado: montoPersonalizado,
+    monto_total: montoPersonalizado,
+    notas_cobrador: notas,
+    solicitado_por: sesion.id,
+  });
+
+  if (error) {
+    redirect(`/panel/clientes/${prestamo.cliente_id}?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath(`/panel/clientes/${prestamo.cliente_id}`);
+  redirect(
+    `/panel/clientes/${prestamo.cliente_id}?exito=${encodeURIComponent("Se mandó el pago personalizado a Empresa")}`
+  );
 }
 
 /**

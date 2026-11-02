@@ -12,6 +12,7 @@ import {
   calcularSaldo,
   generarCalendarioPagos,
 } from "@/lib/finance/calculos";
+import { comprimirDocumentoSiAplica } from "@/lib/storage/comprimirImagen";
 import type { TipoDocumento } from "@/lib/types";
 
 const TIPOS_DOCUMENTO_VALIDOS: TipoDocumento[] = [
@@ -258,10 +259,11 @@ export async function subirDocumentoCliente(formData: FormData) {
     redirect(`${volverA}?error=${encodeURIComponent("Elige un archivo para subir")}`);
   }
 
-  const rutaArchivo = `${clienteId}/${tipoDocumento}/${Date.now()}-${archivo.name}`;
+  const { buffer, contentType, nombre } = await comprimirDocumentoSiAplica(archivo);
+  const rutaArchivo = `${clienteId}/${tipoDocumento}/${Date.now()}-${nombre}`;
   const { error: errorSubida } = await supabase.storage
     .from("documentos-clientes")
-    .upload(rutaArchivo, archivo, { contentType: archivo.type });
+    .upload(rutaArchivo, buffer, { contentType });
 
   if (errorSubida) {
     redirect(`${volverA}?error=${encodeURIComponent(errorSubida.message)}`);

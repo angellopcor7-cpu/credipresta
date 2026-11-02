@@ -67,10 +67,20 @@ export default async function CobradoresPage() {
     obtenerTotales(pago.cobrador_id).recolectado += Number(pago.monto);
   }
 
+  const cobradoresActivos = cobradores.filter((c) => c.activo).length;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Cobradores</h1>
+        <div>
+          <h1 className="text-2xl font-bold">Cobradores</h1>
+          <p className="text-ink-muted text-sm mt-1">
+            {cobradores.length} registrado{cobradores.length === 1 ? "" : "s"} ({cobradoresActivos} activo
+            {cobradoresActivos === 1 ? "" : "s"}). No tienen un máximo real — el storage no les pesa, y el límite de
+            usuarios activos del plan gratis de Supabase (50,000 al mes) está muy por arriba de lo que este negocio
+            va a necesitar.
+          </p>
+        </div>
         <Link
           href="/cobradores/nuevo"
           className="bg-amber-500 hover:bg-amber-400 text-neutral-950 font-semibold text-sm px-4 py-2 rounded-md"

@@ -8,7 +8,8 @@ import {
   calcularSemaforoCliente,
   type SemaforoCliente,
 } from "@/lib/finance/calculos";
-import { Circle } from "lucide-react";
+import { Circle, Users, HardDrive } from "lucide-react";
+import { obtenerUsoStorage, PROMEDIO_BYTES_POR_CLIENTE_ESTIMADO } from "@/lib/storage/usoStorage";
 
 const estadoLabel: Record<string, string> = {
   activo: "Activo",
@@ -29,11 +30,23 @@ type ClienteConCobrador = Cliente & {
 
 export default async function ClientesPage() {
   const supabase = await createClient();
-  const [{ data }, config] = await Promise.all([
+  const [{ data }, config, uso] = await Promise.all([
     supabase.from("clientes").select("*, cobradores(usuarios(nombre_completo))").order("created_at", { ascending: false }),
     obtenerConfiguraciones(),
+    obtenerUsoStorage(),
   ]);
   const clientes = (data ?? []) as unknown as ClienteConCobrador[];
+
+  // Cupo estimado de clientes con el plan actual de Supabase: toma el
+  // promedio real de lo que pesan los documentos de los clientes que ya
+  // existen (ya comprimidos a ~1MB máx. cada uno) y lo compara contra el
+  // límite de storage del plan. Si todavía no hay suficientes datos reales
+  // (pocos clientes), usa un estimado razonable en su lugar.
+  const promedioBytesPorCliente =
+    clientes.length >= 3 && uso.bytesDocumentos > 0
+      ? uso.bytesDocumentos / clientes.length
+      : PROMEDIO_BYTES_POR_CLIENTE_ESTIMADO;
+  const cupoEstimadoClientes = Math.max(1, Math.floor(config.limiteStorageBytes / promedioBytesPorCliente));
 
   const { data: prestamosData } = await supabase
     .from("prestamos")
@@ -106,6 +119,27 @@ export default async function ClientesPage() {
         >
           + Cliente existente
         </Link>
+      </div>
+
+      <div className="grid grid-cols-2 gap-4">
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <div className="flex items-center gap-1.5 text-ink-muted">
+            <Users className="h-3.5 w-3.5" />
+            <p className="text-xs">Clientes agregados</p>
+          </div>
+          <p className="text-xl font-semibold mt-2">{clientes.length}</p>
+        </div>
+        <div className="bg-surface border border-border rounded-xl p-4">
+          <div className="flex items-center gap-1.5 text-ink-muted">
+            <HardDrive className="h-3.5 w-3.5" />
+            <p className="text-xs">Cupo estimado con tu plan actual de Supabase</p>
+          </div>
+          <p className="text-xl font-semibold mt-2">~{cupoEstimadoClientes.toLocaleString("es-MX")} clientes</p>
+          <p className="text-ink-muted text-xs mt-1">
+            Según cuánto pesan en promedio los documentos de tus clientes reales. Si subes a Pro, este número sube
+            solo.
+          </p>
+        </div>
       </div>
 
       {clientes.length === 0 ? (
