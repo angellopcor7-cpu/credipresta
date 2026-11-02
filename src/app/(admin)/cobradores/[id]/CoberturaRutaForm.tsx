@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Shield, UserCog } from "lucide-react";
+import { Plus, X, ShieldCheck, HandHelping, ArrowRight } from "lucide-react";
 import { iniciarCobertura, terminarCobertura } from "../actions";
 
 type CobradorOpcion = { id: string; nombre: string };
@@ -11,7 +11,10 @@ type CoberturaActiva = { id: string; cobradorId: string; nombre: string };
  * Cobertura de ruta: comparte temporalmente los clientes de un cobrador con
  * otro, sin quitárselos — para cuando alguien va a cubrir mientras el
  * cobrador titular no está. Se ve y se controla desde la ficha de
- * cualquiera de los dos cobradores involucrados.
+ * cualquiera de los dos cobradores involucrados. Son DOS cosas distintas y
+ * fácil de confundir, por eso van en tarjetas separadas con color y flecha
+ * de dirección: "alguien cubre A ESTE cobrador" (recibe ayuda) vs. "ESTE
+ * cobrador cubre a alguien más" (da ayuda).
  */
 export function CoberturaRutaForm({
   cobradorId,
@@ -29,16 +32,23 @@ export function CoberturaRutaForm({
   otrosCobradores: CobradorOpcion[];
 }) {
   const volverA = `/cobradores/${cobradorId}`;
+  const primerNombre = nombreCobrador.trim().split(/\s+/)[0] ?? nombreCobrador;
 
   return (
-    <div className="space-y-4">
-      <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-ink-secondary flex items-center gap-1.5">
-          <Shield className="h-3.5 w-3.5" />
-          ¿Quién cubre la ruta de {nombreCobrador}?
-        </h3>
+    <div className="grid gap-3 sm:grid-cols-2">
+      <div className="space-y-2.5 rounded-lg border border-accent-chip-border bg-accent-chip-bg/40 p-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent-chip-bg text-accent-text">
+            <ShieldCheck className="h-3.5 w-3.5" />
+          </span>
+          <h3 className="text-xs font-semibold text-ink-strong">Lo están ayudando a él</h3>
+        </div>
+        <p className="text-ink-muted text-[11px] leading-snug">
+          Estos cobradores ven y cobran a los clientes de <strong>{primerNombre}</strong>, además de los suyos.
+          Nadie más los ve.
+        </p>
         {cubriendoAEste.length === 0 ? (
-          <p className="text-ink-muted text-xs">Nadie más está cubriendo su ruta ahorita.</p>
+          <p className="text-ink-muted text-xs italic">Por ahorita, nadie lo está ayudando.</p>
         ) : (
           <ul className="space-y-1.5">
             {cubriendoAEste.map((c) => (
@@ -46,9 +56,10 @@ export function CoberturaRutaForm({
                 key={c.id}
                 className="flex items-center justify-between gap-2 bg-surface border border-border rounded-md px-3 py-1.5 text-sm"
               >
-                <span>
-                  <span className="font-medium">{c.nombre}</span>{" "}
-                  <span className="text-ink-muted text-xs">está cubriendo esta ruta</span>
+                <span className="inline-flex items-center gap-1.5 min-w-0">
+                  <span className="font-medium truncate">{c.nombre}</span>
+                  <ArrowRight className="h-3 w-3 text-ink-muted shrink-0" />
+                  <span className="text-ink-muted text-xs truncate">clientes de {primerNombre}</span>
                 </span>
                 <TerminarBoton coberturaId={c.id} volverA={volverA} nombre={c.nombre} />
               </li>
@@ -56,7 +67,7 @@ export function CoberturaRutaForm({
           </ul>
         )}
         <EmpezarCoberturaForm
-          label="Que otro cobrador cubra esta ruta"
+          label="Agregar quién lo ayude"
           nombreCampoCubre="cobrador_cubre_id"
           valorFijoCampo="cobrador_cubierto_id"
           valorFijo={cobradorId}
@@ -65,13 +76,18 @@ export function CoberturaRutaForm({
         />
       </div>
 
-      <div className="space-y-2">
-        <h3 className="text-xs font-semibold text-ink-secondary flex items-center gap-1.5">
-          <UserCog className="h-3.5 w-3.5" />
-          ¿A quién le está cubriendo la ruta {nombreCobrador}?
-        </h3>
+      <div className="space-y-2.5 rounded-lg border border-border-strong bg-surface-2/60 p-3">
+        <div className="flex items-center gap-2">
+          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-surface-3 text-ink-strong">
+            <HandHelping className="h-3.5 w-3.5" />
+          </span>
+          <h3 className="text-xs font-semibold text-ink-strong">Él está ayudando a otros</h3>
+        </div>
+        <p className="text-ink-muted text-[11px] leading-snug">
+          <strong>{primerNombre}</strong> ve y cobra los clientes de estos cobradores, además de los suyos.
+        </p>
         {esteCubreA.length === 0 ? (
-          <p className="text-ink-muted text-xs">No está cubriendo la ruta de nadie más ahorita.</p>
+          <p className="text-ink-muted text-xs italic">Por ahorita, no está ayudando a nadie más.</p>
         ) : (
           <ul className="space-y-1.5">
             {esteCubreA.map((c) => (
@@ -79,8 +95,10 @@ export function CoberturaRutaForm({
                 key={c.id}
                 className="flex items-center justify-between gap-2 bg-surface border border-border rounded-md px-3 py-1.5 text-sm"
               >
-                <span>
-                  Está cubriendo la ruta de <span className="font-medium">{c.nombre}</span>
+                <span className="inline-flex items-center gap-1.5 min-w-0">
+                  <span className="font-medium truncate">{primerNombre}</span>
+                  <ArrowRight className="h-3 w-3 text-ink-muted shrink-0" />
+                  <span className="text-ink-muted text-xs truncate">clientes de {c.nombre}</span>
                 </span>
                 <TerminarBoton coberturaId={c.id} volverA={volverA} nombre={c.nombre} />
               </li>
@@ -88,7 +106,7 @@ export function CoberturaRutaForm({
           </ul>
         )}
         <EmpezarCoberturaForm
-          label="Que esta ruta cubra la de otro cobrador"
+          label={`Hacer que ${primerNombre} ayude a otro`}
           nombreCampoCubre="cobrador_cubierto_id"
           valorFijoCampo="cobrador_cubre_id"
           valorFijo={cobradorId}

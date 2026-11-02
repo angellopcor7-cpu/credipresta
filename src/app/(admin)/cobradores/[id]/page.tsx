@@ -320,8 +320,9 @@ export default async function DetalleCobradorPage({
       <div className="space-y-3 bg-surface border border-border rounded-xl p-4">
         <h2 className="text-sm font-semibold text-ink-secondary">Cobertura de ruta</h2>
         <p className="text-ink-muted text-xs -mt-1">
-          Para cuando un cobrador va a cubrir la ruta de otro mientras no está: comparte sus clientes sin
-          quitárselos. No afecta el permiso de dar préstamos — ese se controla aparte, arriba.
+          Para cuando un cobrador va a cubrir la ruta de otro mientras no está: comparte sus clientes SOLO con
+          quien elijas abajo, sin quitárselos y sin que nadie más los vea. No afecta el permiso de dar préstamos —
+          ese se controla aparte, arriba.
         </p>
         <CoberturaRutaForm
           cobradorId={cobradorTyped.id}
