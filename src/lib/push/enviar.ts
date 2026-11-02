@@ -27,12 +27,26 @@ function asegurarVapid() {
 
 export type PayloadPush = { title: string; body: string; url?: string };
 
-/** Manda un push a TODAS las suscripciones (navegadores/dispositivos) de un usuario. Borra solas las que ya expiraron. */
+/**
+ * Manda un aviso a un usuario: SIEMPRE lo guarda en `notificaciones` (lo
+ * que llena la pestaña "Notificaciones" dentro de la app, sin depender de
+ * nada más), y ADEMÁS lo manda como push de verdad a todas sus
+ * suscripciones (navegadores/dispositivos) si las llaves VAPID ya están
+ * configuradas. Borra solas las suscripciones que ya expiraron.
+ */
 export async function enviarPushAUsuario(usuarioId: string, payload: PayloadPush) {
+  const admin = createAdminClient();
+
+  await admin.from("notificaciones").insert({
+    usuario_id: usuarioId,
+    titulo: payload.title,
+    cuerpo: payload.body,
+    url: payload.url ?? null,
+  });
+
   if (!vapidConfigurado()) return;
   asegurarVapid();
 
-  const admin = createAdminClient();
   const { data: suscripciones } = await admin
     .from("push_subscripciones")
     .select("id, endpoint, p256dh, auth")
@@ -58,10 +72,8 @@ export async function enviarPushAUsuario(usuarioId: string, payload: PayloadPush
   );
 }
 
-/** Manda el mismo push a todos los administradores activos (Empresa). */
+/** Manda el mismo aviso (notificación en-app + push) a todos los administradores activos (Empresa). */
 export async function enviarPushAEmpresa(payload: PayloadPush) {
-  if (!vapidConfigurado()) return;
-
   const admin = createAdminClient();
   const { data: administradores } = await admin
     .from("usuarios")

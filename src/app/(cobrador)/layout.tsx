@@ -5,6 +5,7 @@ import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PageTransition } from "@/components/PageTransition";
 import { NotificacionesPushBoton } from "@/components/NotificacionesPushBoton";
+import { NotificacionesLinkBadge } from "@/components/NotificacionesLinkBadge";
 import { salirDeImpersonacion } from "./actions";
 
 async function signOut() {
@@ -16,6 +17,12 @@ async function signOut() {
 
 export default async function CobradorLayout({ children }: { children: React.ReactNode }) {
   const sesion = await exigirVistaCobrador();
+  const supabase = await createClient();
+  const { count: notificacionesNoLeidasCount } = await supabase
+    .from("notificaciones")
+    .select("id", { count: "exact", head: true })
+    .eq("usuario_id", sesion.id)
+    .eq("leida", false);
 
   return (
     <div className="min-h-screen bg-page text-ink">
@@ -57,6 +64,7 @@ export default async function CobradorLayout({ children }: { children: React.Rea
                 Vista Empresa
               </Link>
             )}
+            <NotificacionesLinkBadge href="/panel/notificaciones" noLeidasInicial={notificacionesNoLeidasCount ?? 0} />
             <NotificacionesPushBoton />
             <ThemeToggle />
             <span className="text-ink-muted">{sesion.nombreCompleto}</span>

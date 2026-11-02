@@ -22,14 +22,17 @@ export default async function AdminLayout({
   const primerNombre = sesion.nombreCompleto.trim().split(/\s+/)[0] ?? sesion.nombreCompleto;
 
   const supabase = await createClient();
-  const { count: solicitudesPendientesCount } = await supabase
-    .from("solicitudes_prestamo")
-    .select("id", { count: "exact", head: true })
-    .eq("estado", "pendiente");
+  const [{ count: solicitudesPendientesCount }, { count: notificacionesNoLeidasCount }] = await Promise.all([
+    supabase.from("solicitudes_prestamo").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    supabase.from("notificaciones").select("id", { count: "exact", head: true }).eq("usuario_id", sesion.id).eq("leida", false),
+  ]);
 
   return (
     <div className="min-h-screen bg-page text-ink md:flex">
-      <AdminSidebar solicitudesPendientesInicial={solicitudesPendientesCount ?? 0} />
+      <AdminSidebar
+        solicitudesPendientesInicial={solicitudesPendientesCount ?? 0}
+        notificacionesNoLeidasInicial={notificacionesNoLeidasCount ?? 0}
+      />
       <div className="flex-1 min-w-0">
         <header className="border-b border-border">
           <div className="pl-14 pr-4 py-4 md:px-8 flex items-center justify-between gap-3 flex-wrap">

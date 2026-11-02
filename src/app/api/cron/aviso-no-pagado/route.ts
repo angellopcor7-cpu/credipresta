@@ -7,12 +7,12 @@ import { enviarPushAUsuario } from "@/lib/push/enviar";
 /**
  * Corre una vez al día a las 10pm hora de Ciudad de México (ver vercel.json,
  * "0 4 * * *" en UTC — México ya no tiene horario de verano desde 2022, así
- * que siempre es UTC-6). Por cada cobrador, manda UN push resumiendo:
- * - Qué clientes de hoy (día de cobro para ellos) todavía no registran su
- *   pago del día.
- * - De esos y de cualquier otro con préstamo activo, cuáles ya tienen mora
- *   acumulada.
- * No manda nada si el cobrador no tiene ningún cliente en esas condiciones.
+ * que siempre es UTC-6). Por cada cobrador, manda UN push resumiendo qué
+ * clientes de hoy (día de cobro para ellos) todavía no registran su pago
+ * del día. No manda nada si el cobrador no tiene ningún cliente así.
+ *
+ * El aviso de mora acumulada es aparte (en tiempo real, cuando de verdad se
+ * aplica — ver /api/webhooks/mora-aplicada), a petición de Angel.
  *
  * Protegido con CRON_SECRET (Vercel lo manda solo como
  * "Authorization: Bearer <CRON_SECRET>" en sus crons configurados) — si la
@@ -34,9 +34,7 @@ export async function GET(request: Request) {
 
   const { data: prestamos } = await supabase
     .from("prestamos")
-    .select(
-      "id, cobrador_id, monto_prestado, mora_acumulada, dias_cobro_personalizados, clientes(nombre_completo)"
-    )
+    .select("id, cobrador_id, monto_prestado, dias_cobro_personalizados, clientes(nombre_completo)")
     .in("estado", ["activo", "en_mora"])
     .not("cobrador_id", "is", null);
 
@@ -53,8 +51,7 @@ export async function GET(request: Request) {
     .in("prestamo_id", idsPrestamos);
   const prestamosConPagoHoy = new Set((pagosHoyData ?? []).map((p) => p.prestamo_id));
 
-  type ClientePendiente = { nombre: string; noPagoHoy: boolean; conMora: boolean };
-  const pendientesPorCobrador = new Map<string, ClientePendiente[]>();
+  const noPagaronPorCobrador = new Map<string, string[]>();
 
   for (const p of prestamos) {
     const nombreCliente =
@@ -68,44 +65,31 @@ export async function GET(request: Request) {
       p.dias_cobro_personalizados
     );
     const noPagoHoy = esDiaDeCobroHoy && !prestamosConPagoHoy.has(p.id);
-    const conMora = Number(p.mora_acumulada) > 0;
 
-    if (!noPagoHoy && !conMora) continue;
-    if (!p.cobrador_id) continue;
+    if (!noPagoHoy || !p.cobrador_id) continue;
 
-    const lista = pendientesPorCobrador.get(p.cobrador_id) ?? [];
-    lista.push({ nombre: nombreCliente || "Un cliente", noPagoHoy, conMora });
-    pendientesPorCobrador.set(p.cobrador_id, lista);
+    const lista = noPagaronPorCobrador.get(p.cobrador_id) ?? [];
+    lista.push(nombreCliente || "Un cliente");
+    noPagaronPorCobrador.set(p.cobrador_id, lista);
   }
 
-  if (pendientesPorCobrador.size === 0) {
+  if (noPagaronPorCobrador.size === 0) {
     return NextResponse.json({ ok: true, cobradoresAvisados: 0 });
   }
 
   const { data: cobradoresData } = await supabase
     .from("cobradores")
     .select("id, usuario_id")
-    .in("id", Array.from(pendientesPorCobrador.keys()))
+    .in("id", Array.from(noPagaronPorCobrador.keys()))
     .eq("activo", true);
 
   let avisados = 0;
   await Promise.all(
     (cobradoresData ?? []).map(async (cobrador) => {
-      const pendientes = pendientesPorCobrador.get(cobrador.id) ?? [];
-      if (pendientes.length === 0) return;
+      const nombres = noPagaronPorCobrador.get(cobrador.id) ?? [];
+      if (nombres.length === 0) return;
 
-      const sinPagar = pendientes.filter((c) => c.noPagoHoy);
-      const conMora = pendientes.filter((c) => c.conMora);
-
-      const partes: string[] = [];
-      if (sinPagar.length > 0) {
-        partes.push(`${sinPagar.length} no pagó hoy${sinPagar.length === 1 ? "" : "n"}`);
-      }
-      if (conMora.length > 0) {
-        partes.push(`${conMora.length} con mora acumulada`);
-      }
-
-      const nombresUnicos = Array.from(new Set(pendientes.map((c) => c.nombre)));
+      const nombresUnicos = Array.from(new Set(nombres));
       const nombresTexto =
         nombresUnicos.length <= 5
           ? nombresUnicos.join(", ")
@@ -113,7 +97,7 @@ export async function GET(request: Request) {
 
       await enviarPushAUsuario(cobrador.usuario_id, {
         title: "Aviso de cobro — 10pm",
-        body: `${partes.join(", ")}: ${nombresTexto}`,
+        body: `${nombresUnicos.length} no pagó${nombresUnicos.length === 1 ? "" : "n"} hoy: ${nombresTexto}`,
         url: "/panel",
       });
       avisados += 1;

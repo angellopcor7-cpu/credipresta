@@ -12,6 +12,7 @@ import {
   Scissors,
   History,
   Receipt,
+  Bell,
   Menu,
   X,
 } from "lucide-react";
@@ -25,6 +26,7 @@ const MODULOS = [
   { label: "Hacer corte", href: "/corte", icon: Scissors },
   { label: "Historial", href: "/historial", icon: History },
   { label: "Gastos", href: "/gastos", icon: Receipt },
+  { label: "Notificaciones", href: "/notificaciones", icon: Bell },
 ];
 
 const TITULO_BASE = "CrediPresta";
@@ -48,17 +50,26 @@ function estaActivo(pathname: string, href: string) {
  * como un cajón con el botón de hamburguesa (fijo en la esquina para no
  * pelearse con el layout del header).
  *
- * También avisa cuando hay solicitudes esperando respuesta: un numerito
- * junto a "Solicitudes" (aquí y en el cajón de móvil) y el mismo número en
- * el título de la pestaña del navegador, para que se note aunque Empresa
- * esté viendo otra parte de la app. El número llega ya calculado del
- * servidor al cargar la página, y de ahí en adelante se refresca solo cada
- * rato (ver INTERVALO_REFRESCO_MS) pidiéndolo a /api/solicitudes-pendientes-count.
+ * También avisa cuando hay solicitudes esperando respuesta o notificaciones
+ * sin leer: un numerito junto a "Solicitudes"/"Notificaciones" (aquí y en
+ * el cajón de móvil) y la suma de ambos en el título de la pestaña del
+ * navegador, para que se note aunque Empresa esté viendo otra parte de la
+ * app. Los números llegan ya calculados del servidor al cargar la página,
+ * y de ahí en adelante se refrescan solos cada rato (ver
+ * INTERVALO_REFRESCO_MS) pidiéndolos a /api/solicitudes-pendientes-count y
+ * /api/notificaciones-no-leidas-count.
  */
-export function AdminSidebar({ solicitudesPendientesInicial }: { solicitudesPendientesInicial: number }) {
+export function AdminSidebar({
+  solicitudesPendientesInicial,
+  notificacionesNoLeidasInicial,
+}: {
+  solicitudesPendientesInicial: number;
+  notificacionesNoLeidasInicial: number;
+}) {
   const pathname = usePathname();
   const [abierto, setAbierto] = useState(false);
   const [pendientes, setPendientes] = useState(solicitudesPendientesInicial);
+  const [noLeidas, setNoLeidas] = useState(notificacionesNoLeidasInicial);
   // Para "adoptar" el valor nuevo del servidor cuando cambia (por ejemplo,
   // al navegar a otra pantalla del panel) sin esperar al siguiente refresco
   // por tiempo. Comparar y ajustar aquí mismo, durante el render, es el
@@ -69,14 +80,27 @@ export function AdminSidebar({ solicitudesPendientesInicial }: { solicitudesPend
     setSolicitudesPendientesPrevias(solicitudesPendientesInicial);
     setPendientes(solicitudesPendientesInicial);
   }
+  const [notificacionesNoLeidasPrevias, setNotificacionesNoLeidasPrevias] = useState(notificacionesNoLeidasInicial);
+  if (notificacionesNoLeidasInicial !== notificacionesNoLeidasPrevias) {
+    setNotificacionesNoLeidasPrevias(notificacionesNoLeidasInicial);
+    setNoLeidas(notificacionesNoLeidasInicial);
+  }
 
   useEffect(() => {
     const intervalo = setInterval(async () => {
       try {
-        const res = await fetch("/api/solicitudes-pendientes-count", { cache: "no-store" });
-        if (!res.ok) return;
-        const datos: { count: number } = await res.json();
-        setPendientes(datos.count);
+        const [resSolicitudes, resNotificaciones] = await Promise.all([
+          fetch("/api/solicitudes-pendientes-count", { cache: "no-store" }),
+          fetch("/api/notificaciones-no-leidas-count", { cache: "no-store" }),
+        ]);
+        if (resSolicitudes.ok) {
+          const datos: { count: number } = await resSolicitudes.json();
+          setPendientes(datos.count);
+        }
+        if (resNotificaciones.ok) {
+          const datos: { count: number } = await resNotificaciones.json();
+          setNoLeidas(datos.count);
+        }
       } catch {
         // Sin conexión momentánea o lo que sea: se intenta de nuevo en el
         // siguiente ciclo, no hace falta avisar nada por esto.
@@ -86,14 +110,16 @@ export function AdminSidebar({ solicitudesPendientesInicial }: { solicitudesPend
   }, []);
 
   useEffect(() => {
-    document.title = pendientes > 0 ? `(${pendientes}) ${TITULO_BASE}` : TITULO_BASE;
-  }, [pendientes]);
+    const total = pendientes + noLeidas;
+    document.title = total > 0 ? `(${total}) ${TITULO_BASE}` : TITULO_BASE;
+  }, [pendientes, noLeidas]);
 
   const enlaces = (
     <nav className="flex-1 px-3 space-y-0.5 overflow-y-auto">
       {MODULOS.map((m) => {
         const activo = estaActivo(pathname, m.href);
         const avisoSolicitudes = m.href === "/solicitudes" && pendientes > 0;
+        const avisoNotificaciones = m.href === "/notificaciones" && noLeidas > 0;
         return (
           <Link
             key={m.href}
@@ -110,6 +136,11 @@ export function AdminSidebar({ solicitudesPendientesInicial }: { solicitudesPend
             {avisoSolicitudes && (
               <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] font-bold text-white">
                 {pendientes}
+              </span>
+            )}
+            {avisoNotificaciones && (
+              <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] font-bold text-white">
+                {noLeidas}
               </span>
             )}
           </Link>
