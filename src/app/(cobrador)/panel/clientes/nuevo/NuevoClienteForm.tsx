@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { UserRound, Landmark, CalendarClock, FileImage, CircleCheck, FileText, PenLine } from "lucide-react";
 import { crearClienteYSolicitud } from "../../../actions";
 import { FirmaCanvas } from "./FirmaCanvas";
+import { FotoDocumentoInput } from "@/components/FotoDocumentoInput";
 import { comprimirImagen } from "@/lib/comprimirImagen";
 import {
   calcularPorcentajeInteresPorPlan,
@@ -374,63 +375,35 @@ export function NuevoClienteForm({
           <FileImage className="h-4 w-4 text-accent-text" />
           Documentos
         </p>
-        <div className="grid sm:grid-cols-2 gap-3">
-          <div className="space-y-1">
-            <label className="text-sm text-ink-secondary" htmlFor="doc_ine_frente">
-              Foto del INE (frente)
-            </label>
-            <input
-              id="doc_ine_frente"
-              name="doc_ine_frente"
-              type="file"
-              accept="image/*"
-              required
-              onChange={comprimirDocumento}
-              className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm text-ink-secondary" htmlFor="doc_ine_reverso">
-              Foto del INE (reverso)
-            </label>
-            <input
-              id="doc_ine_reverso"
-              name="doc_ine_reverso"
-              type="file"
-              accept="image/*"
-              required
-              onChange={comprimirDocumento}
-              className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm text-ink-secondary" htmlFor="doc_comprobante_domicilio">
-              Comprobante de domicilio
-            </label>
-            <input
-              id="doc_comprobante_domicilio"
-              name="doc_comprobante_domicilio"
-              type="file"
-              accept="image/*"
-              required
-              onChange={comprimirDocumento}
-              className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
-            />
-          </div>
-          <div className="space-y-1">
-            <label className="text-sm text-ink-secondary" htmlFor="doc_foto_cliente">
-              Foto de la cara del cliente
-            </label>
-            <input
-              id="doc_foto_cliente"
-              name="doc_foto_cliente"
-              type="file"
-              accept="image/*"
-              required
-              onChange={comprimirDocumento}
-              className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
-            />
-          </div>
+        <div className="grid sm:grid-cols-2 gap-4">
+          <FotoDocumentoInput
+            id="doc_ine_frente"
+            name="doc_ine_frente"
+            label="Foto del INE (frente)"
+            required
+            onFileChange={comprimirDocumento}
+          />
+          <FotoDocumentoInput
+            id="doc_ine_reverso"
+            name="doc_ine_reverso"
+            label="Foto del INE (reverso)"
+            required
+            onFileChange={comprimirDocumento}
+          />
+          <FotoDocumentoInput
+            id="doc_comprobante_domicilio"
+            name="doc_comprobante_domicilio"
+            label="Comprobante de domicilio"
+            required
+            onFileChange={comprimirDocumento}
+          />
+          <FotoDocumentoInput
+            id="doc_foto_cliente"
+            name="doc_foto_cliente"
+            label="Foto de la cara del cliente"
+            required
+            onFileChange={comprimirDocumento}
+          />
         </div>
       </div>
 

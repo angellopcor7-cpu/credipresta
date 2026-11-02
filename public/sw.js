@@ -9,6 +9,14 @@ self.addEventListener("activate", (event) => {
   event.waitUntil(self.clients.claim());
 });
 
+// Chrome exige que el service worker tenga un manejador de "fetch" para
+// considerar la app instalable (aunque no cachee nada) — sin esto, Chrome
+// puede negarse a instalarla con "esta app no se puede instalar". Solo deja
+// pasar la petición tal cual, no cachea ni hace nada offline.
+self.addEventListener("fetch", (event) => {
+  event.respondWith(fetch(event.request));
+});
+
 self.addEventListener("push", (event) => {
   let data = {};
   try {
