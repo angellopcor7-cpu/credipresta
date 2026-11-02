@@ -174,6 +174,7 @@ export async function crearClienteExistente(formData: FormData) {
     plazoDias,
     montoPrestamo: montoPrestado,
     montoCuota,
+    montoTotal,
     regla: config.reglaDiasCobro,
     diasPersonalizados: null,
   });

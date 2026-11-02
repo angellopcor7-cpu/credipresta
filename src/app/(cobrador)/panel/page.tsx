@@ -58,6 +58,36 @@ export default async function PanelCobradorPage({
   const clientes = (clientesData ?? []) as Cliente[];
   const clienteIds = clientes.map((c) => c.id);
 
+  // Foto de perfil (la "foto de la cara del cliente" que se sube al dar de
+  // alta) en vez de solo iniciales — para reconocer al cliente de un
+  // vistazo. Si un cliente tiene varias (se volvió a subir), se usa la más
+  // reciente. "cliente existente" dado de alta sin documentos simplemente no
+  // tiene y se le siguen mostrando las iniciales.
+  const { data: fotosData } =
+    clienteIds.length > 0
+      ? await supabase
+          .from("documentos_clientes")
+          .select("cliente_id, storage_path, created_at")
+          .in("cliente_id", clienteIds)
+          .eq("tipo_documento", "foto_cliente")
+          .order("created_at", { ascending: false })
+      : { data: [] as { cliente_id: string; storage_path: string; created_at: string }[] };
+  const rutaFotoPorCliente = new Map<string, string>();
+  for (const f of fotosData ?? []) {
+    if (!rutaFotoPorCliente.has(f.cliente_id)) rutaFotoPorCliente.set(f.cliente_id, f.storage_path);
+  }
+  const rutasFotos = Array.from(rutaFotoPorCliente.values());
+  const { data: fotosFirmadas } =
+    rutasFotos.length > 0
+      ? await supabase.storage.from("documentos-clientes").createSignedUrls(rutasFotos, 3600)
+      : { data: [] as { path: string | null; signedUrl: string }[] };
+  const urlFotoPorRuta = new Map((fotosFirmadas ?? []).map((f) => [f.path, f.signedUrl]));
+  const fotoUrlPorCliente = new Map(
+    Array.from(rutaFotoPorCliente.entries())
+      .map(([clienteId, ruta]) => [clienteId, urlFotoPorRuta.get(ruta)] as const)
+      .filter((entrada): entrada is [string, string] => !!entrada[1])
+  );
+
   const { data: prestamosData } =
     clienteIds.length > 0
       ? await supabase.from("prestamos").select("*").in("cliente_id", clienteIds)
@@ -97,14 +127,22 @@ export default async function PanelCobradorPage({
     const todosLiquidados = prestamosDelCliente.length > 0 && prestamosDelCliente.every((p) => p.estado === "liquidado");
 
     let estadoTexto = estadoClienteLabel[cliente.estado] ?? cliente.estado;
+    let alCorriente = false;
     if (cliente.estado === "activo") {
-      estadoTexto = todosLiquidados ? "Liquidado" : enMora ? "En mora" : "Al corriente";
+      if (todosLiquidados) {
+        estadoTexto = "Liquidado";
+      } else if (enMora) {
+        estadoTexto = "En mora";
+      } else {
+        estadoTexto = "Al corriente";
+        alCorriente = true;
+      }
     }
 
     // Prioridad para ordenar: mora primero (urge cobrarles), luego pendientes de aprobación, luego el resto.
     const prioridad = enMora ? 0 : cliente.estado === "pendiente_aprobacion" ? 1 : 2;
 
-    return { cliente, total, abonado, saldo, mora, progreso, prestamoActivo, estadoTexto, enMora, prioridad };
+    return { cliente, total, abonado, saldo, mora, progreso, prestamoActivo, estadoTexto, enMora, alCorriente, prioridad };
   });
 
   filas.sort((a, b) => a.prioridad - b.prioridad);
@@ -181,7 +219,7 @@ export default async function PanelCobradorPage({
           <div className="flex justify-end">
             <AbrirTodoButton />
           </div>
-          {filas.map(({ cliente, total, abonado, saldo, mora, progreso, prestamoActivo, estadoTexto, enMora }) => (
+          {filas.map(({ cliente, total, abonado, saldo, mora, progreso, prestamoActivo, estadoTexto, enMora, alCorriente }) => (
             <div
               key={cliente.id}
               className={`group bg-surface border rounded-xl p-4 flex flex-wrap items-center gap-4 border-l-4 transition-colors hover:bg-surface-2 ${
@@ -195,9 +233,18 @@ export default async function PanelCobradorPage({
               }`}
             >
               <div className="flex items-center gap-3 min-w-[13rem]">
-                <div className="shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-neutral-950 font-bold text-sm">
-                  {iniciales(cliente.nombre_completo)}
-                </div>
+                {fotoUrlPorCliente.has(cliente.id) ? (
+                  // eslint-disable-next-line @next/next/no-img-element -- URL firmada temporal de Storage, no vale la pena el pipeline de optimización de next/image para esto.
+                  <img
+                    src={fotoUrlPorCliente.get(cliente.id)}
+                    alt={cliente.nombre_completo}
+                    className="shrink-0 h-10 w-10 rounded-full object-cover object-top border border-border-strong"
+                  />
+                ) : (
+                  <div className="shrink-0 h-10 w-10 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-neutral-950 font-bold text-sm">
+                    {iniciales(cliente.nombre_completo)}
+                  </div>
+                )}
                 <div className="min-w-0">
                   <p className="font-medium truncate flex items-center gap-1.5">
                     {cliente.nombre_completo}
@@ -222,7 +269,9 @@ export default async function PanelCobradorPage({
                           ? "bg-danger-chip-bg text-danger-text border-danger-chip-border"
                           : cliente.estado === "inactivo"
                             ? "bg-surface-2 text-ink-muted border-border-strong"
-                            : "bg-surface-2 text-ink-strong border-border-soft"
+                            : alCorriente
+                              ? "bg-green-500/10 text-green-500 border-green-500/30"
+                              : "bg-surface-2 text-ink-strong border-border-soft"
                     }`}
                   >
                     {cliente.estado === "pendiente_aprobacion" ? (

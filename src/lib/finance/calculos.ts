@@ -244,19 +244,63 @@ export type DiaCalendario = {
 };
 
 /**
+ * Reparte un total en `plazoDias` montos diarios ENTEROS (sin centavos) que
+ * suman exactamente el total, en vez de la misma cuota con centavos todos
+ * los días (p. ej. $597.50 cada día de un total de $11,950 a 20 días) — unos
+ * días caen en $597 y otros en $598, repartidos lo más parejo posible a lo
+ * largo del plazo (no todos los "598" amontonados al principio o al final).
+ * Si el total trae centavos de verdad (puede pasar por el interés), esos
+ * centavos sobrantes se le suman al último día, para no perder ni un
+ * centavo del total real.
+ */
+export function distribuirMontosDiarios(montoTotal: number, plazoDias: number): number[] {
+  if (plazoDias <= 0) throw new Error("plazoDias debe ser mayor a 0");
+
+  const centavosTotal = Math.round(montoTotal * 100);
+  const pesosTotales = Math.floor(centavosTotal / 100);
+  const centavosResiduales = centavosTotal - pesosTotales * 100;
+
+  const basePorDia = Math.floor(pesosTotales / plazoDias);
+  const diasConExtra = pesosTotales - basePorDia * plazoDias;
+
+  const montos: number[] = [];
+  let extrasAsignados = 0;
+  for (let i = 0; i < plazoDias; i++) {
+    // Reparto parejo (tipo "línea de Bresenham"): decide si este día lleva
+    // el peso extra según cuántos "extra" deberían llevarse hasta aquí, no
+    // metiéndolos todos seguidos.
+    const extrasEsperadosHastaAqui = Math.floor(((i + 1) * diasConExtra) / plazoDias);
+    const llevaExtra = extrasEsperadosHastaAqui > extrasAsignados;
+    if (llevaExtra) extrasAsignados += 1;
+    montos.push(basePorDia + (llevaExtra ? 1 : 0));
+  }
+
+  if (centavosResiduales !== 0 && montos.length > 0) {
+    montos[montos.length - 1] = redondear(montos[montos.length - 1] + centavosResiduales / 100);
+  }
+
+  return montos;
+}
+
+/**
  * Genera el calendario de cobro de un préstamo: `plazoDias` fechas de cobro,
  * empezando el día después de `fechaInicio`, saltando los días que no
  * correspondan según el monto del préstamo (fines de semana según la regla).
+ * El monto esperado de cada día ya no es la misma cuota con centavos
+ * repetida — se reparte el total en pesos enteros (ver `distribuirMontosDiarios`).
  */
 export function generarCalendarioPagos(params: {
   fechaInicio: Date;
   plazoDias: number;
   montoPrestamo: number;
   montoCuota: number;
+  /** Total real a repartir en montos diarios enteros; si no se manda, se usa montoCuota × plazoDias. */
+  montoTotal?: number;
   regla: ReglaDiasCobro;
   diasPersonalizados?: number[] | null;
 }): DiaCalendario[] {
-  const { fechaInicio, plazoDias, montoPrestamo, montoCuota, regla, diasPersonalizados } = params;
+  const { fechaInicio, plazoDias, montoPrestamo, montoCuota, montoTotal, regla, diasPersonalizados } = params;
+  const montosDiarios = distribuirMontosDiarios(montoTotal ?? montoCuota * plazoDias, plazoDias);
   const dias: DiaCalendario[] = [];
   const cursor = new Date(
     Date.UTC(fechaInicio.getUTCFullYear(), fechaInicio.getUTCMonth(), fechaInicio.getUTCDate())
@@ -267,12 +311,12 @@ export function generarCalendarioPagos(params: {
   while (numeroDia < plazoDias) {
     cursor.setUTCDate(cursor.getUTCDate() + 1);
     if (esDiaDeCobro(cursor, montoPrestamo, regla, diasPersonalizados)) {
-      numeroDia += 1;
       dias.push({
-        numeroDia,
+        numeroDia: numeroDia + 1,
         fechaProgramada: cursor.toISOString().slice(0, 10),
-        montoEsperado: montoCuota,
+        montoEsperado: montosDiarios[numeroDia],
       });
+      numeroDia += 1;
     }
   }
 

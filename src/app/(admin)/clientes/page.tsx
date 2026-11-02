@@ -3,7 +3,6 @@ import { createClient } from "@/lib/supabase/server";
 import type { Cliente } from "@/lib/types";
 import { obtenerConfiguraciones } from "@/lib/config";
 import {
-  esDiaDeCobro,
   tieneCuotaVencidaSinPagar,
   calcularSemaforoCliente,
   type SemaforoCliente,
@@ -95,12 +94,11 @@ export default async function ClientesPage() {
         enMora: prestamo.estado === "en_mora",
         moraAcumulada: Number(prestamo.mora_acumulada),
         tieneCuotaVencida: tieneCuotaVencidaSinPagar(calendario, hoy),
-        esDiaDeCobroHoy: esDiaDeCobro(
-          new Date(`${hoy}T00:00:00Z`),
-          Number(prestamo.monto_prestado),
-          config.reglaDiasCobro,
-          prestamo.dias_cobro_personalizados
-        ),
+        // OJO: esto NO es "hoy es día de cobro según la regla general" (eso
+        // marcaba como "le toca pagar hoy" a un préstamo recién aprobado
+        // HOY, cuyo primer cobro real es hasta mañana) — es "el calendario
+        // de ESTE préstamo tiene una fecha programada para hoy".
+        esDiaDeCobroHoy: calendario.some((d) => d.fechaProgramada === hoy),
         yaPagoHoy: prestamosConPagoHoy.has(prestamo.id),
       })
     );

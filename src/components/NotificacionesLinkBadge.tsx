@@ -35,9 +35,9 @@ export function NotificacionesLinkBadge({ href, noLeidasInicial }: { href: strin
   }, []);
 
   return (
-    <Link href={href} className="inline-flex items-center gap-1 hover:text-ink">
+    <Link href={href} className="inline-flex items-center gap-1 hover:text-ink" title="Notificaciones">
       <Bell className="h-4 w-4" />
-      Notificaciones
+      <span className="hidden sm:inline">Notificaciones</span>
       {noLeidas > 0 && (
         <span className="inline-flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-red-600 text-[10px] font-bold text-white">
           {noLeidas}

@@ -1,9 +1,22 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
   title: "CrediPresta",
   description: "Gestión de préstamos, clientes y pagos",
+  manifest: "/manifest.webmanifest",
+  // iOS no lee el manifest.json para esto — necesita sus propias meta tags
+  // para abrir como app de verdad (sin la barra de Safari) cuando se agrega
+  // a la pantalla de inicio.
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "CrediPresta",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#0a0a0a",
 };
 
 const SCRIPT_TEMA = `

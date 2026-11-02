@@ -44,35 +44,37 @@ export default async function CobradorLayout({ children }: { children: React.Rea
         </div>
       )}
       <header className="border-b border-border">
-        <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
-          <Link href="/panel" className="font-bold text-lg">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between gap-3 flex-wrap">
+          <Link href="/panel" className="font-bold text-lg shrink-0">
             Credi<span className="text-accent-text">Presta</span>
           </Link>
-          <nav className="flex items-center gap-5 text-sm text-ink-secondary flex-wrap">
-            <Link href="/panel" className="hover:text-ink">
+          {/* Solo lo esencial arriba: a dónde ir (Mis clientes) y las
+              notificaciones. "Nuevo cliente" ya tiene su propio botón grande
+              dentro de /panel — no hace falta repetirlo aquí también. */}
+          <nav className="flex items-center gap-3 text-sm text-ink-secondary flex-wrap">
+            <Link href="/panel" className="hover:text-ink font-medium">
               Mis clientes
             </Link>
-            {sesion.puedeDarPrestamos && (
-              <Link href="/panel/clientes/nuevo" className="hover:text-ink">
-                + Nuevo cliente
-              </Link>
-            )}
             {sesion.rol === "administrador" && (
               <Link
                 href="/dashboard"
-                className="text-xs border border-border-strong rounded-full px-3 py-1 hover:border-border-soft"
+                className="text-xs border border-border-strong rounded-full px-2.5 py-1 hover:border-border-soft"
               >
                 Vista Empresa
               </Link>
             )}
-            <NotificacionesLinkBadge href="/panel/notificaciones" noLeidasInicial={notificacionesNoLeidasCount ?? 0} />
-            <NotificacionesPushBoton />
-            <ProbarNotificacionBoton />
-            <ThemeToggle />
-            <span className="text-ink-muted">{sesion.nombreCompleto}</span>
-            <form action={signOut}>
-              <button className="text-ink-muted hover:text-ink">Cerrar sesión</button>
-            </form>
+            <div className="flex items-center gap-2.5 border-l border-border pl-3">
+              <NotificacionesLinkBadge href="/panel/notificaciones" noLeidasInicial={notificacionesNoLeidasCount ?? 0} />
+              <NotificacionesPushBoton />
+              <ProbarNotificacionBoton />
+              <ThemeToggle />
+            </div>
+            <div className="flex items-center gap-2.5 border-l border-border pl-3">
+              <span className="text-ink-muted text-xs">{sesion.nombreCompleto}</span>
+              <form action={signOut}>
+                <button className="text-ink-muted hover:text-ink text-xs">Cerrar sesión</button>
+              </form>
+            </div>
           </nav>
         </div>
       </header>

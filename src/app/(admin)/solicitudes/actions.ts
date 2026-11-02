@@ -120,6 +120,7 @@ export async function aprobarSolicitud(formData: FormData) {
     plazoDias,
     montoPrestamo: montoPrestado,
     montoCuota,
+    montoTotal,
     regla: config.reglaDiasCobro,
     diasPersonalizados: solicitud.dias_cobro_personalizados,
   });

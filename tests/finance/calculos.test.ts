@@ -21,6 +21,7 @@ import {
   validarMontoPago,
   aplicarPagoVariosDias,
   obtenerFechasPagadas,
+  distribuirMontosDiarios,
 } from "../../src/lib/finance/calculos";
 
 describe("interés y total", () => {
@@ -336,6 +337,61 @@ describe("generación del calendario de pagos", () => {
       return diaSemana === 0 || diaSemana === 6;
     });
     expect(incluyeFinDeSemana).toBe(true);
+  });
+
+  it("reparte el total en montos diarios enteros, sin repetir la misma cuota con centavos", () => {
+    const dias = generarCalendarioPagos({
+      fechaInicio: new Date("2026-09-01T00:00:00Z"),
+      plazoDias: 20,
+      montoPrestamo: 1000,
+      montoCuota: 597.5,
+      montoTotal: 11950,
+      regla,
+    });
+
+    expect(dias).toHaveLength(20);
+    // Ningún día debe quedar con centavos.
+    dias.forEach((d) => expect(Number.isInteger(d.montoEsperado)).toBe(true));
+    // La suma de los 20 días debe dar exactamente el total.
+    expect(dias.reduce((s, d) => s + d.montoEsperado, 0)).toBe(11950);
+    // Con $11,950 entre 20 días: 10 días de $597 y 10 de $598.
+    expect(dias.filter((d) => d.montoEsperado === 597)).toHaveLength(10);
+    expect(dias.filter((d) => d.montoEsperado === 598)).toHaveLength(10);
+  });
+});
+
+describe("reparto de montos diarios (distribuirMontosDiarios)", () => {
+  it("$11,950 entre 20 días: mitad $597, mitad $598, nunca $597.50", () => {
+    const montos = distribuirMontosDiarios(11950, 20);
+    expect(montos).toHaveLength(20);
+    montos.forEach((m) => expect(Number.isInteger(m)).toBe(true));
+    expect(montos.reduce((s, m) => s + m, 0)).toBe(11950);
+    expect(montos.filter((m) => m === 597)).toHaveLength(10);
+    expect(montos.filter((m) => m === 598)).toHaveLength(10);
+  });
+
+  it("cuando el total es múltiplo exacto del plazo, todos los días quedan iguales", () => {
+    const montos = distribuirMontosDiarios(500, 10);
+    expect(montos).toEqual(Array(10).fill(50));
+  });
+
+  it("reparte el peso extra parejo a lo largo del plazo, no todo amontonado", () => {
+    // $1,003 entre 10 días: base $100, 3 días con $101 — deben quedar
+    // separados (no los 3 primeros ni los 3 últimos seguidos).
+    const montos = distribuirMontosDiarios(1003, 10);
+    expect(montos.reduce((s, m) => s + m, 0)).toBe(1003);
+    const indicesConExtra = montos.map((m, i) => (m === 101 ? i : -1)).filter((i) => i >= 0);
+    expect(indicesConExtra).toHaveLength(3);
+    // No deben ser consecutivos los tres.
+    expect(indicesConExtra).not.toEqual([0, 1, 2]);
+    expect(indicesConExtra).not.toEqual([7, 8, 9]);
+  });
+
+  it("si el total trae centavos de verdad, el sobrante se le suma al último día", () => {
+    const montos = distribuirMontosDiarios(100.25, 4);
+    expect(montos.reduce((s, m) => s + m, 0)).toBeCloseTo(100.25, 2);
+    // Los primeros 3 días quedan enteros; solo el último carga los centavos.
+    expect(montos.slice(0, 3).every((m) => Number.isInteger(m))).toBe(true);
   });
 });
 

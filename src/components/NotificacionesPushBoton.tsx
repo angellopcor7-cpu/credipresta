@@ -44,7 +44,23 @@ export function NotificacionesPushBoton() {
     navigator.serviceWorker
       .register("/sw.js")
       .then((registro) => registro.pushManager.getSubscription())
-      .then((suscripcion) => setEstado(suscripcion ? "activo" : "inactivo"))
+      .then((suscripcion) => {
+        // Si este dispositivo ya estaba suscrito, lo volvemos a guardar
+        // (mismo endpoint, upsert) — así, si antes se activó estando
+        // conectado con OTRA cuenta en este mismo navegador (p. ej. probando
+        // como cobrador y después entrando como Empresa), el dueño de la
+        // suscripción en la base de datos se corrige al usuario que tiene
+        // la sesión iniciada AHORA, en vez de quedarse pegado al que la
+        // activó primero. Sin esto, un dispositivo de prueba compartido
+        // entre cuentas podía recibir avisos que no le tocaban.
+        if (suscripcion) {
+          const json = suscripcion.toJSON() as { endpoint?: string; keys?: { p256dh: string; auth: string } };
+          if (json.endpoint && json.keys) {
+            guardarSuscripcionPush({ endpoint: json.endpoint, keys: json.keys }, navigator.userAgent).catch(() => {});
+          }
+        }
+        setEstado(suscripcion ? "activo" : "inactivo");
+      })
       .catch(() => setEstado("inactivo"));
   }, [estado]);
 

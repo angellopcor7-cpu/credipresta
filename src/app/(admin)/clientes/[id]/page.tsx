@@ -2,9 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { formatoFechaCorta } from "@/lib/format";
-import { obtenerConfiguraciones } from "@/lib/config";
 import {
-  esDiaDeCobro,
   tieneCuotaVencidaSinPagar,
   calcularSemaforoCliente,
   obtenerFechasPagadas,
@@ -76,10 +74,11 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
   const { id } = await params;
   const supabase = await createClient();
 
-  const [{ data: clienteData }, config] = await Promise.all([
-    supabase.from("clientes").select("*, cobradores(usuarios(nombre_completo))").eq("id", id).maybeSingle(),
-    obtenerConfiguraciones(),
-  ]);
+  const { data: clienteData } = await supabase
+    .from("clientes")
+    .select("*, cobradores(usuarios(nombre_completo))")
+    .eq("id", id)
+    .maybeSingle();
 
   if (!clienteData) notFound();
   const cliente = clienteData as unknown as ClienteConCobrador;
@@ -138,12 +137,11 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
           calendario.map((d) => ({ fechaProgramada: d.fecha_programada, estado: d.estado })),
           hoy
         ),
-        esDiaDeCobroHoy: esDiaDeCobro(
-          new Date(`${hoy}T00:00:00Z`),
-          Number(prestamoRelevante!.monto_prestado),
-          config.reglaDiasCobro,
-          prestamoRelevante!.dias_cobro_personalizados
-        ),
+        // Igual que en /clientes: "le toca pagar hoy" se basa en si el
+        // calendario de ESTE préstamo tiene una fecha programada para hoy,
+        // no en la regla genérica de día de la semana (que marcaba a un
+        // préstamo recién aprobado hoy como atrasado desde el día 1).
+        esDiaDeCobroHoy: calendario.some((d) => d.fecha_programada === hoy),
         yaPagoHoy: pagos.some((p) => p.tipo === "cuota_diaria" && p.fecha_pago?.slice(0, 10) === hoy),
       });
   const estiloSemaforo = SEMAFORO_ESTILO[semaforo];

@@ -384,7 +384,6 @@ export function NuevoClienteForm({
               name="doc_ine_frente"
               type="file"
               accept="image/*"
-              capture="environment"
               required
               onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
@@ -399,7 +398,6 @@ export function NuevoClienteForm({
               name="doc_ine_reverso"
               type="file"
               accept="image/*"
-              capture="environment"
               required
               onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
@@ -414,7 +412,6 @@ export function NuevoClienteForm({
               name="doc_comprobante_domicilio"
               type="file"
               accept="image/*"
-              capture="environment"
               required
               onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"
@@ -429,7 +426,6 @@ export function NuevoClienteForm({
               name="doc_foto_cliente"
               type="file"
               accept="image/*"
-              capture="user"
               required
               onChange={comprimirDocumento}
               className="w-full text-xs text-ink-secondary file:mr-3 file:rounded-md file:border-0 file:bg-surface-3 file:px-3 file:py-1.5 file:text-ink"

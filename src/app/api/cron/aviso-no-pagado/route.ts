@@ -1,7 +1,5 @@
 import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { obtenerConfiguraciones } from "@/lib/config";
-import { esDiaDeCobro } from "@/lib/finance/calculos";
 import { enviarPushAUsuario } from "@/lib/push/enviar";
 
 /**
@@ -29,12 +27,11 @@ export async function GET(request: Request) {
   }
 
   const supabase = createAdminClient();
-  const config = await obtenerConfiguraciones();
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "America/Mexico_City" }); // YYYY-MM-DD
 
   const { data: prestamos } = await supabase
     .from("prestamos")
-    .select("id, cobrador_id, monto_prestado, dias_cobro_personalizados, clientes(nombre_completo)")
+    .select("id, cobrador_id, clientes(nombre_completo)")
     .in("estado", ["activo", "en_mora"])
     .not("cobrador_id", "is", null);
 
@@ -43,13 +40,25 @@ export async function GET(request: Request) {
   }
 
   const idsPrestamos = prestamos.map((p) => p.id);
-  const { data: pagosHoyData } = await supabase
-    .from("pagos")
-    .select("prestamo_id")
-    .eq("tipo", "cuota_diaria")
-    .gte("fecha_pago", hoy)
-    .in("prestamo_id", idsPrestamos);
+  // "Le tocaba pagar hoy" se saca del calendario REAL de cada préstamo, no
+  // de la regla genérica de día de la semana — un préstamo recién aprobado
+  // hoy todavía no tiene cobro programado para hoy (el primero es mañana),
+  // así que no debe avisarse como que "no pagó".
+  const [{ data: pagosHoyData }, { data: calendarioHoyData }] = await Promise.all([
+    supabase
+      .from("pagos")
+      .select("prestamo_id")
+      .eq("tipo", "cuota_diaria")
+      .gte("fecha_pago", hoy)
+      .in("prestamo_id", idsPrestamos),
+    supabase
+      .from("calendario_pagos")
+      .select("prestamo_id")
+      .eq("fecha_programada", hoy)
+      .in("prestamo_id", idsPrestamos),
+  ]);
   const prestamosConPagoHoy = new Set((pagosHoyData ?? []).map((p) => p.prestamo_id));
+  const prestamosConCobroHoy = new Set((calendarioHoyData ?? []).map((d) => d.prestamo_id));
 
   const noPagaronPorCobrador = new Map<string, string[]>();
 
@@ -58,13 +67,7 @@ export async function GET(request: Request) {
       (p.clientes as unknown as { nombre_completo?: string } | { nombre_completo?: string }[] | null) &&
       (Array.isArray(p.clientes) ? p.clientes[0]?.nombre_completo : (p.clientes as { nombre_completo?: string } | null)?.nombre_completo);
 
-    const esDiaDeCobroHoy = esDiaDeCobro(
-      new Date(`${hoy}T00:00:00Z`),
-      Number(p.monto_prestado),
-      config.reglaDiasCobro,
-      p.dias_cobro_personalizados
-    );
-    const noPagoHoy = esDiaDeCobroHoy && !prestamosConPagoHoy.has(p.id);
+    const noPagoHoy = prestamosConCobroHoy.has(p.id) && !prestamosConPagoHoy.has(p.id);
 
     if (!noPagoHoy || !p.cobrador_id) continue;
 
