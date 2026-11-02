@@ -20,6 +20,7 @@ import { EstadoCobradorButton } from "./EstadoCobradorButton";
 import { PuedeDarPrestamosButton } from "./PuedeDarPrestamosButton";
 import { ReasignarTodosForm } from "./ReasignarTodosForm";
 import { CoberturaRutaForm } from "./CoberturaRutaForm";
+import { EntrarComoCobradorButton } from "../EntrarComoCobradorButton";
 import { reasignarCliente } from "../actions";
 import { TIPOS_COMISION, type TipoComision } from "@/lib/types";
 
@@ -231,6 +232,9 @@ export default async function DetalleCobradorPage({
           </div>
         </div>
         <div className="flex flex-col items-end gap-2">
+          {cobradorTyped.activo && (
+            <EntrarComoCobradorButton cobradorId={cobradorTyped.id} nombreCobrador={nombreCobrador} />
+          )}
           <EstadoCobradorButton
             cobradorId={cobradorTyped.id}
             usuarioId={cobradorTyped.usuario_id}

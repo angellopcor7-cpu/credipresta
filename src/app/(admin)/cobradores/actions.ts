@@ -2,9 +2,11 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { exigirAdministrador } from "@/lib/auth/roles";
+import { COOKIE_IMPERSONACION } from "@/lib/auth/impersonacion";
 import type { TipoComision } from "@/lib/types";
 
 /** Lee y valida el tipo/porcentaje de comisión de un FormData; redirige si vienen mal. */
@@ -449,6 +451,44 @@ export async function iniciarCobertura(formData: FormData) {
   revalidatePath(`/cobradores/${cobradorCubreId}`);
   revalidatePath(`/cobradores/${cobradorCubiertoId}`);
   redirect(`${volverA}?exito=${encodeURIComponent("Cobertura iniciada")}`);
+}
+
+/**
+ * Empresa entra a ver y actuar como un cobrador específico: pone una cookie
+ * con su id (`cobradores.id`) que `getSesionUsuario()` lee para devolver, a
+ * partir de ahí, la sesión del cobrador en vez de la de Empresa — pagos,
+ * clientes, solicitudes y todo lo demás que se haga desde /panel queda
+ * registrado a nombre de él, no de Empresa. La sesión real de Supabase Auth
+ * nunca cambia, así que Empresa sigue pasando las políticas RLS de
+ * administrador en todo momento; "Salir" (desde el aviso en /panel) regresa
+ * a la cuenta normal de Empresa sin cerrar sesión.
+ */
+export async function entrarComoCobrador(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const cobradorId = String(formData.get("cobrador_id") || "");
+  if (!cobradorId) redirect("/cobradores");
+
+  const { data: cobrador } = await supabase
+    .from("cobradores")
+    .select("id, activo")
+    .eq("id", cobradorId)
+    .maybeSingle();
+
+  if (!cobrador || !cobrador.activo) {
+    redirect(`/cobradores?error=${encodeURIComponent("Ese cobrador no está activo")}`);
+  }
+
+  const cookieStore = await cookies();
+  cookieStore.set(COOKIE_IMPERSONACION, cobradorId, {
+    httpOnly: true,
+    sameSite: "lax",
+    path: "/",
+    maxAge: 60 * 60 * 8, // 8 horas
+  });
+
+  redirect("/panel");
 }
 
 /** Termina una cobertura activa — los clientes vuelven a verse solo desde su cobrador original. */

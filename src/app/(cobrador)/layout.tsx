@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { PageTransition } from "@/components/PageTransition";
+import { salirDeImpersonacion } from "./actions";
 
 async function signOut() {
   "use server";
@@ -17,6 +18,22 @@ export default async function CobradorLayout({ children }: { children: React.Rea
 
   return (
     <div className="min-h-screen bg-page text-ink">
+      {sesion.impersonadoPor && (
+        <div className="bg-amber-500 text-neutral-950 text-sm px-4 py-2 flex items-center justify-between gap-3 flex-wrap">
+          <span>
+            Estás viendo y actuando como <strong>{sesion.nombreCompleto}</strong> — todo lo que hagas aquí queda
+            registrado a su nombre, no al de {sesion.impersonadoPor.nombreCompleto}.
+          </span>
+          <form action={salirDeImpersonacion}>
+            <button
+              type="submit"
+              className="shrink-0 bg-neutral-950 text-amber-400 text-xs font-semibold px-3 py-1.5 rounded-md hover:bg-neutral-900"
+            >
+              Salir y volver a Empresa
+            </button>
+          </form>
+        </div>
+      )}
       <header className="border-b border-border">
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <Link href="/panel" className="font-bold text-lg">

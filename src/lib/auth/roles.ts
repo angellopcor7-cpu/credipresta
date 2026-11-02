@@ -1,5 +1,7 @@
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
+import { COOKIE_IMPERSONACION } from "@/lib/auth/impersonacion";
 
 /**
  * App privada: ya no hay clientes con cuenta propia (los da de alta el
@@ -23,6 +25,15 @@ export type SesionUsuario = {
    * o apaga desde la ficha del cobrador. Un administrador siempre puede.
    */
   puedeDarPrestamos: boolean;
+  /**
+   * Si no es null, esta sesión en realidad es Empresa "viendo y actuando
+   * como" el cobrador de arriba (nombre, cobradorId, puedeDarPrestamos ya
+   * son los del cobrador) — guarda quién es Empresa de verdad, para poder
+   * mostrar el aviso y el botón de "Salir". La sesión real de Supabase Auth
+   * (auth.uid()) sigue siendo la de Empresa en todo momento; nada más se
+   * sobreescribe esto a nivel app.
+   */
+  impersonadoPor: { id: string; nombreCompleto: string } | null;
 };
 
 /** A dónde debe ir cada rol al entrar — para no mandar a nadie a una pantalla que no le toca. */
@@ -61,7 +72,7 @@ export async function getSesionUsuario(): Promise<SesionUsuario | null> {
     | null;
   const cobradorFila = Array.isArray(cobrador) ? cobrador[0] ?? null : cobrador;
 
-  return {
+  const sesionReal: SesionUsuario = {
     id: user.id,
     email: user.email,
     nombreCompleto: perfil.nombre_completo,
@@ -70,7 +81,52 @@ export async function getSesionUsuario(): Promise<SesionUsuario | null> {
     // Un administrador sin fila propia de cobrador (todavía no entró a la
     // vista de cobrador) de todos modos puede dar préstamos.
     puedeDarPrestamos: cobradorFila?.puede_dar_prestamos ?? true,
+    impersonadoPor: null,
   };
+
+  // Si Empresa está "viendo y actuando como" un cobrador (cookie puesta por
+  // `entrarComoCobrador`), se le devuelve la sesión del cobrador en su
+  // lugar — pero sin tocar nada de la autenticación real: auth.uid() sigue
+  // siendo el de Empresa, así que cualquier política RLS basada en
+  // is_admin() sigue dejándolo pasar. Solo aplica si de verdad es
+  // administrador; una cookie vieja o inválida simplemente se ignora.
+  if (rolNombre === "administrador") {
+    const cookieStore = await cookies();
+    const cobradorImpersonadoId = cookieStore.get(COOKIE_IMPERSONACION)?.value;
+
+    if (cobradorImpersonadoId) {
+      const { data: cobradorImpersonado } = await supabase
+        .from("cobradores")
+        .select("id, usuario_id, puede_dar_prestamos, activo, usuarios(nombre_completo, activo)")
+        .eq("id", cobradorImpersonadoId)
+        .maybeSingle();
+
+      const usuarioImpersonado = cobradorImpersonado?.usuarios as unknown as
+        | { nombre_completo: string; activo: boolean }
+        | { nombre_completo: string; activo: boolean }[]
+        | null;
+      const usuarioFila = Array.isArray(usuarioImpersonado) ? usuarioImpersonado[0] ?? null : usuarioImpersonado;
+
+      if (cobradorImpersonado && cobradorImpersonado.activo && usuarioFila?.activo) {
+        return {
+          // Importante: este id es el del COBRADOR impersonado, no el de
+          // Empresa — es lo que hace que pagos, solicitudes e historial
+          // queden registrados a su nombre. La sesión real de Supabase Auth
+          // (auth.uid()) sigue siendo la de Empresa y es la que usan las
+          // políticas RLS basadas en is_admin().
+          id: cobradorImpersonado.usuario_id,
+          email: undefined,
+          nombreCompleto: usuarioFila.nombre_completo,
+          rol: "cobrador",
+          cobradorId: cobradorImpersonado.id,
+          puedeDarPrestamos: cobradorImpersonado.puede_dar_prestamos,
+          impersonadoPor: { id: sesionReal.id, nombreCompleto: sesionReal.nombreCompleto },
+        };
+      }
+    }
+  }
+
+  return sesionReal;
 }
 
 /** Exige que haya sesión con rol administrador; si no, redirige a donde sí le toca. */

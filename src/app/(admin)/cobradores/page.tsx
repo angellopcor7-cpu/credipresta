@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { CobradorConUsuario } from "@/lib/types";
 import { ChevronRight } from "lucide-react";
+import { EntrarComoCobradorButton } from "./EntrarComoCobradorButton";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN", maximumFractionDigits: 0 }).format(n);
@@ -141,12 +142,20 @@ export default async function CobradoresPage() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <Link
-                        href={`/cobradores/${c.id}`}
-                        className="inline-flex items-center text-ink-muted hover:text-ink"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Link>
+                      <div className="flex items-center gap-2 justify-end">
+                        {c.activo && (
+                          <EntrarComoCobradorButton
+                            cobradorId={c.id}
+                            nombreCobrador={c.usuarios?.nombre_completo ?? "este cobrador"}
+                          />
+                        )}
+                        <Link
+                          href={`/cobradores/${c.id}`}
+                          className="inline-flex items-center text-ink-muted hover:text-ink"
+                        >
+                          <ChevronRight className="h-4 w-4" />
+                        </Link>
+                      </div>
                     </td>
                   </tr>
                 );

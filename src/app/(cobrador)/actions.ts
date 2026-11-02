@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { exigirVistaCobrador } from "@/lib/auth/roles";
+import { COOKIE_IMPERSONACION } from "@/lib/auth/impersonacion";
 import {
   esPlanValido,
   calcularMontoMora,
@@ -30,6 +32,13 @@ function leerDiasPersonalizados(formData: FormData): number[] | null {
   if (!formData.get("personalizar_dias")) return null;
   const dias = DIAS_SEMANA.filter((d) => formData.get(`dia_${d}`));
   return dias; // puede ser un arreglo vacío a propósito (no cobra ningún día)
+}
+
+/** Empresa sale del modo "ver y actuar como" un cobrador — borra la cookie y regresa a /cobradores. No cierra sesión. */
+export async function salirDeImpersonacion() {
+  const cookieStore = await cookies();
+  cookieStore.delete(COOKIE_IMPERSONACION);
+  redirect("/cobradores");
 }
 
 /**
