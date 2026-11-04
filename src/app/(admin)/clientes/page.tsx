@@ -146,7 +146,7 @@ export default async function ClientesPage() {
               cupo ~{cupoEstimadoClientes.toLocaleString("es-MX")}
             </span>
           </div>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface text-ink-muted text-left">
               <tr>

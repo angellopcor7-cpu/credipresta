@@ -294,7 +294,7 @@ export default async function DetalleCobradorPage({
           <AgregarRutaForm cobradorId={cobradorTyped.id} />
         </div>
         {rutas && rutas.length > 0 ? (
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
@@ -344,7 +344,7 @@ export default async function DetalleCobradorPage({
           />
         </div>
         {listaClientes.length > 0 ? (
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>

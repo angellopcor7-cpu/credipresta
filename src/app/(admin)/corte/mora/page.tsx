@@ -114,7 +114,7 @@ export default async function MoraSemanaPage({
       {filas.length === 0 ? (
         <p className="text-ink-muted text-sm">Nadie generó mora nueva esta semana.</p>
       ) : (
-        <div className="border border-border rounded-xl overflow-hidden">
+        <div className="border border-border rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface text-ink-muted text-left">
               <tr>

@@ -45,7 +45,7 @@ export default async function PrestamosPage() {
       {prestamos.length === 0 ? (
         <p className="text-ink-muted text-sm">Aún no hay préstamos.</p>
       ) : (
-        <div className="border border-border rounded-xl overflow-hidden">
+        <div className="border border-border rounded-xl overflow-x-auto">
           <table className="w-full text-sm">
             <thead className="bg-surface text-ink-muted text-left">
               <tr>

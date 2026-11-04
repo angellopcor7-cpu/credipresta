@@ -242,7 +242,7 @@ export default async function DetallePrestamoPage({
           {listaPagos.length === 0 ? (
             <p className="text-ink-muted text-sm">Sin pagos registrados.</p>
           ) : (
-            <div className="border border-border rounded-xl overflow-hidden">
+            <div className="border border-border rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-surface text-ink-muted text-left">
                   <tr>
@@ -272,7 +272,7 @@ export default async function DetallePrestamoPage({
           {listaMoras.length === 0 ? (
             <p className="text-ink-muted text-sm">Sin moras aplicadas.</p>
           ) : (
-            <div className="border border-border rounded-xl overflow-hidden">
+            <div className="border border-border rounded-xl overflow-x-auto">
               <table className="w-full text-sm">
                 <thead className="bg-surface text-ink-muted text-left">
                   <tr>

@@ -344,7 +344,7 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
       {moras.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Moras del préstamo mostrado</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
@@ -372,7 +372,7 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
       {pagos.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Pagos registrados del préstamo mostrado</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
@@ -400,7 +400,7 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
       {prestamos.length > 1 && (
         <div>
           <h2 className="font-semibold mb-2">Historial de préstamos ({prestamos.length})</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>

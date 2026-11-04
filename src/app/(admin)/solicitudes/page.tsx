@@ -308,7 +308,7 @@ export default async function SolicitudesPage({
       {listaRevisadasMora.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Perdones de mora revisados recientemente</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
@@ -410,7 +410,7 @@ export default async function SolicitudesPage({
       {listaRevisadasPagoExtra.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Pagos de días extra revisados recientemente</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
@@ -454,7 +454,7 @@ export default async function SolicitudesPage({
         {listaRevisadas.length === 0 ? (
           <p className="text-ink-muted text-sm">Todavía no has revisado ninguna.</p>
         ) : (
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>

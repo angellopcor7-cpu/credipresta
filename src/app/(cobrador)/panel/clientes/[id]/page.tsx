@@ -448,7 +448,7 @@ export default async function DetalleClientePage({
       {moras.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Moras</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
@@ -476,7 +476,7 @@ export default async function DetalleClientePage({
       {pagos.length > 0 && (
         <div>
           <h2 className="font-semibold mb-2">Pagos registrados</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
@@ -504,7 +504,7 @@ export default async function DetalleClientePage({
       {prestamos.length > 1 && (
         <div>
           <h2 className="font-semibold mb-2">Historial de préstamos</h2>
-          <div className="border border-border rounded-xl overflow-hidden">
+          <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
                 <tr>
