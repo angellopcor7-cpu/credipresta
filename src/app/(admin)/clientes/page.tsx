@@ -9,25 +9,18 @@ import {
 } from "@/lib/finance/calculos";
 import { Circle, Users, HardDrive } from "lucide-react";
 import { obtenerUsoStorage, PROMEDIO_BYTES_POR_CLIENTE_ESTIMADO } from "@/lib/storage/usoStorage";
-
-const estadoLabel: Record<string, string> = {
-  activo: "Activo",
-  pendiente_aprobacion: "Pendiente de aprobación",
-  inactivo: "Inactivo",
-};
-
-const SEMAFORO_ESTILO: Record<SemaforoCliente, { color: string; titulo: string }> = {
-  verde: { color: "text-green-500", titulo: "Al día — ya pagó hoy, o hoy no le tocaba" },
-  amarillo: { color: "text-amber-400", titulo: "Hoy le toca pagar y todavía no registra el pago del día" },
-  rojo: { color: "text-red-500", titulo: "Atrasado o con mora" },
-  sin_prestamo: { color: "text-ink-muted", titulo: "No tiene un préstamo activo ahorita" },
-};
+import { ClientesTabla, type FilaClienteTabla } from "./ClientesTabla";
 
 type ClienteConCobrador = Cliente & {
   cobradores: { usuarios: { nombre_completo: string } | null } | null;
 };
 
-export default async function ClientesPage() {
+export default async function ClientesPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ error?: string; exito?: string }>;
+}) {
+  const { error, exito } = await searchParams;
   const supabase = await createClient();
   const [{ data }, config, uso] = await Promise.all([
     supabase.from("clientes").select("*, cobradores(usuarios(nombre_completo))").order("created_at", { ascending: false }),
@@ -79,6 +72,20 @@ export default async function ClientesPage() {
   }
   const prestamosConPagoHoy = new Set((pagosHoyData ?? []).map((p) => p.prestamo_id));
 
+  // Fecha del préstamo MÁS RECIENTE de cada cliente (cualquier estado, no
+  // solo activo/en_mora) — para la columna "Último préstamo" de la tabla.
+  const { data: todosPrestamosData } = await supabase
+    .from("prestamos")
+    .select("cliente_id, fecha_inicio")
+    .in("cliente_id", clientes.map((c) => c.id))
+    .order("fecha_inicio", { ascending: false });
+  const ultimoPrestamoPorCliente = new Map<string, string>();
+  for (const p of todosPrestamosData ?? []) {
+    if (!ultimoPrestamoPorCliente.has(p.cliente_id)) {
+      ultimoPrestamoPorCliente.set(p.cliente_id, p.fecha_inicio);
+    }
+  }
+
   const semaforoPorCliente = new Map<string, SemaforoCliente>();
   for (const cliente of clientes) {
     const prestamo = prestamoActivoPorCliente.get(cliente.id);
@@ -104,6 +111,18 @@ export default async function ClientesPage() {
     );
   }
 
+  const filas: FilaClienteTabla[] = clientes.map((c) => ({
+    id: c.id,
+    nombreCompleto: c.nombre_completo,
+    telefono: c.telefono,
+    identificacion: c.identificacion,
+    estado: c.estado,
+    cobradorId: c.cobrador_id,
+    nombreCobrador: c.cobradores?.usuarios?.nombre_completo ?? null,
+    semaforo: semaforoPorCliente.get(c.id) ?? "sin_prestamo",
+    ultimoPrestamoFecha: ultimoPrestamoPorCliente.get(c.id) ?? null,
+  }));
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
@@ -118,6 +137,15 @@ export default async function ClientesPage() {
           + Cliente existente
         </Link>
       </div>
+
+      {error && (
+        <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">{error}</p>
+      )}
+      {exito && (
+        <p className="text-sm text-accent-text bg-accent-chip-bg/50 border border-accent-chip-border rounded-md px-3 py-2">
+          {exito}
+        </p>
+      )}
 
       {clientes.length === 0 ? (
         <p className="text-ink-muted text-sm">Aún no hay clientes.</p>
@@ -146,57 +174,7 @@ export default async function ClientesPage() {
               cupo ~{cupoEstimadoClientes.toLocaleString("es-MX")}
             </span>
           </div>
-          <div className="border border-border rounded-xl overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead className="bg-surface text-ink-muted text-left">
-              <tr>
-                <th className="px-4 py-3"></th>
-                <th className="px-4 py-3">Nombre</th>
-                <th className="px-4 py-3">Teléfono</th>
-                <th className="px-4 py-3">Identificación</th>
-                <th className="px-4 py-3">Estado</th>
-                <th className="px-4 py-3">Cobrador</th>
-              </tr>
-            </thead>
-            <tbody>
-              {clientes.map((c) => {
-                const nombreCobrador = c.cobradores?.usuarios?.nombre_completo;
-                const semaforo = semaforoPorCliente.get(c.id) ?? "sin_prestamo";
-                const estilo = SEMAFORO_ESTILO[semaforo];
-                return (
-                  <tr key={c.id} className="border-t border-border">
-                    <td className="px-4 py-3">
-                      <span title={estilo.titulo}>
-                        <Circle className={`h-3 w-3 ${estilo.color} fill-current`} aria-hidden="true" />
-                        <span className="sr-only">{estilo.titulo}</span>
-                      </span>
-                    </td>
-                    <td className="px-4 py-3">
-                      <Link href={`/clientes/${c.id}`} className="font-medium text-ink hover:text-accent-text hover:underline">
-                        {c.nombre_completo}
-                      </Link>
-                    </td>
-                    <td className="px-4 py-3 text-ink-secondary">{c.telefono ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-secondary">{c.identificacion ?? "—"}</td>
-                    <td className="px-4 py-3 text-ink-secondary">{estadoLabel[c.estado]}</td>
-                    <td className="px-4 py-3">
-                      {c.cobrador_id ? (
-                        <Link
-                          href={`/cobradores/${c.cobrador_id}`}
-                          className="inline-flex items-center text-xs bg-surface-2 hover:bg-surface-3 border border-border-strong text-ink-strong rounded-full px-3 py-1"
-                        >
-                          Cliente de {nombreCobrador ?? "—"}
-                        </Link>
-                      ) : (
-                        <span className="text-xs text-ink-muted">Sin cobrador asignado</span>
-                      )}
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          </div>
+          <ClientesTabla filas={filas} />
         </>
       )}
     </div>

@@ -17,7 +17,7 @@ export function ProbarNotificacionBoton() {
         title="Mandarme una notificación de prueba (push + en-app)"
       >
         <TestTube2 className="h-4 w-4" />
-        Probar
+        <span className="hidden sm:inline">Probar</span>
       </button>
     </form>
   );

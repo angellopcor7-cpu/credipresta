@@ -333,6 +333,17 @@ export async function solicitarNuevoPrestamoClienteExistente(formData: FormData)
     firmaCobradorDataUrl: String(firmaCobradorDataUrl),
   });
 
+  // Este cliente YA tiene pagarés firmados de préstamos anteriores en su
+  // expediente (es una renovación) — como legalmente solo vale el más
+  // reciente, se guardan sus rutas de storage ANTES de subir el nuevo para
+  // borrarlos justo después (documento + archivo), y que en "Archivos" ya
+  // no se acumulen pagarés viejos.
+  const { data: pagaresViejos } = await supabase
+    .from("documentos_clientes")
+    .select("id, storage_path")
+    .eq("cliente_id", clienteId)
+    .eq("tipo_documento", "pagare_firmado");
+
   const rutaPagare = `${clienteId}/pagare_firmado/${Date.now()}-pagare-firmado.pdf`;
   const { error: errorSubidaPagare } = await supabase.storage
     .from("documentos-clientes")
@@ -345,6 +356,17 @@ export async function solicitarNuevoPrestamoClienteExistente(formData: FormData)
       storage_path: rutaPagare,
       subido_por: sesion.id,
     });
+
+    if (pagaresViejos && pagaresViejos.length > 0) {
+      await supabase
+        .from("documentos_clientes")
+        .delete()
+        .in("id", pagaresViejos.map((p) => p.id));
+      const rutasViejas = pagaresViejos.map((p) => p.storage_path).filter(Boolean);
+      if (rutasViejas.length > 0) {
+        await supabase.storage.from("documentos-clientes").remove(rutasViejas);
+      }
+    }
   }
 
   const { error: errorSolicitud } = await supabase.from("solicitudes_prestamo").insert({

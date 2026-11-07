@@ -24,6 +24,17 @@ function leerComision(formData: FormData, redirectPath: string) {
   return { tipoComision: tipoComisionTexto as TipoComision, porcentajeComision };
 }
 
+/** Lee y valida el salario (opcional) de un FormData; redirige si viene mal. */
+function leerSalario(formData: FormData, redirectPath: string) {
+  const texto = String(formData.get("salario") || "").trim();
+  if (!texto) return null;
+  const salario = Number(texto);
+  if (!Number.isFinite(salario) || salario < 0) {
+    redirect(`${redirectPath}?error=${encodeURIComponent("El salario debe ser un número mayor o igual a 0")}`);
+  }
+  return salario;
+}
+
 /**
  * Crea la cuenta de un cobrador nuevo: usuario en Supabase Auth (con la
  * llave service_role, porque un admin creando la cuenta de otra persona no
@@ -50,6 +61,7 @@ export async function crearCobrador(formData: FormData) {
   }
 
   const { tipoComision, porcentajeComision } = leerComision(formData, "/cobradores/nuevo");
+  const salario = leerSalario(formData, "/cobradores/nuevo");
 
   const admin = createAdminClient();
 
@@ -86,6 +98,7 @@ export async function crearCobrador(formData: FormData) {
       activo: true,
       tipo_comision: tipoComision,
       porcentaje_comision: porcentajeComision,
+      salario,
     })
     .select("id")
     .single();
@@ -127,6 +140,7 @@ export async function actualizarCobrador(formData: FormData) {
   }
 
   const { tipoComision, porcentajeComision } = leerComision(formData, `/cobradores/${cobradorId}`);
+  const salario = leerSalario(formData, `/cobradores/${cobradorId}`);
 
   const { error: errorUsuario } = await supabase
     .from("usuarios")
@@ -139,7 +153,7 @@ export async function actualizarCobrador(formData: FormData) {
 
   const { error: errorCobrador } = await supabase
     .from("cobradores")
-    .update({ tipo_comision: tipoComision, porcentaje_comision: porcentajeComision })
+    .update({ tipo_comision: tipoComision, porcentaje_comision: porcentajeComision, salario })
     .eq("id", cobradorId);
 
   if (errorCobrador) {

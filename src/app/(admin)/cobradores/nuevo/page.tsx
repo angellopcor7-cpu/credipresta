@@ -53,6 +53,8 @@ export default async function NuevoCobradorPage({
           <Field label="Porcentaje de comisión" name="porcentaje_comision" type="number" hint="Ej. 5 = 5%" />
         </div>
 
+        <Field label="Salario (opcional)" name="salario" type="number" hint="Déjalo vacío si no aplica — lo puedes agregar después." />
+
         {error && (
           <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">
             {error}

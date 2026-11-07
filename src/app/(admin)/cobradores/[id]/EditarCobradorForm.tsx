@@ -19,6 +19,7 @@ export function EditarCobradorForm({
   telefono,
   tipoComision,
   porcentajeComision,
+  salario,
 }: {
   cobradorId: string;
   usuarioId: string;
@@ -26,6 +27,7 @@ export function EditarCobradorForm({
   telefono: string | null;
   tipoComision: TipoComision;
   porcentajeComision: number;
+  salario: number | null;
 }) {
   const [editando, setEditando] = useState(false);
 
@@ -109,6 +111,21 @@ export function EditarCobradorForm({
             max="100"
             step="0.01"
             defaultValue={porcentajeComision}
+            className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
+          />
+        </div>
+        <div className="space-y-1">
+          <label className="text-xs text-ink-muted" htmlFor="editar_salario">
+            Salario (opcional)
+          </label>
+          <input
+            id="editar_salario"
+            name="salario"
+            type="number"
+            min="0"
+            step="0.01"
+            defaultValue={salario ?? ""}
+            placeholder="Sin salario capturado"
             className="w-full rounded-md bg-surface-2 border border-border-strong px-3 py-2 text-ink text-sm focus:outline-none focus:ring-2 focus:ring-amber-500"
           />
         </div>

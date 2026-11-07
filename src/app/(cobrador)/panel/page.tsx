@@ -123,7 +123,13 @@ export default async function PanelCobradorPage({
     const progreso = total > 0 ? Math.min(100, Math.round((abonado / total) * 100)) : 0;
 
     const prestamoActivo = prestamosDelCliente.find((p) => p.estado === "activo" || p.estado === "en_mora");
-    const enMora = prestamosDelCliente.some((p) => prestamosConMora.has(p.id) || p.estado === "en_mora");
+    // Un préstamo ya liquidado nunca cuenta como "en mora" aunque queden filas
+    // viejas de mora sin resolver en la base de datos (bug conocido: liquidar
+    // un préstamo no marca sus moras pendientes como resueltas) — si no se
+    // excluyen aquí, un cliente liquidado se ve en rojo con ícono de alerta.
+    const enMora = prestamosDelCliente.some(
+      (p) => p.estado !== "liquidado" && (prestamosConMora.has(p.id) || p.estado === "en_mora")
+    );
     const todosLiquidados = prestamosDelCliente.length > 0 && prestamosDelCliente.every((p) => p.estado === "liquidado");
 
     let estadoTexto = estadoClienteLabel[cliente.estado] ?? cliente.estado;
@@ -246,8 +252,8 @@ export default async function PanelCobradorPage({
                   </div>
                 )}
                 <div className="min-w-0">
-                  <p className="font-medium truncate flex items-center gap-1.5">
-                    {cliente.nombre_completo}
+                  <p className="font-medium flex items-center gap-1.5">
+                    <span className="truncate">{cliente.nombre_completo}</span>
                     {cliente.cobrador_id !== sesion.cobradorId && (
                       <span
                         title="No es tu cliente — estás cubriendo esta ruta"

@@ -58,7 +58,7 @@ export default async function DetalleCobradorPage({
   const { data: cobrador } = await supabase
     .from("cobradores")
     .select(
-      "id, usuario_id, zona, fecha_ingreso, activo, tipo_comision, porcentaje_comision, puede_dar_prestamos, usuarios(nombre_completo, telefono)"
+      "id, usuario_id, zona, fecha_ingreso, activo, tipo_comision, porcentaje_comision, salario, puede_dar_prestamos, usuarios(nombre_completo, telefono)"
     )
     .eq("id", id)
     .maybeSingle();
@@ -73,6 +73,7 @@ export default async function DetalleCobradorPage({
     activo: boolean;
     tipo_comision: TipoComision;
     porcentaje_comision: number;
+    salario: number | null;
     puede_dar_prestamos: boolean;
     usuarios: { nombre_completo: string; telefono: string | null } | null;
   };
@@ -284,6 +285,7 @@ export default async function DetalleCobradorPage({
           telefono={cobradorTyped.usuarios?.telefono ?? null}
           tipoComision={cobradorTyped.tipo_comision}
           porcentajeComision={cobradorTyped.porcentaje_comision}
+          salario={cobradorTyped.salario}
         />
         <RestablecerPasswordForm cobradorId={cobradorTyped.id} usuarioId={cobradorTyped.usuario_id} />
       </div>

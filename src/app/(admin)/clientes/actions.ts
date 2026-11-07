@@ -284,3 +284,42 @@ export async function subirDocumentoCliente(formData: FormData) {
   revalidatePath(volverA);
   redirect(`${volverA}?exito=${encodeURIComponent("Documento subido")}`);
 }
+
+/**
+ * Borra un cliente PARA SIEMPRE, junto con todo su historial real
+ * (préstamos, pagos, mora, calendario, documentos y solicitudes) — a
+ * diferencia del borrado del lado cobrador (que solo deja borrar un cliente
+ * sin préstamo real), este sí borra cualquier cliente, a petición explícita
+ * de Angel. No es reversible. Toda la lógica de cascada vive en la función
+ * `eliminar_cliente_total` (SQL) para que sea una sola transacción atómica.
+ */
+export async function eliminarClienteTotal(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const clienteId = String(formData.get("cliente_id") || "").trim();
+  if (!clienteId) {
+    redirect(`/clientes?error=${encodeURIComponent("Falta el cliente")}`);
+  }
+
+  // Se recogen las rutas de sus documentos ANTES de borrar — la función
+  // SQL ya borra las filas de documentos_clientes, así que después ya no
+  // se podría saber qué archivos quitar del storage.
+  const { data: documentos } = await supabase
+    .from("documentos_clientes")
+    .select("storage_path")
+    .eq("cliente_id", clienteId);
+
+  const { error } = await supabase.rpc("eliminar_cliente_total", { p_cliente_id: clienteId });
+  if (error) {
+    redirect(`/clientes?error=${encodeURIComponent(error.message)}`);
+  }
+
+  const rutas = (documentos ?? []).map((d) => d.storage_path).filter(Boolean);
+  if (rutas.length > 0) {
+    await supabase.storage.from("documentos-clientes").remove(rutas);
+  }
+
+  revalidatePath("/clientes");
+  redirect(`/clientes?exito=${encodeURIComponent("Cliente eliminado para siempre")}`);
+}
