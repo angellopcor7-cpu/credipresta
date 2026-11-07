@@ -58,10 +58,18 @@ export function esPlanValido(plazoDias: number): plazoDias is PlanPrestamo {
   return plazoDias === 20 || plazoDias === 30;
 }
 
-/** cuota sugerida = total / plazo_dias (referencia, no es una obligación rígida por día) */
+/**
+ * cuota sugerida = total / plazo_dias, redondeada a PESOS ENTEROS (nunca
+ * centavos — Angel no quiere ningún "." en el pago diario). Es la cantidad
+ * fija que "Aplicar pago del día" cobra siempre; el calendario de cobro ya
+ * reparte el total real en pesos enteros por su cuenta (ver
+ * `distribuirMontosDiarios`), así que un préstamo puede tardar uno o dos
+ * días más o menos en liquidarse por este redondeo — no afecta el saldo
+ * real, que siempre se calcula aparte.
+ */
 export function calcularCuotaSugerida(montoTotal: number, plazoDias: number): number {
   if (plazoDias <= 0) throw new Error("plazoDias debe ser mayor a 0");
-  return redondear(montoTotal / plazoDias);
+  return Math.round(montoTotal / plazoDias);
 }
 
 /**
