@@ -1,6 +1,6 @@
 "use client";
 
-import { useId, useState } from "react";
+import { useId, useRef, useState } from "react";
 
 export type PuntoGanancia = {
   /** clave_lunes de esa semana, para la key. */
@@ -36,11 +36,13 @@ const MARGEN = { arriba: 16, abajo: 28, izquierda: 8, derecha: 8 };
  *
  * Barras divergentes alrededor de cero: verde = esa semana entró más de lo
  * que salió, rojo = salió más de lo que entró. Pasar el mouse (o tocar en
- * celular) sobre una barra muestra el desglose.
+ * celular) sobre cualquier parte de la gráfica muestra el desglose de la
+ * semana más cercana — no hace falta acertarle exacto a una barra angosta.
  */
 export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
   const [activo, setActivo] = useState<number | null>(null);
   const idGradiente = useId();
+  const svgRef = useRef<SVGSVGElement>(null);
 
   if (datos.length === 0) {
     return <p className="text-ink-muted text-sm">Todavía no hay suficientes semanas para graficar.</p>;
@@ -50,10 +52,31 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
   const anchoUtil = ANCHO - MARGEN.izquierda - MARGEN.derecha;
   const altoUtil = ALTO - MARGEN.arriba - MARGEN.abajo;
   const yCero = MARGEN.arriba + altoUtil / 2;
-  const escalaY = altoUtil / 2 / maxAbs;
+
+  // Compresión en raíz cuadrada (no lineal): si una sola semana tuvo una
+  // pérdida o ganancia muy grande frente a las demás, una escala lineal
+  // deja esa barra gigante y el resto casi invisibles (justo lo que
+  // reportó Angel). Con raíz cuadrada la barra más grande sigue siendo la
+  // más alta, pero una semana con el 1% del valor máximo ya no se ve como
+  // el 1% de la altura — se ve como ~10%, perfectamente visible — sin
+  // perder el orden ni el signo. El tooltip siempre muestra el monto real.
+  const altoMedio = altoUtil / 2;
+  function alturaBarra(valorAbs: number) {
+    if (valorAbs <= 0) return 0;
+    return Math.sqrt(valorAbs / maxAbs) * altoMedio;
+  }
 
   const anchoBarra = Math.min(36, (anchoUtil / datos.length) * 0.56);
   const paso = anchoUtil / datos.length;
+
+  function indiceDesdeClientX(clientX: number): number | null {
+    const rect = svgRef.current?.getBoundingClientRect();
+    if (!rect || rect.width === 0) return null;
+    const escalaX = ANCHO / rect.width;
+    const xSvg = (clientX - rect.left) * escalaX;
+    const i = Math.floor((xSvg - MARGEN.izquierda) / paso);
+    return Math.min(datos.length - 1, Math.max(0, i));
+  }
   // Si hay muchas semanas, no se puede poner una etiqueta por barra (se
   // amontonan, sobre todo en celular) — se eligen como máximo 4,
   // repartidas parejo, siempre incluyendo la primera y la última semana.
@@ -83,7 +106,28 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
       </div>
 
       <div className="relative">
-        <svg viewBox={`0 0 ${ANCHO} ${ALTO}`} className="w-full h-auto" role="img" aria-label="Ganancia o pérdida estimada por semana">
+        <svg
+          ref={svgRef}
+          viewBox={`0 0 ${ANCHO} ${ALTO}`}
+          className="w-full h-auto touch-none"
+          role="img"
+          aria-label="Ganancia o pérdida estimada por semana"
+          onPointerMove={(e) => {
+            // En touch no hay "hover" real — ahí usamos onPointerDown (tap)
+            // más abajo, para no dejar el tooltip pegado al dedo.
+            if (e.pointerType === "touch") return;
+            setActivo(indiceDesdeClientX(e.clientX));
+          }}
+          onPointerLeave={(e) => {
+            if (e.pointerType === "touch") return;
+            setActivo(null);
+          }}
+          onPointerDown={(e) => {
+            if (e.pointerType !== "touch") return;
+            const i = indiceDesdeClientX(e.clientX);
+            setActivo((prev) => (prev === i ? null : i));
+          }}
+        >
           <defs>
             <clipPath id={`${idGradiente}-clip`}>
               <rect x={0} y={0} width={ANCHO} height={ALTO} />
@@ -94,7 +138,7 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
 
           {datos.map((d, i) => {
             const x = MARGEN.izquierda + i * paso + (paso - anchoBarra) / 2;
-            const alto = Math.max(2, Math.abs(d.ganancia) * escalaY);
+            const alto = Math.max(d.ganancia === 0 ? 0 : 3, alturaBarra(Math.abs(d.ganancia)));
             const esGanancia = d.ganancia >= 0;
             const y = esGanancia ? yCero - alto : yCero;
             const color = esGanancia ? VERDE : ROJO;
@@ -102,22 +146,6 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
 
             return (
               <g key={d.id}>
-                {/* Hit target más ancho que la barra, para que sea fácil tocarla */}
-                <rect
-                  x={MARGEN.izquierda + i * paso}
-                  y={MARGEN.arriba}
-                  width={paso}
-                  height={altoUtil}
-                  fill="transparent"
-                  onMouseEnter={() => setActivo(i)}
-                  onMouseLeave={() => setActivo(null)}
-                  onFocus={() => setActivo(i)}
-                  onBlur={() => setActivo(null)}
-                  onClick={() => setActivo(estaActivo ? null : i)}
-                  tabIndex={0}
-                  role="button"
-                  aria-label={`${d.etiqueta}: ${d.ganancia >= 0 ? "ganancia" : "pérdida"} de ${currency(Math.abs(d.ganancia))}`}
-                />
                 <rect
                   x={x}
                   y={y}
@@ -131,13 +159,33 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
                 {estaActivo && (
                   <rect x={x - 2} y={MARGEN.arriba} width={anchoBarra + 4} height={altoUtil} fill={color} opacity={0.06} />
                 )}
+                {/* Elemento invisible, solo para navegación con teclado (Tab) — el
+                    mouse/touch ya los detecta con los handlers del <svg> de arriba. */}
+                <rect
+                  x={MARGEN.izquierda + i * paso}
+                  y={MARGEN.arriba}
+                  width={paso}
+                  height={altoUtil}
+                  fill="transparent"
+                  onFocus={() => setActivo(i)}
+                  onBlur={() => setActivo(null)}
+                  tabIndex={0}
+                  role="button"
+                  aria-label={`${d.etiqueta}: ${d.ganancia >= 0 ? "ganancia" : "pérdida"} de ${currency(Math.abs(d.ganancia))}`}
+                />
               </g>
             );
           })}
         </svg>
 
-        {puntoActivo && (
-          <div className="absolute top-0 right-0 bg-surface border border-border-strong rounded-lg px-3 py-2 text-xs shadow-lg pointer-events-none">
+        {puntoActivo && activo !== null && (
+          <div
+            className="absolute top-0 bg-surface border border-border-strong rounded-lg px-3 py-2 text-xs shadow-lg pointer-events-none whitespace-nowrap"
+            style={{
+              left: `${Math.min(82, Math.max(18, ((MARGEN.izquierda + activo * paso + paso / 2) / ANCHO) * 100))}%`,
+              transform: "translateX(-50%)",
+            }}
+          >
             <p className="font-semibold text-ink-strong mb-1">{puntoActivo.etiqueta}</p>
             <p className="text-ink-secondary">Cobrado: {currency(puntoActivo.ingreso)}</p>
             <p className="text-ink-secondary">Comisión: {currency(puntoActivo.comision)}</p>
