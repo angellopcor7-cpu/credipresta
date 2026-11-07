@@ -22,15 +22,28 @@ export default async function AdminLayout({
   const primerNombre = sesion.nombreCompleto.trim().split(/\s+/)[0] ?? sesion.nombreCompleto;
 
   const supabase = await createClient();
-  const [{ count: solicitudesPendientesCount }, { count: notificacionesNoLeidasCount }] = await Promise.all([
+  // Cuenta las 3 clases de solicitud que le llegan a Empresa (préstamo
+  // nuevo/renovación, perdón de mora, pago de días extra/personalizado) —
+  // antes solo contaba préstamo nuevo aquí, así que el numerito del
+  // sidebar al cargar la página se quedaba corto si lo único pendiente
+  // era, por ejemplo, un perdón de mora.
+  const [
+    { count: countPrestamo },
+    { count: countPerdonMora },
+    { count: countPagoExtra },
+    { count: notificacionesNoLeidasCount },
+  ] = await Promise.all([
     supabase.from("solicitudes_prestamo").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    supabase.from("solicitudes_perdon_mora").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    supabase.from("solicitudes_pago_extra").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     supabase.from("notificaciones").select("id", { count: "exact", head: true }).eq("usuario_id", sesion.id).eq("leida", false),
   ]);
+  const solicitudesPendientesCount = (countPrestamo ?? 0) + (countPerdonMora ?? 0) + (countPagoExtra ?? 0);
 
   return (
     <div className="min-h-screen bg-page text-ink md:flex">
       <AdminSidebar
-        solicitudesPendientesInicial={solicitudesPendientesCount ?? 0}
+        solicitudesPendientesInicial={solicitudesPendientesCount}
         notificacionesNoLeidasInicial={notificacionesNoLeidasCount ?? 0}
       />
       <div className="flex-1 min-w-0">

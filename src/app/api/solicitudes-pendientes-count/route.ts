@@ -16,10 +16,14 @@ export async function GET() {
   }
 
   const supabase = await createClient();
-  const [{ count: countPrestamo }, { count: countPagoExtra }] = await Promise.all([
+  // Cuenta las 3 clases de solicitud que le llegan a Empresa — antes faltaba
+  // perdón de mora aquí, así que el numerito del sidebar no se actualizaba
+  // si lo único pendiente era, por ejemplo, un perdón de mora.
+  const [{ count: countPrestamo }, { count: countPerdonMora }, { count: countPagoExtra }] = await Promise.all([
     supabase.from("solicitudes_prestamo").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    supabase.from("solicitudes_perdon_mora").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     supabase.from("solicitudes_pago_extra").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
   ]);
 
-  return NextResponse.json({ count: (countPrestamo ?? 0) + (countPagoExtra ?? 0) });
+  return NextResponse.json({ count: (countPrestamo ?? 0) + (countPerdonMora ?? 0) + (countPagoExtra ?? 0) });
 }

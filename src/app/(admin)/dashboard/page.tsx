@@ -74,7 +74,9 @@ export default async function DashboardPage() {
     { count: clientesCount },
     { count: cobradoresCount },
     { data: prestamos },
-    { count: solicitudesPendientesCount },
+    { count: solicitudesPrestamoCount },
+    { count: solicitudesPerdonMoraCount },
+    { count: solicitudesPagoExtraCount },
     { data: actividadReciente },
     { data: todasLasMoras },
     { data: todosLosPagos },
@@ -86,7 +88,12 @@ export default async function DashboardPage() {
     supabase
       .from("prestamos")
       .select("estado, saldo_actual, mora_acumulada, monto_prestado, created_at, cobrador_id"),
+    // Las 3 clases de solicitud que le llegan a Empresa — antes este aviso
+    // del Panel solo contaba préstamo nuevo/renovación, así que un perdón
+    // de mora o un pago de días extra pendiente no hacía salir el aviso.
     supabase.from("solicitudes_prestamo").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    supabase.from("solicitudes_perdon_mora").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
+    supabase.from("solicitudes_pago_extra").select("id", { count: "exact", head: true }).eq("estado", "pendiente"),
     supabase
       .from("historial_movimientos")
       .select("id, tipo_movimiento, descripcion, monto, created_at, clientes(nombre_completo)")
@@ -108,7 +115,8 @@ export default async function DashboardPage() {
   const carteraActiva = activos.reduce((s, p) => s + Number(p.saldo_actual), 0);
   const totalPrestado = listaPrestamos.reduce((s, p) => s + Number(p.monto_prestado), 0);
   const moraTotal = activos.reduce((s, p) => s + Number(p.mora_acumulada), 0);
-  const solicitudesPendientes = solicitudesPendientesCount ?? 0;
+  const solicitudesPendientes =
+    (solicitudesPrestamoCount ?? 0) + (solicitudesPerdonMoraCount ?? 0) + (solicitudesPagoExtraCount ?? 0);
 
   const stats: { label: string; value: string; icon: LucideIcon; tono: "neutral" | "amber" | "red" }[] = [
     { label: "Clientes activos", value: String(clientesCount ?? 0), icon: UserRound, tono: "neutral" },
