@@ -21,11 +21,10 @@ function currency(n: number) {
 
 const VERDE = "#22c55e";
 const ROJO = "#f87171";
-const GRIS = "#9ca3af";
 
 const ALTO = 220;
 const ANCHO = 760;
-const MARGEN = { arriba: 20, abajo: 28, izquierda: 10, derecha: 14 };
+const MARGEN = { arriba: 16, abajo: 28, izquierda: 10, derecha: 10 };
 
 /**
  * Ganancia (o pérdida) semanal estimada = cobrado − comisión de cobradores
@@ -35,13 +34,14 @@ const MARGEN = { arriba: 20, abajo: 28, izquierda: 10, derecha: 14 };
  * Pero para responder "¿el negocio va rentable o no?" de un vistazo, ver
  * semana a semana si entra más dinero del que sale ya dice bastante.
  *
- * Línea con flechas (a petición de Angel, antes eran barras): un punto por
- * semana (verde si esa semana entró más de lo que salió, rojo si salió
- * más), conectados por flechas que apuntan hacia arriba cuando una semana
- * mejoró respecto a la anterior y hacia abajo cuando empeoró — mismo
- * criterio que ya usa la columna "Tendencia" de la tabla de abajo. Pasar
- * el mouse (o tocar en celular) sobre cualquier parte de la gráfica
- * muestra el desglose de la semana más cercana.
+ * Gráfica de línea simple (a petición de Angel, sin flechas ni compresión
+ * rara de la escala): una sola línea que sube y baja con la ganancia real
+ * de cada semana, en escala normal — verde en la parte de arriba de cero,
+ * roja en la de abajo (el tramo de la línea cambia de color justo donde
+ * cruza el cero). Cada punto también es verde o rojo según si esa semana
+ * en concreto ganó o perdió. Pasar el mouse (o tocar en celular) sobre
+ * cualquier parte de la gráfica muestra el desglose de la semana más
+ * cercana.
  */
 export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
   const [activo, setActivo] = useState<number | null>(null);
@@ -56,33 +56,34 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
   const anchoUtil = ANCHO - MARGEN.izquierda - MARGEN.derecha;
   const altoUtil = ALTO - MARGEN.arriba - MARGEN.abajo;
   const yCero = MARGEN.arriba + altoUtil / 2;
-  const altoMedio = altoUtil / 2;
+  const escalaY = altoUtil / 2 / maxAbs;
 
-  // Compresión en raíz cuadrada (no lineal, con signo): si una sola semana
-  // tuvo una pérdida o ganancia muy grande frente a las demás, una escala
-  // lineal aplana el resto de la línea contra el cero y ya no se distingue
-  // nada entre semanas normales. Con raíz cuadrada el punto más extremo
-  // sigue siendo el más alto/bajo, pero una semana con poco valor frente
-  // al máximo ya no queda pegada a la línea de cero — el tooltip siempre
-  // muestra el monto real exacto.
-  function yDeValor(v: number) {
-    if (v === 0) return yCero;
-    const signo = v > 0 ? 1 : -1;
-    return yCero - signo * Math.sqrt(Math.abs(v) / maxAbs) * altoMedio;
-  }
-
-  const paso = anchoUtil / datos.length;
+  const paso = datos.length > 1 ? anchoUtil / (datos.length - 1) : 0;
   const puntos = datos.map((d, i) => ({
-    x: MARGEN.izquierda + i * paso + paso / 2,
-    y: yDeValor(d.ganancia),
+    x: datos.length > 1 ? MARGEN.izquierda + i * paso : MARGEN.izquierda + anchoUtil / 2,
+    y: yCero - d.ganancia * escalaY,
   }));
+
+  const lineaPath = puntos.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
+  // Franja de cada semana para detectar el hover/tap: centrada en SU punto
+  // (de -paso/2 a +paso/2), recortada a los bordes de la gráfica — así la
+  // zona detectada queda alineada con lo que se ve, no corrida aparte.
+  function franjaDePunto(i: number) {
+    const centro = puntos[i].x;
+    const mitad = datos.length > 1 ? paso / 2 : anchoUtil / 2;
+    const inicio = Math.max(MARGEN.izquierda, centro - mitad);
+    const fin = Math.min(MARGEN.izquierda + anchoUtil, centro + mitad);
+    return { inicio, ancho: fin - inicio };
+  }
 
   function indiceDesdeClientX(clientX: number): number | null {
     const rect = svgRef.current?.getBoundingClientRect();
     if (!rect || rect.width === 0) return null;
+    if (datos.length === 1) return 0;
     const escalaX = ANCHO / rect.width;
     const xSvg = (clientX - rect.left) * escalaX;
-    const i = Math.floor((xSvg - MARGEN.izquierda) / paso);
+    const i = Math.round((xSvg - MARGEN.izquierda) / paso);
     return Math.min(datos.length - 1, Math.max(0, i));
   }
 
@@ -100,6 +101,10 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
   }
 
   const puntoActivo = activo !== null ? datos[activo] : null;
+  // Dónde cae el cero dentro del área de la gráfica (0 = arriba, 1 = abajo)
+  // — el degradado de la línea cambia de verde a rojo justo en ese punto,
+  // para que el tramo que está arriba de cero se vea verde y el de abajo rojo.
+  const fraccionCero = (yCero - MARGEN.arriba) / altoUtil;
 
   return (
     <div className="space-y-2">
@@ -111,20 +116,6 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
         <span className="inline-flex items-center gap-1.5">
           <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: ROJO }} />
           Esa semana salió más de lo que entró
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <svg width="14" height="10" viewBox="0 0 14 10" className="shrink-0">
-            <path d="M 1 8 L 13 2" stroke={VERDE} strokeWidth={2} fill="none" />
-            <path d="M 7 1 L 13 2 L 10 7 z" fill={VERDE} />
-          </svg>
-          Mejoró vs. la semana anterior
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <svg width="14" height="10" viewBox="0 0 14 10" className="shrink-0">
-            <path d="M 1 2 L 13 8" stroke={ROJO} strokeWidth={2} fill="none" />
-            <path d="M 7 9 L 13 8 L 10 3 z" fill={ROJO} />
-          </svg>
-          Empeoró vs. la semana anterior
         </span>
       </div>
 
@@ -152,53 +143,19 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
           }}
         >
           <defs>
-            {([
-              [`${idBase}-flecha-verde`, VERDE],
-              [`${idBase}-flecha-roja`, ROJO],
-              [`${idBase}-flecha-gris`, GRIS],
-            ] as const).map(([id, color]) => (
-              <marker key={id} id={id} viewBox="0 0 10 10" refX="7" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
-                <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
-              </marker>
-            ))}
+            <linearGradient id={`${idBase}-linea`} x1={0} y1={MARGEN.arriba} x2={0} y2={ALTO - MARGEN.abajo} gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor={VERDE} />
+              <stop offset={fraccionCero} stopColor={VERDE} />
+              <stop offset={fraccionCero} stopColor={ROJO} />
+              <stop offset="1" stopColor={ROJO} />
+            </linearGradient>
           </defs>
 
           {/* Línea base (cero) */}
           <line x1={MARGEN.izquierda} x2={ANCHO - MARGEN.derecha} y1={yCero} y2={yCero} stroke="var(--border-strong)" strokeWidth={1} />
 
-          {/* Flechas entre semanas consecutivas: verde si mejoró, roja si empeoró, gris si quedó igual */}
-          {puntos.slice(1).map((p, idx) => {
-            const i = idx + 1;
-            const anterior = puntos[i - 1];
-            const diferencia = datos[i].ganancia - datos[i - 1].ganancia;
-            const color = diferencia > 0 ? VERDE : diferencia < 0 ? ROJO : GRIS;
-            const marcador = diferencia > 0 ? `${idBase}-flecha-verde` : diferencia < 0 ? `${idBase}-flecha-roja` : `${idBase}-flecha-gris`;
-            const atenuada = activo !== null && activo !== i && activo !== i - 1;
-            // La línea termina un poco antes del punto para dejarle espacio
-            // a la cabeza de la flecha y que no se encime con el círculo.
-            const dx = p.x - anterior.x;
-            const dy = p.y - anterior.y;
-            const largo = Math.hypot(dx, dy) || 1;
-            const recorte = 7;
-            const xFin = p.x - (dx / largo) * recorte;
-            const yFin = p.y - (dy / largo) * recorte;
-            return (
-              <line
-                key={datos[i].id}
-                x1={anterior.x}
-                y1={anterior.y}
-                x2={xFin}
-                y2={yFin}
-                stroke={color}
-                strokeWidth={2.5}
-                opacity={atenuada ? 0.35 : 1}
-                className="transition-opacity"
-                markerEnd={`url(#${marcador})`}
-              />
-            );
-          })}
+          <path d={lineaPath} fill="none" stroke={`url(#${idBase}-linea)`} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" />
 
-          {/* Puntos: verde = semana con ganancia, rojo = semana con pérdida */}
           {puntos.map((p, i) => {
             const esGanancia = datos[i].ganancia >= 0;
             const color = esGanancia ? VERDE : ROJO;
@@ -208,21 +165,13 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
                 {estaActivo && (
                   <line x1={p.x} x2={p.x} y1={MARGEN.arriba} y2={ALTO - MARGEN.abajo} stroke={color} strokeWidth={1} strokeDasharray="3 3" opacity={0.5} />
                 )}
-                <circle
-                  cx={p.x}
-                  cy={p.y}
-                  r={estaActivo ? 6 : 4}
-                  fill="var(--surface)"
-                  stroke={color}
-                  strokeWidth={2.5}
-                  className="transition-all"
-                />
+                <circle cx={p.x} cy={p.y} r={estaActivo ? 5.5 : 3.5} fill={color} stroke="var(--surface)" strokeWidth={1.5} className="transition-all" />
                 {/* Elemento invisible, solo para navegación con teclado (Tab) — el
                     mouse/touch ya lo detectan los handlers del <svg> de arriba. */}
                 <rect
-                  x={MARGEN.izquierda + i * paso}
+                  x={franjaDePunto(i).inicio}
                   y={MARGEN.arriba}
-                  width={paso}
+                  width={franjaDePunto(i).ancho}
                   height={altoUtil}
                   fill="transparent"
                   onFocus={() => setActivo(i)}
@@ -260,21 +209,18 @@ export function GananciaChart({ datos }: { datos: PuntoGanancia[] }) {
         style={{ paddingLeft: `${(MARGEN.izquierda / ANCHO) * 100}%`, paddingRight: `${(MARGEN.derecha / ANCHO) * 100}%` }}
       >
         {datos.map((d, i) => {
+          const ancho = datos.length > 0 ? (1 / datos.length) * 100 : 0;
           if (!indicesConEtiqueta.has(i)) {
-            return <div key={d.id} style={{ width: `${(paso / ANCHO) * 100}%` }} />;
+            return <div key={d.id} style={{ width: `${ancho}%` }} />;
           }
-          // Cada etiqueta vive en la franja de SU punto (para quedar bien
-          // alineada), pero puede desbordarse hacia las franjas vacías de al
+          // Cada etiqueta vive en una franja pareja (para quedar bien
+          // repartida), pero puede desbordarse hacia las franjas vacías de al
           // lado sin cortarse — si no, en celular quedaban truncadas a una
           // sola letra. La primera se alinea a la izquierda y la última a la
           // derecha para no salirse de la gráfica.
           const alineacion = i === 0 ? "text-left" : i === datos.length - 1 ? "text-right" : "text-center";
           return (
-            <div
-              key={d.id}
-              className={`whitespace-nowrap overflow-visible ${alineacion}`}
-              style={{ width: `${(paso / ANCHO) * 100}%` }}
-            >
+            <div key={d.id} className={`whitespace-nowrap overflow-visible ${alineacion}`} style={{ width: `${ancho}%` }}>
               {d.etiquetaCorta}
             </div>
           );
