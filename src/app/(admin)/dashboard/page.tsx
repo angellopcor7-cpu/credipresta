@@ -177,7 +177,7 @@ export default async function DashboardPage() {
   }
 
   const analisisSemana = construirAnalisis(ultimosDias(7), claveDia);
-  const analisisMes = construirAnalisis(ultimasSemanas(5), claveSemana);
+  const analisisMes = construirAnalisis(ultimasSemanas(5, config.diaInicioSemana), (f) => claveSemana(f, config.diaInicioSemana));
   const analisisSeisMeses = construirAnalisis(ultimosMeses(6), claveMes);
 
   return (

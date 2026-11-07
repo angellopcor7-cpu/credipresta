@@ -12,6 +12,19 @@ describe("claveSemana", () => {
   it("funciona igual con un timestamptz que con una fecha simple", () => {
     expect(claveSemana("2026-09-30T23:50:00+00:00")).toBe(claveSemana("2026-09-30"));
   });
+
+  it("respeta diaInicioSemana cuando no es lunes (0=domingo..6=sábado)", () => {
+    // Misma semana del lunes 2026-09-28 al domingo 2026-10-04, pero con la
+    // semana empezando en domingo (0): el domingo 2026-09-27 es el inicio.
+    expect(claveSemana("2026-09-28", 0)).toBe("2026-09-27"); // lunes, semana empieza domingo
+    expect(claveSemana("2026-09-30", 0)).toBe("2026-09-27"); // miércoles
+    expect(claveSemana("2026-09-27", 0)).toBe("2026-09-27"); // domingo mismo
+
+    // Semana empezando en viernes (5): el viernes 2026-10-02 es el inicio
+    // de la semana que contiene el domingo 2026-10-04.
+    expect(claveSemana("2026-10-04", 5)).toBe("2026-10-02");
+    expect(claveSemana("2026-10-02", 5)).toBe("2026-10-02");
+  });
 });
 
 describe("domingoDe / semanaMasDelta", () => {

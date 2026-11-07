@@ -54,6 +54,18 @@ export async function obtenerConfiguraciones() {
   // el panel use el límite correcto.
   const limiteStorageBytes = numero("limite_storage_bytes", 1024 * 1024 * 1024);
 
+  // Día en que empieza la semana de corte/reportes (0=domingo..6=sábado,
+  // igual que Date.getUTCDay()) — antes era siempre lunes (1) a fuerza; a
+  // petición de Angel, ahora se puede elegir desde /corte. Se usa para el
+  // corte semanal, "Semana por semana" de /historial, y el "Análisis" del
+  // Panel. Si el valor guardado viniera corrupto o fuera de rango, se cae
+  // de vuelta a lunes.
+  const diaInicioSemanaSinValidar = numero("dia_inicio_semana", 1);
+  const diaInicioSemana =
+    Number.isInteger(diaInicioSemanaSinValidar) && diaInicioSemanaSinValidar >= 0 && diaInicioSemanaSinValidar <= 6
+      ? diaInicioSemanaSinValidar
+      : 1;
+
   const reglaDiasCobro: ReglaDiasCobro = {
     umbral: umbralMora,
     diasMenorUmbral: diasCobroMenorUmbral,
@@ -79,5 +91,6 @@ export async function obtenerConfiguraciones() {
     lugarPagare,
     interesMoratorioDiarioPagare,
     limiteStorageBytes,
+    diaInicioSemana,
   };
 }

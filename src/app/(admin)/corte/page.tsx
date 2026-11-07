@@ -16,8 +16,10 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { claveSemana, lunesDeHoy, semanaMasDelta, formatoRangoSemana } from "@/lib/fechas";
+import { obtenerConfiguraciones } from "@/lib/config";
 import { calcularCorte } from "./calcular";
 import { confirmarCorte } from "./actions";
+import { AjustesCorteForm } from "./AjustesCorteForm";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -54,9 +56,10 @@ export default async function CortePage({
   searchParams: Promise<{ semana?: string; error?: string; exito?: string }>;
 }) {
   const { semana, error, exito } = await searchParams;
-  const claveLunesSolicitada = semana && /^\d{4}-\d{2}-\d{2}$/.test(semana) ? semana : lunesDeHoy();
-  const claveLunes = claveSemana(claveLunesSolicitada); // normaliza: siempre el lunes de esa semana
-  const esSemanaActual = claveLunes === lunesDeHoy();
+  const config = await obtenerConfiguraciones();
+  const claveLunesSolicitada = semana && /^\d{4}-\d{2}-\d{2}$/.test(semana) ? semana : lunesDeHoy(config.diaInicioSemana);
+  const claveLunes = claveSemana(claveLunesSolicitada, config.diaInicioSemana); // normaliza: siempre el primer día de esa semana
+  const esSemanaActual = claveLunes === lunesDeHoy(config.diaInicioSemana);
 
   const supabase = await createClient();
 
@@ -110,6 +113,7 @@ export default async function CortePage({
           <h1 className="text-2xl font-bold">Corte semanal</h1>
         </div>
         <div className="flex items-center gap-3">
+          <AjustesCorteForm diaInicioSemanaActual={config.diaInicioSemana} />
           <Link
             href="/corte/historial"
             className="inline-flex items-center gap-1.5 text-sm bg-surface-2 hover:bg-surface-3 border border-border-strong text-ink font-medium rounded-md px-3 py-2"

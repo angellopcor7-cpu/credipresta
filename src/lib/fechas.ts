@@ -90,8 +90,16 @@ export function ultimosDias(cantidad: number): { clave: string; etiqueta: string
   return dias;
 }
 
-/** Clave "YYYY-MM-DD" del lunes de la semana que contiene `fechaTexto`, en hora de CDMX. */
-export function claveSemana(fechaTexto: string): string {
+/**
+ * Clave "YYYY-MM-DD" del primer día de la semana que contiene `fechaTexto`,
+ * en hora de CDMX. `diaInicioSemana` es 0=domingo..6=sábado (configurable
+ * por Angel desde /corte, guardado en `configuraciones` — ver
+ * `obtenerConfiguraciones`); por defecto 1 = lunes, que era el único
+ * comportamiento antes de que esto se pudiera elegir. El nombre de la
+ * función sigue diciendo "semana" en general (no "lunes") a propósito: el
+ * día que regresa depende de esta configuración.
+ */
+export function claveSemana(fechaTexto: string, diaInicioSemana: number = 1): string {
   const fecha = new Date(fechaTexto.length === 10 ? `${fechaTexto}T12:00:00Z` : fechaTexto);
   const partes = new Intl.DateTimeFormat("en-CA", {
     year: "numeric",
@@ -103,15 +111,15 @@ export function claveSemana(fechaTexto: string): string {
   for (const parte of partes) valores[parte.type] = parte.value;
   const diaUTC = new Date(Date.UTC(Number(valores.year), Number(valores.month) - 1, Number(valores.day), 12));
   const diaSemana = diaUTC.getUTCDay(); // 0 = domingo
-  const diasDesdeElLunes = diaSemana === 0 ? 6 : diaSemana - 1;
-  diaUTC.setUTCDate(diaUTC.getUTCDate() - diasDesdeElLunes);
+  const diasDesdeElInicio = (diaSemana - diaInicioSemana + 7) % 7;
+  diaUTC.setUTCDate(diaUTC.getUTCDate() - diasDesdeElInicio);
   return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(diaUTC);
 }
 
-/** Las últimas `cantidad` semanas (lunes a domingo, incluyendo la actual), del más vieja a la más nueva, en hora de CDMX. */
-export function ultimasSemanas(cantidad: number): { clave: string; etiqueta: string }[] {
+/** Las últimas `cantidad` semanas (incluyendo la actual, empezando en `diaInicioSemana`), del más vieja a la más nueva, en hora de CDMX. */
+export function ultimasSemanas(cantidad: number, diaInicioSemana: number = 1): { clave: string; etiqueta: string }[] {
   const hoy = hoyEnMexicoComoFecha();
-  const claveHoy = claveSemana(new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(hoy));
+  const claveHoy = claveSemana(new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(hoy), diaInicioSemana);
   const lunesActual = new Date(`${claveHoy}T12:00:00Z`);
 
   const semanas: { clave: string; etiqueta: string }[] = [];
@@ -127,10 +135,10 @@ export function ultimasSemanas(cantidad: number): { clave: string; etiqueta: str
   return semanas;
 }
 
-/** Lunes ("YYYY-MM-DD") de la semana actual, en hora de CDMX. */
-export function lunesDeHoy(): string {
+/** Primer día ("YYYY-MM-DD") de la semana actual (según `diaInicioSemana`), en hora de CDMX. */
+export function lunesDeHoy(diaInicioSemana: number = 1): string {
   const hoy = new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(hoyEnMexicoComoFecha());
-  return claveSemana(hoy);
+  return claveSemana(hoy, diaInicioSemana);
 }
 
 /** Suma (o resta, con delta negativo) `delta` semanas a una clave de lunes "YYYY-MM-DD". */
@@ -140,7 +148,7 @@ export function semanaMasDelta(claveLunes: string, delta: number): string {
   return new Intl.DateTimeFormat("en-CA", { timeZone: "UTC" }).format(fecha);
 }
 
-/** Domingo ("YYYY-MM-DD") de la semana cuyo lunes es `claveLunes`. */
+/** Último día ("YYYY-MM-DD") de la semana que empieza en `claveLunes` (6 días después — funciona para cualquier `diaInicioSemana`, no solo lunes-domingo). */
 export function domingoDe(claveLunes: string): string {
   const fecha = new Date(`${claveLunes}T12:00:00Z`);
   fecha.setUTCDate(fecha.getUTCDate() + 6);

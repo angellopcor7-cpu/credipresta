@@ -2,6 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { ChevronLeft, CircleAlert } from "lucide-react";
 import { claveSemana, lunesDeHoy, domingoDe, formatoRangoSemana } from "@/lib/fechas";
+import { obtenerConfiguraciones } from "@/lib/config";
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
@@ -29,8 +30,9 @@ export default async function MoraSemanaPage({
   searchParams: Promise<{ semana?: string }>;
 }) {
   const { semana } = await searchParams;
-  const claveLunesSolicitada = semana && /^\d{4}-\d{2}-\d{2}$/.test(semana) ? semana : lunesDeHoy();
-  const claveLunes = claveSemana(claveLunesSolicitada);
+  const config = await obtenerConfiguraciones();
+  const claveLunesSolicitada = semana && /^\d{4}-\d{2}-\d{2}$/.test(semana) ? semana : lunesDeHoy(config.diaInicioSemana);
+  const claveLunes = claveSemana(claveLunesSolicitada, config.diaInicioSemana);
   const claveDomingo = domingoDe(claveLunes);
 
   const supabase = await createClient();

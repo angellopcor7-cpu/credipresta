@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdministrador } from "@/lib/auth/roles";
 import { lunesDeHoy, domingoDe, claveSemana, formatoRangoSemana } from "@/lib/fechas";
+import { obtenerConfiguraciones } from "@/lib/config";
 import { calcularCorte, construirDetalleClientes } from "./calcular";
 import { generarRespaldoCortePDF } from "@/lib/pdf/respaldoCorte";
 
@@ -24,11 +25,12 @@ import { generarRespaldoCortePDF } from "@/lib/pdf/respaldoCorte";
 export async function confirmarCorte(formData: FormData) {
   const sesion = await exigirAdministrador();
   const supabase = await createClient();
+  const config = await obtenerConfiguraciones();
 
   const claveLunesForm = String(formData.get("clave_lunes") || "");
-  const claveLunes = claveSemana(claveLunesForm || lunesDeHoy());
+  const claveLunes = claveSemana(claveLunesForm || lunesDeHoy(config.diaInicioSemana), config.diaInicioSemana);
 
-  if (claveLunes !== lunesDeHoy()) {
+  if (claveLunes !== lunesDeHoy(config.diaInicioSemana)) {
     redirect(`/corte?semana=${claveLunes}&error=${encodeURIComponent("Solo se puede confirmar el corte de la semana en curso")}`);
   }
 
@@ -104,4 +106,36 @@ export async function confirmarCorte(formData: FormData) {
   revalidatePath("/corte/historial");
   revalidatePath("/dashboard");
   redirect(`/corte?semana=${claveLunes}&exito=${encodeURIComponent("Corte de la semana confirmado")}`);
+}
+
+/**
+ * Cambia qué día empieza la semana de corte/reportes (0=domingo..6=sábado)
+ * — a petición de Angel, antes estaba fijo a lunes en el código. Solo
+ * afecta hacia ADELANTE: los cortes semanales ya confirmados se quedan con
+ * las fechas con las que se guardaron (no se recalculan), igual que
+ * cualquier otro ajuste de configuración en la app.
+ */
+export async function actualizarDiaInicioSemana(formData: FormData) {
+  await exigirAdministrador();
+  const supabase = await createClient();
+
+  const dia = Number(formData.get("dia_inicio_semana"));
+  if (!Number.isInteger(dia) || dia < 0 || dia > 6) {
+    redirect(`/corte?error=${encodeURIComponent("Día inválido")}`);
+  }
+
+  const { error } = await supabase
+    .from("configuraciones")
+    .upsert({ clave: "dia_inicio_semana", valor: String(dia) });
+
+  if (error) {
+    redirect(`/corte?error=${encodeURIComponent(error.message)}`);
+  }
+
+  revalidatePath("/corte");
+  revalidatePath("/corte/historial");
+  revalidatePath("/corte/mora");
+  revalidatePath("/dashboard");
+  revalidatePath("/historial");
+  redirect(`/corte?exito=${encodeURIComponent("Día de inicio de semana actualizado")}`);
 }
