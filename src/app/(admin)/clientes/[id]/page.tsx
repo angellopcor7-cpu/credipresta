@@ -9,6 +9,7 @@ import {
   type SemaforoCliente,
 } from "@/lib/finance/calculos";
 import { CalendarioPagosMensual } from "@/components/CalendarioPagosMensual";
+import { FotoClienteAvatar } from "@/components/FotoClienteAvatar";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
 import {
   ArrowLeft,
@@ -28,11 +29,6 @@ import {
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
-}
-
-function iniciales(nombre: string) {
-  const partes = nombre.trim().split(/\s+/);
-  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
 const ESTADO_CLIENTE_LABEL: Record<string, string> = {
@@ -86,7 +82,11 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
   const [{ data: prestamosData }, { data: solicitudesData }, { data: documentosData }] = await Promise.all([
     supabase.from("prestamos").select("*").eq("cliente_id", id).order("created_at", { ascending: false }),
     supabase.from("solicitudes_prestamo").select("*").eq("cliente_id", id).order("fecha_solicitud", { ascending: false }),
-    supabase.from("documentos_clientes").select("tipo_documento, storage_path").eq("cliente_id", id),
+    supabase
+      .from("documentos_clientes")
+      .select("tipo_documento, storage_path, created_at")
+      .eq("cliente_id", id)
+      .order("created_at", { ascending: false }),
   ]);
 
   const prestamos = (prestamosData ?? []) as Prestamo[];
@@ -146,7 +146,7 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
       });
   const estiloSemaforo = SEMAFORO_ESTILO[semaforo];
 
-  const documentosPorTipo = (documentosData ?? []) as { tipo_documento: TipoDocumento; storage_path: string }[];
+  const documentosPorTipo = (documentosData ?? []) as { tipo_documento: TipoDocumento; storage_path: string; created_at: string }[];
   let documentosConUrl: { tipo: TipoDocumento; url: string }[] = [];
   if (documentosPorTipo.length > 0) {
     const { data: firmados } = await supabase.storage
@@ -159,6 +159,10 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
       .map((d, i) => ({ tipo: d.tipo_documento, url: firmados?.[i]?.signedUrl ?? "" }))
       .filter((d) => d.url);
   }
+  // La foto de perfil ("foto de la cara") que se muestra en el encabezado —
+  // si se volvió a subir, se usa la más reciente (ya viene ordenado por
+  // created_at desc arriba).
+  const fotoClienteUrl = documentosConUrl.find((d) => d.tipo === "foto_cliente")?.url ?? null;
 
   return (
     <div className="space-y-6">
@@ -170,9 +174,7 @@ export default async function DetalleClienteAdminPage({ params }: { params: Prom
 
         <div className="flex flex-wrap items-center justify-between gap-3 mt-3">
           <div className="flex items-center gap-3">
-            <div className="shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-neutral-950 font-bold">
-              {iniciales(cliente.nombre_completo)}
-            </div>
+            <FotoClienteAvatar nombreCompleto={cliente.nombre_completo} fotoUrl={fotoClienteUrl} />
             <div>
               <h1 className="text-2xl font-bold leading-tight flex items-center gap-2">
                 {cliente.nombre_completo}

@@ -116,13 +116,18 @@ export default async function PanelCobradorPage({
 
   const filas = clientes.map((cliente) => {
     const prestamosDelCliente = prestamos.filter((p) => p.cliente_id === cliente.id);
-    const total = prestamosDelCliente.reduce((suma, p) => suma + Number(p.monto_total), 0);
-    const saldo = prestamosDelCliente.reduce((suma, p) => suma + Number(p.saldo_actual), 0);
-    const mora = prestamosDelCliente.reduce((suma, p) => suma + Number(p.mora_acumulada), 0);
+    const prestamoActivo = prestamosDelCliente.find((p) => p.estado === "activo" || p.estado === "en_mora");
+
+    // Total/saldo/abonado/mora/progreso son del préstamo ACTUAL únicamente —
+    // si se sumaran todos los préstamos del cliente (bug conocido: pasaba
+    // antes), uno viejo ya liquidado se mezclaba con el nuevo recién dado y
+    // el progreso salía a medias (ej. 50%) sin que el cliente hubiera
+    // abonado nada todavía del préstamo nuevo.
+    const total = prestamoActivo ? Number(prestamoActivo.monto_total) : 0;
+    const saldo = prestamoActivo ? Number(prestamoActivo.saldo_actual) : 0;
+    const mora = prestamoActivo ? Number(prestamoActivo.mora_acumulada) : 0;
     const abonado = total - saldo;
     const progreso = total > 0 ? Math.min(100, Math.round((abonado / total) * 100)) : 0;
-
-    const prestamoActivo = prestamosDelCliente.find((p) => p.estado === "activo" || p.estado === "en_mora");
     // Un préstamo ya liquidado nunca cuenta como "en mora" aunque queden filas
     // viejas de mora sin resolver en la base de datos (bug conocido: liquidar
     // un préstamo no marca sus moras pendientes como resueltas) — si no se

@@ -10,6 +10,7 @@ import { PedirPerdonMoraForm } from "./PedirPerdonMoraForm";
 import { PedirPagoExtraForm } from "./PedirPagoExtraForm";
 import { PedirPagoPersonalizadoForm } from "./PedirPagoPersonalizadoForm";
 import { CalendarioPagosMensual } from "@/components/CalendarioPagosMensual";
+import { FotoClienteAvatar } from "@/components/FotoClienteAvatar";
 import { obtenerFechasPagadas } from "@/lib/finance/calculos";
 import type { CalendarioPago, Cliente, Mora, Pago, Prestamo, SolicitudPrestamo, TipoDocumento } from "@/lib/types";
 import {
@@ -30,11 +31,6 @@ import {
 
 function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
-}
-
-function iniciales(nombre: string) {
-  const partes = nombre.trim().split(/\s+/);
-  return ((partes[0]?.[0] ?? "") + (partes[1]?.[0] ?? "")).toUpperCase() || "?";
 }
 
 const ETIQUETAS_DOCUMENTO: Record<TipoDocumento, string> = {
@@ -80,7 +76,11 @@ export default async function DetalleClientePage({
 
   const [{ data: prestamosData }, { data: documentosData }, { data: solicitudesData }] = await Promise.all([
     supabase.from("prestamos").select("*").eq("cliente_id", id).order("created_at", { ascending: false }),
-    supabase.from("documentos_clientes").select("tipo_documento, storage_path").eq("cliente_id", id),
+    supabase
+      .from("documentos_clientes")
+      .select("tipo_documento, storage_path, created_at")
+      .eq("cliente_id", id)
+      .order("created_at", { ascending: false }),
     supabase
       .from("solicitudes_prestamo")
       .select("*")
@@ -133,7 +133,7 @@ export default async function DetalleClientePage({
   const solicitudPagoExtraPendiente = solicitudPagoExtraData as { id: string; estado: string } | null;
   const diasAtraso = moras[0]?.dia_atraso ?? 0;
 
-  const documentosPorTipo = (documentosData ?? []) as { tipo_documento: TipoDocumento; storage_path: string }[];
+  const documentosPorTipo = (documentosData ?? []) as { tipo_documento: TipoDocumento; storage_path: string; created_at: string }[];
   let documentosConUrl: { tipo: TipoDocumento; url: string }[] = [];
   if (documentosPorTipo.length > 0) {
     const { data: firmados } = await supabase.storage
@@ -146,6 +146,10 @@ export default async function DetalleClientePage({
       .map((d, i) => ({ tipo: d.tipo_documento, url: firmados?.[i]?.signedUrl ?? "" }))
       .filter((d) => d.url);
   }
+  // La foto de perfil ("foto de la cara") que se muestra en el encabezado —
+  // si se volvió a subir, se usa la más reciente (ya viene ordenado por
+  // created_at desc arriba).
+  const fotoClienteUrl = documentosConUrl.find((d) => d.tipo === "foto_cliente")?.url ?? null;
 
   // Para bloquear el botón de "pago del día": un préstamo no puede recibir
   // dos pagos de cuota diaria el mismo día. La mora ya no la aplica el
@@ -189,9 +193,7 @@ export default async function DetalleClientePage({
         </Link>
 
         <div className="flex items-center gap-3 mt-3">
-          <div className="shrink-0 h-12 w-12 rounded-full bg-gradient-to-br from-amber-400 to-amber-600 flex items-center justify-center text-neutral-950 font-bold">
-            {iniciales(cliente.nombre_completo)}
-          </div>
+          <FotoClienteAvatar nombreCompleto={cliente.nombre_completo} fotoUrl={fotoClienteUrl} />
           <div>
             <h1 className="text-2xl font-bold leading-tight">{cliente.nombre_completo}</h1>
             <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-ink-muted text-sm">
