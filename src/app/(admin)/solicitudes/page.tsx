@@ -31,6 +31,28 @@ function currency(n: number) {
   return new Intl.NumberFormat("es-MX", { style: "currency", currency: "MXN" }).format(n);
 }
 
+/**
+ * Cada tipo de solicitud (préstamo nuevo / perdón de mora / pago extra o
+ * personalizado) tiene su propio color — a petición de Angel, porque con
+ * varias tablas seguidas en la misma pantalla no se distinguía fácil cuál
+ * era cuál. El mismo color se usa en la sección "pendientes" y en su tabla
+ * de "revisados recientemente", para que se note que van juntas. No se
+ * tocó el color de los badges "Aprobada"/"Rechazada" (ámbar/rojo) — ese ya
+ * significa el resultado, no el tipo de solicitud.
+ */
+const COLOR_PRESTAMO = { borde: "border-l-sky-500", punto: "bg-sky-500" };
+const COLOR_MORA = { borde: "border-l-violet-500", punto: "bg-violet-500" };
+const COLOR_PAGO_EXTRA = { borde: "border-l-teal-500", punto: "bg-teal-500" };
+
+function TituloSeccion({ color, children }: { color: { punto: string }; children: React.ReactNode }) {
+  return (
+    <h2 className="font-semibold mb-2 flex items-center gap-2">
+      <span className={`inline-block h-2.5 w-2.5 rounded-full shrink-0 ${color.punto}`} />
+      {children}
+    </h2>
+  );
+}
+
 /** Trae los links (temporales, 1h) a los documentos de cada cliente con solicitud pendiente, para revisarlos antes de aprobar. */
 async function obtenerDocumentosPorCliente(
   supabase: Awaited<ReturnType<typeof createClient>>,
@@ -173,8 +195,23 @@ export default async function SolicitudesPage({
         <p className="text-sm text-danger-text bg-danger-chip-bg/50 border border-danger-chip-border rounded-md px-3 py-2">{error}</p>
       )}
 
-      <div>
-        <h2 className="font-semibold mb-2">Pendientes de revisión ({listaPendientes.length})</h2>
+      <div className="flex flex-wrap items-center gap-4 text-xs text-ink-muted">
+        <span className="inline-flex items-center gap-1.5">
+          <span className={`h-2.5 w-2.5 rounded-full ${COLOR_PRESTAMO.punto}`} />
+          Préstamo nuevo / renovación
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className={`h-2.5 w-2.5 rounded-full ${COLOR_MORA.punto}`} />
+          Perdón de mora
+        </span>
+        <span className="inline-flex items-center gap-1.5">
+          <span className={`h-2.5 w-2.5 rounded-full ${COLOR_PAGO_EXTRA.punto}`} />
+          Pago de varios días / personalizado
+        </span>
+      </div>
+
+      <div className={`border-l-4 pl-4 ${COLOR_PRESTAMO.borde}`}>
+        <TituloSeccion color={COLOR_PRESTAMO}>Pendientes de revisión ({listaPendientes.length})</TituloSeccion>
         {listaPendientes.length === 0 ? (
           <p className="text-ink-muted text-sm">No hay solicitudes pendientes.</p>
         ) : (
@@ -244,8 +281,8 @@ export default async function SolicitudesPage({
         )}
       </div>
 
-      <div>
-        <h2 className="font-semibold mb-2">Solicitudes de perdón de mora ({listaPendientesMora.length})</h2>
+      <div className={`border-l-4 pl-4 ${COLOR_MORA.borde}`}>
+        <TituloSeccion color={COLOR_MORA}>Solicitudes de perdón de mora ({listaPendientesMora.length})</TituloSeccion>
         {listaPendientesMora.length === 0 ? (
           <p className="text-ink-muted text-sm">No hay solicitudes de perdón de mora pendientes.</p>
         ) : (
@@ -306,8 +343,8 @@ export default async function SolicitudesPage({
       </div>
 
       {listaRevisadasMora.length > 0 && (
-        <div>
-          <h2 className="font-semibold mb-2">Perdones de mora revisados recientemente</h2>
+        <div className={`border-l-4 pl-4 ${COLOR_MORA.borde}`}>
+          <TituloSeccion color={COLOR_MORA}>Perdones de mora revisados recientemente</TituloSeccion>
           <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
@@ -347,8 +384,10 @@ export default async function SolicitudesPage({
         </div>
       )}
 
-      <div>
-        <h2 className="font-semibold mb-2">Solicitudes de pago de varios días o personalizado ({listaPendientesPagoExtra.length})</h2>
+      <div className={`border-l-4 pl-4 ${COLOR_PAGO_EXTRA.borde}`}>
+        <TituloSeccion color={COLOR_PAGO_EXTRA}>
+          Solicitudes de pago de varios días o personalizado ({listaPendientesPagoExtra.length})
+        </TituloSeccion>
         {listaPendientesPagoExtra.length === 0 ? (
           <p className="text-ink-muted text-sm">No hay solicitudes de pago pendientes.</p>
         ) : (
@@ -408,8 +447,8 @@ export default async function SolicitudesPage({
       </div>
 
       {listaRevisadasPagoExtra.length > 0 && (
-        <div>
-          <h2 className="font-semibold mb-2">Pagos de días extra revisados recientemente</h2>
+        <div className={`border-l-4 pl-4 ${COLOR_PAGO_EXTRA.borde}`}>
+          <TituloSeccion color={COLOR_PAGO_EXTRA}>Pagos de días extra revisados recientemente</TituloSeccion>
           <div className="border border-border rounded-xl overflow-x-auto">
             <table className="w-full text-sm">
               <thead className="bg-surface text-ink-muted text-left">
@@ -449,8 +488,8 @@ export default async function SolicitudesPage({
         </div>
       )}
 
-      <div>
-        <h2 className="font-semibold mb-2">Revisadas recientemente</h2>
+      <div className={`border-l-4 pl-4 ${COLOR_PRESTAMO.borde}`}>
+        <TituloSeccion color={COLOR_PRESTAMO}>Revisadas recientemente</TituloSeccion>
         {listaRevisadas.length === 0 ? (
           <p className="text-ink-muted text-sm">Todavía no has revisado ninguna.</p>
         ) : (

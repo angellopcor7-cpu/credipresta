@@ -2,7 +2,7 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import type { CobradorConUsuario } from "@/lib/types";
 import type { MotivoDescuentoApertura } from "@/lib/finance/calculos";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight, Users } from "lucide-react";
 import { EntrarComoCobradorButton } from "./EntrarComoCobradorButton";
 
 function currency(n: number) {
@@ -128,12 +128,15 @@ export default async function CobradoresPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Cobradores</h1>
-          <p className="text-ink-muted text-sm mt-1">
-            {cobradores.length} registrado{cobradores.length === 1 ? "" : "s"} ({cobradoresActivos} activo
-            {cobradoresActivos === 1 ? "" : "s"}). No tienen un máximo real — el storage no les pesa, y el límite de
-            usuarios activos del plan gratis de Supabase (50,000 al mes) está muy por arriba de lo que este negocio
-            va a necesitar.
-          </p>
+          <span
+            className="inline-flex items-center gap-1.5 text-ink-muted text-xs mt-1"
+            title="Los cobradores no tienen un máximo real — casi no pesan en storage, y el límite de usuarios activos del plan gratis de Supabase (50,000 al mes) está muy por arriba de lo que este negocio va a necesitar."
+          >
+            <Users className="h-3 w-3" />
+            {cobradores.length} registrado{cobradores.length === 1 ? "" : "s"}
+            <span className="text-ink-muted/60">·</span>
+            {cobradoresActivos} activo{cobradoresActivos === 1 ? "" : "s"}
+          </span>
         </div>
         <Link
           href="/cobradores/nuevo"
